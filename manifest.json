@@ -1,0 +1,14 @@
+{
+  "name": "RezervoAI — Recepsionisti AI",
+  "short_name": "RezervoAI",
+  "description": "The AI receptionist that never sleeps — bookings, reminders and customer chat on WhatsApp, 24/7, in any language.",
+  "start_url": "./demo.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f3ef",
+  "theme_color": "#0ca678",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

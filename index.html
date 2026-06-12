@@ -3,189 +3,398 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RezervoAI — Recepsionisti AI i biznesit tënd</title>
+<title>RezervoAI — Recepsionisti AI që nuk fle kurrë</title>
+<meta name="description" content="AI që i përgjigjet klientëve të tu në WhatsApp, rezervon takime dhe dërgon kujtesa — 24/7, në çdo gjuhë, për çdo biznes. | The AI receptionist that answers your customers on WhatsApp, books appointments and sends reminders — 24/7, in any language.">
+<meta property="og:title" content="RezervoAI — The AI receptionist that never sleeps">
+<meta property="og:description" content="Bookings, reminders and customer chat on WhatsApp — fully automatic, 24/7, in any language.">
+<meta property="og:type" content="website">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0ca678">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<style>
+:root {
+  --milk:#f5f3ef; --ink:#16201c; --ink-soft:#5a6a64; --ink-faint:#93a29c;
+  --glass:rgba(255,255,255,.55); --glass-strong:rgba(255,255,255,.72);
+  --glass-edge:rgba(255,255,255,.75);
+  --accent:#0ca678; --accent-deep:#087f5b; --accent-bright:#20c997;
+  --accent-soft:rgba(12,166,120,.12); --accent-glow:rgba(12,166,120,.30);
+  --fd:"Sora","Segoe UI",system-ui,sans-serif;
+  --fb:"Manrope","Segoe UI",system-ui,sans-serif;
+  --r-md:18px; --r-lg:26px; --r-xl:32px;
+  --sh-glass:0 1px 1px rgba(22,32,28,.04),0 8px 24px rgba(22,32,28,.07),inset 0 1px 0 var(--glass-edge);
+  --sh-float:0 2px 4px rgba(22,32,28,.05),0 18px 48px rgba(22,32,28,.12),inset 0 1px 0 var(--glass-edge);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+::selection{background:rgba(12,166,120,.22);color:var(--accent-deep)}
+html{scroll-behavior:smooth}
+body{font-family:var(--fb);font-size:16px;background:var(--milk);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:-30%;z-index:-2;
+  background:
+    radial-gradient(38% 34% at 24% 26%,rgba(32,201,151,.34),transparent 70%),
+    radial-gradient(34% 32% at 78% 16%,rgba(116,173,255,.32),transparent 70%),
+    radial-gradient(36% 34% at 72% 82%,rgba(255,196,145,.30),transparent 70%),
+    radial-gradient(28% 28% at 16% 86%,rgba(196,156,255,.22),transparent 70%);
+  filter:blur(70px) saturate(1.25);animation:aurora 28s ease-in-out infinite alternate}
+@keyframes aurora{from{transform:translate3d(-2.5%,-1.5%,0) rotate(-1.5deg)}to{transform:translate3d(2.5%,2%,0) rotate(2deg) scale(1.06)}}
+body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E")}
+@media (prefers-reduced-motion:reduce){body::before{animation:none}*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
+
+.nav{display:flex;align-items:center;justify-content:space-between;position:sticky;top:12px;z-index:50;
+  margin:14px auto 0;width:calc(100% - 36px);max-width:1200px;padding:12px 20px;
+  background:var(--glass);backdrop-filter:blur(26px) saturate(1.7);-webkit-backdrop-filter:blur(26px) saturate(1.7);
+  border:1px solid var(--glass-edge);border-radius:var(--r-lg);box-shadow:var(--sh-glass)}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(140deg,#2ad59f,#0ca678 55%,#066649);
+  color:#fff;font-family:var(--fd);font-weight:800;font-size:22px;display:grid;place-items:center;
+  box-shadow:0 8px 22px var(--accent-glow),inset 0 1.5px 0 rgba(255,255,255,.45)}
+.brand b{font-family:var(--fd);font-weight:800;font-size:19px;letter-spacing:-.035em}
+.nav-right{display:flex;gap:9px;align-items:center}
+.lang{display:flex;padding:3px;background:rgba(22,32,28,.06);border:1px solid rgba(255,255,255,.5);border-radius:999px}
+.lang button{border:none;background:transparent;padding:7px 14px;border-radius:999px;font-family:var(--fb);
+  font-size:13px;font-weight:800;color:var(--ink-soft);cursor:pointer;transition:all .2s}
+.lang button.active{background:rgba(255,255,255,.92);color:var(--accent-deep);box-shadow:0 2px 8px rgba(22,32,28,.1)}
+.btn{display:inline-block;text-decoration:none;text-align:center;font-family:var(--fb);font-weight:800;cursor:pointer;
+  border:1px solid var(--glass-edge);background:var(--glass-strong);color:var(--ink);
+  border-radius:14px;padding:11px 22px;font-size:15px;
+  box-shadow:0 1px 2px rgba(22,32,28,.05),inset 0 1px 0 #fff;
+  transition:transform .16s,box-shadow .22s,background .16s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(22,32,28,.13),inset 0 1px 0 #fff}
+.btn.primary{background:linear-gradient(160deg,var(--accent-bright),var(--accent) 60%,var(--accent-deep));
+  border-color:rgba(255,255,255,.35);color:#fff;
+  box-shadow:0 5px 18px var(--accent-glow),inset 0 1.5px 0 rgba(255,255,255,.4)}
+.btn.primary:hover{box-shadow:0 10px 30px var(--accent-glow),inset 0 1.5px 0 rgba(255,255,255,.4)}
+.btn.big{padding:15px 32px;font-size:17px;border-radius:16px}
+
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+
+.hero{text-align:center;padding:84px 0 60px}
+.eyebrow{display:inline-block;background:var(--glass);border:1px solid var(--glass-edge);border-radius:999px;
+  padding:7px 18px;font-size:13.5px;font-weight:800;color:var(--accent-deep);box-shadow:var(--sh-glass);margin-bottom:26px}
+h1{font-family:var(--fd);font-size:clamp(34px,6.5vw,64px);font-weight:800;letter-spacing:-.045em;line-height:1.06;
+  max-width:850px;margin:0 auto}
+h1 .grad{background:linear-gradient(120deg,var(--accent-bright),var(--accent-deep));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:clamp(16px,2.4vw,19.5px);color:var(--ink-soft);font-weight:600;line-height:1.6;max-width:640px;margin:22px auto 0}
+.cta{display:flex;gap:13px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+.stats{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:52px}
+.stat{background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--glass-edge);border-radius:var(--r-md);
+  padding:16px 26px;box-shadow:var(--sh-glass);min-width:150px}
+.stat b{display:block;font-family:var(--fd);font-size:24px;font-weight:800;letter-spacing:-.03em;color:var(--accent-deep)}
+.stat span{font-size:12.5px;font-weight:700;color:var(--ink-soft)}
+
+section{padding:64px 0}
+.sec-head{text-align:center;max-width:640px;margin:0 auto 44px}
+h2{font-family:var(--fd);font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-.04em;line-height:1.15}
+.sec-head p{color:var(--ink-soft);font-weight:600;font-size:16px;margin-top:12px;line-height:1.6}
+
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.step{background:var(--glass);backdrop-filter:blur(24px) saturate(1.5);border:1px solid var(--glass-edge);
+  border-radius:var(--r-lg);padding:30px 26px;box-shadow:var(--sh-glass);position:relative;
+  transition:transform .18s,box-shadow .25s}
+.step:hover{transform:translateY(-4px);box-shadow:var(--sh-float)}
+.step .n{font-family:var(--fd);font-size:15px;font-weight:800;color:#fff;width:34px;height:34px;border-radius:11px;
+  display:grid;place-items:center;background:linear-gradient(150deg,var(--accent-bright),var(--accent-deep));
+  box-shadow:0 4px 12px var(--accent-glow);margin-bottom:16px}
+.step h3{font-family:var(--fd);font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+.step p{color:var(--ink-soft);font-weight:600;font-size:14px;line-height:1.6}
+
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.feat{background:var(--glass);backdrop-filter:blur(24px) saturate(1.5);border:1px solid var(--glass-edge);
+  border-radius:var(--r-lg);padding:26px;box-shadow:var(--sh-glass);transition:transform .18s,box-shadow .25s}
+.feat:hover{transform:translateY(-4px);box-shadow:var(--sh-float)}
+.feat .ic{font-size:26px;margin-bottom:13px;display:block}
+.feat h3{font-family:var(--fd);font-size:16.5px;font-weight:800;letter-spacing:-.02em;margin-bottom:7px}
+.feat p{color:var(--ink-soft);font-weight:600;font-size:13.5px;line-height:1.6}
+
+.biz-chips{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;max-width:820px;margin:0 auto}
+.bchip{background:var(--glass-strong);border:1px solid var(--glass-edge);border-radius:999px;
+  padding:9px 18px;font-size:14px;font-weight:800;color:var(--ink);box-shadow:inset 0 1px 0 #fff,0 1px 3px rgba(22,32,28,.05)}
+
+.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;max-width:1020px;margin:0 auto;align-items:stretch}
+.plan{background:var(--glass);backdrop-filter:blur(26px) saturate(1.5);border:1px solid var(--glass-edge);
+  border-radius:var(--r-xl);padding:32px 28px;box-shadow:var(--sh-glass);display:flex;flex-direction:column;
+  transition:transform .18s,box-shadow .25s}
+.plan:hover{transform:translateY(-5px);box-shadow:var(--sh-float)}
+.plan.featured{background:linear-gradient(170deg,rgba(255,255,255,.75),rgba(32,201,151,.16));
+  border-color:rgba(32,201,151,.45);position:relative;box-shadow:var(--sh-float)}
+.plan .tag{position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  background:linear-gradient(160deg,var(--accent-bright),var(--accent-deep));color:#fff;
+  font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  border-radius:999px;padding:6px 16px;box-shadow:0 4px 14px var(--accent-glow);white-space:nowrap}
+.plan h3{font-family:var(--fd);font-size:17px;font-weight:800}
+.plan .price{font-family:var(--fd);font-size:44px;font-weight:800;letter-spacing:-.05em;margin:10px 0 2px}
+.plan .price small{font-size:15px;font-weight:700;color:var(--ink-soft);letter-spacing:0}
+.plan .for{font-size:13px;font-weight:700;color:var(--ink-soft);margin-bottom:18px}
+.plan ul{list-style:none;display:flex;flex-direction:column;gap:9px;margin-bottom:24px;flex:1}
+.plan li{font-size:14px;font-weight:700;color:var(--ink);display:flex;gap:9px;align-items:flex-start;line-height:1.45}
+.plan li::before{content:"✓";color:var(--accent);font-weight:800;flex-shrink:0}
+.plan li.dim{color:var(--ink-faint)}
+.plan li.dim::before{content:"—";color:var(--ink-faint)}
+.trial-note{text-align:center;margin-top:22px;font-weight:700;color:var(--ink-soft);font-size:14px}
+
+.final{text-align:center;padding:70px 0 90px}
+.final .glass-cta{background:var(--glass);backdrop-filter:blur(26px) saturate(1.6);border:1px solid var(--glass-edge);
+  border-radius:var(--r-xl);box-shadow:var(--sh-float);padding:56px 32px;max-width:760px;margin:0 auto}
+
+footer{border-top:1px solid rgba(22,32,28,.08);padding:28px 0 90px;text-align:center;
+  color:var(--ink-faint);font-size:13.5px;font-weight:600}
+footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
+
+@media (max-width:640px){
+  .nav{padding:10px 14px;width:calc(100% - 20px);top:8px}
+  .nav .btn{padding:8px 13px;font-size:13px}
+  .brand b{font-size:16px}
+  .logo{width:38px;height:38px;font-size:19px;border-radius:12px}
+  .lang button{padding:6px 10px;font-size:12px}
+  .hero{padding:54px 0 40px}
+  section{padding:44px 0}
+  .stat{min-width:130px;padding:13px 18px}
+  .stat b{font-size:20px}
+}
+</style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    <div class="brand-logo">R</div>
-    <div>
-      <div class="brand-name">RezervoAI</div>
-      <div class="brand-tag" data-i18n="ui.brandTag">Recepsionisti AI që nuk fle kurrë</div>
+<nav class="nav">
+  <a class="brand" href="#"><span class="logo">R</span><b>RezervoAI</b></a>
+  <div class="nav-right">
+    <div class="lang" id="lang">
+      <button data-l="sq">SQ</button>
+      <button data-l="en">EN</button>
     </div>
+    <a class="btn primary" href="demo.html" data-t="navDemo">▶ Provo demon</a>
   </div>
-  <div class="topbar-actions">
-    <div class="lang-switch" id="langSwitch">
-      <button data-lang="sq">SQ</button>
-      <button data-lang="en">EN</button>
-    </div>
-    <button class="btn ghost" id="btnSettings" data-i18n="ui.settings">⚙ Cilësimet</button>
-    <button class="btn ghost danger" id="btnReset" data-i18n="ui.reset">↺ Rifillo demon</button>
+</nav>
+
+<header class="hero wrap">
+  <div class="eyebrow" data-t="eyebrow">Për çdo biznes me takime · Në çdo gjuhë · 24/7</div>
+  <h1 data-t="h1html"></h1>
+  <p class="sub" data-t="sub"></p>
+  <div class="cta">
+    <a class="btn primary big" href="demo.html" data-t="ctaDemo">▶ Provo demon live — falas</a>
+    <a class="btn big" href="#pricing" data-t="ctaPricing">Shiko çmimet</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>24/7</b><span data-t="s1">pa pushim, pa pushime</span></div>
+    <div class="stat"><b>100%</b><span data-t="s2">saktësi e orareve</span></div>
+    <div class="stat"><b>5 min</b><span data-t="s3">nga regjistrimi te klientët</span></div>
+    <div class="stat"><b>100+</b><span data-t="s4">gjuhë të botës</span></div>
   </div>
 </header>
 
-<main class="layout">
-
-  <!-- ====== TELEFONI I KLIENTIT (WhatsApp) ====== -->
-  <section class="phone-col">
-    <div class="phone-hint">
-      <span id="phoneHintText"></span>
-      <div class="hint-chips" id="hintChips"></div>
-    </div>
-
-    <div class="phone">
-      <div class="phone-notch"></div>
-      <div class="wa-header">
-        <div class="wa-avatar" id="waAvatar">T</div>
-        <div class="wa-title">
-          <div class="wa-name" id="waBizName">Biznesi</div>
-          <div class="wa-status" id="waStatus">online</div>
-        </div>
-        <div class="wa-icons">📞 ⋮</div>
-      </div>
-      <div class="wa-chat" id="chat"></div>
-      <div class="wa-quick" id="quickReplies"></div>
-      <form class="wa-input" id="chatForm" autocomplete="off">
-        <input type="text" id="chatInput" data-i18n-ph="ui.inputPlaceholder" placeholder="Shkruaj një mesazh…" maxlength="300">
-        <button type="submit" class="wa-send" aria-label="Send">➤</button>
-      </form>
-    </div>
-
-    <div class="client-identity">
-      <span data-i18n="ui.writingAs">Po shkruan si:</span> <input type="text" id="clientName" value="Andi" maxlength="20">
-    </div>
-  </section>
-
-  <!-- ====== PANELI I PRONARIT ====== -->
-  <section class="panel-col">
-    <div class="panel-head">
-      <div>
-        <h2 id="panelBizName">Paneli i pronarit</h2>
-        <p class="panel-sub" data-i18n="ui.panelSub">Gjithçka që bën AI, e sheh dhe e kontrollon këtu — pa lëvizur gishtin.</p>
-      </div>
-    </div>
-
-    <nav class="tabs">
-      <button class="tab active" data-tab="calendar" data-i18n="ui.tabCalendar">📅 Kalendari</button>
-      <button class="tab" data-tab="appointments" data-i18n="ui.tabAppts">📋 Takimet</button>
-      <button class="tab" data-tab="blocks" data-i18n="ui.tabBlocks">⛔ Bllokime</button>
-      <button class="tab" data-tab="notifications"><span data-i18n="ui.tabNotifs">🔔 Njoftimet</span> <span class="badge" id="notifBadge" hidden>0</span></button>
-      <button class="tab" data-tab="stats" data-i18n="ui.tabStats">📊 Statistika</button>
-    </nav>
-
-    <!-- Kalendari -->
-    <div class="tab-pane active" id="pane-calendar">
-      <div class="cal-controls">
-        <button class="btn small" id="calPrev">‹</button>
-        <div class="cal-date" id="calDateLabel"></div>
-        <button class="btn small" id="calNext">›</button>
-        <button class="btn small ghost" id="calToday" data-i18n="ui.today">Sot</button>
-      </div>
-      <div class="timeline" id="timeline"></div>
-    </div>
-
-    <!-- Takimet -->
-    <div class="tab-pane" id="pane-appointments">
-      <div class="pane-toolbar">
-        <button class="btn primary small" id="btnAddAppt" data-i18n="ui.addManual">+ Shto takim manual</button>
-      </div>
-      <div class="appt-list" id="apptList"></div>
-    </div>
-
-    <!-- Bllokime -->
-    <div class="tab-pane" id="pane-blocks">
-      <p class="pane-desc" data-i18n="ui.blocksDesc">Blloko orare kur nuk punon — AI nuk ia ofron askujt.</p>
-      <form class="block-form" id="blockForm">
-        <input type="date" id="blockDate" required>
-        <input type="time" id="blockFrom" required step="1800">
-        <input type="time" id="blockTo" required step="1800">
-        <input type="text" id="blockReason" data-i18n-ph="ui.blockReasonPh" placeholder="Arsyeja (opsionale)" maxlength="40">
-        <button class="btn primary small" type="submit" data-i18n="ui.blockBtn">Blloko</button>
-      </form>
-      <div class="block-list" id="blockList"></div>
-    </div>
-
-    <!-- Njoftimet -->
-    <div class="tab-pane" id="pane-notifications">
-      <p class="pane-desc" data-i18n="ui.notifsDesc">Kur AI nuk është i sigurt, nuk hamendëson — ta kalon ty. Këtu i sheh.</p>
-      <div class="notif-list" id="notifList"></div>
-    </div>
-
-    <!-- Statistika -->
-    <div class="tab-pane" id="pane-stats">
-      <div class="stats-grid" id="statsGrid"></div>
-      <p class="stats-note" data-i18n="ui.statsNote">Këto shifra janë arsyeja pse biznesi e rinovon abonimin çdo muaj pa diskutim.</p>
-    </div>
-  </section>
-</main>
-
-<!-- ====== NAVIGIMI MOBILE (si app nativ) ====== -->
-<nav class="view-switch" id="viewSwitch">
-  <button data-view="client" class="active" data-i18n="ui.viewClient">💬 Klienti</button>
-  <button data-view="panel" data-i18n="ui.viewPanel">📊 Paneli</button>
-</nav>
-
-<!-- ====== MAGJISTARI I REGJISTRIMIT (5 minuta) ====== -->
-<div class="modal-backdrop" id="setupModal" hidden>
-  <div class="modal">
-    <div class="modal-head">
-      <h2 data-i18n="ui.setupTitle">Mirë se erdhe! 👋</h2>
-      <p id="setupSub"></p>
-    </div>
-
-    <label class="field">
-      <span data-i18n="ui.setupType">Lloji i biznesit</span>
-      <select id="setupType"></select>
-    </label>
-
-    <label class="field">
-      <span data-i18n="ui.setupName">Emri i biznesit</span>
-      <input type="text" id="setupName" maxlength="40">
-    </label>
-
-    <label class="field">
-      <span data-i18n="ui.setupAddr">Adresa</span>
-      <input type="text" id="setupAddress" data-i18n-ph="ui.setupAddrPh" placeholder="p.sh. Rruga e Durrësit 12, Tiranë" maxlength="60">
-    </label>
-
-    <div class="field">
-      <span data-i18n="ui.setupServices">Shërbimet (emri, minutat, çmimi €)</span>
-      <div id="setupServices"></div>
-      <button class="btn ghost small" id="btnAddService" type="button" data-i18n="ui.addService">+ Shto shërbim</button>
-    </div>
-
-    <div class="field">
-      <span data-i18n="ui.setupHours">Orari i punës</span>
-      <div class="hours-grid" id="setupHours"></div>
-    </div>
-
-    <button class="btn primary big" id="btnFinishSetup" data-i18n="ui.finishSetup">Përfundo — jam gati për klientë ✓</button>
+<section class="wrap">
+  <div class="sec-head">
+    <h2 data-t="howH">Si funksionon — 3 hapa</h2>
+    <p data-t="howP">Pa instalime të ndërlikuara, pa trajnime, pa IT. Nëse di të përdorësh WhatsApp, di të përdorësh RezervoAI.</p>
   </div>
-</div>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><h3 data-t="st1h">Regjistrohu për 5 minuta</h3><p data-t="st1p">Zgjedh llojin e biznesit, shërbimet mbushen vetë, vendos orarin e punës. Kaq.</p></div>
+    <div class="step"><div class="n">2</div><h3 data-t="st2h">Lidh WhatsApp-in</h3><p data-t="st2p">Numri yt i biznesit lidhet me AI-në tonë. Klientët s'instalojnë asgjë — shkruajnë si gjithmonë.</p></div>
+    <div class="step"><div class="n">3</div><h3 data-t="st3h">AI punon për ty</h3><p data-t="st3p">Përgjigjet në çast, rezervon vetëm orare realisht të lira, dërgon kujtesa. Ti vetëm sheh kalendarin të mbushet.</p></div>
+  </div>
+</section>
 
-<!-- ====== SHTO TAKIM MANUAL ====== -->
-<div class="modal-backdrop" id="apptModal" hidden>
-  <div class="modal small-modal">
-    <div class="modal-head">
-      <h2 data-i18n="ui.manTitle">Takim manual</h2>
-      <p data-i18n="ui.manSub">Për klientin që të vjen në derë ose në telefon.</p>
+<section class="wrap">
+  <div class="sec-head">
+    <h2 data-t="featH">Gjithçka që humb klientë, e zgjidhur</h2>
+    <p data-t="featP">Çdo telefonatë pa përgjigje dhe çdo klient që harron orarin janë para të humbura. RezervoAI i kthen.</p>
+  </div>
+  <div class="feats">
+    <div class="feat"><span class="ic">⚡</span><h3 data-t="f1h">Rezervime automatike</h3><p data-t="f1p">Klienti shkruan në 23:30? AI i përgjigjet në çast dhe e rezervon. Ti fle, kalendari mbushet.</p></div>
+    <div class="feat"><span class="ic">🔔</span><h3 data-t="f2h">Kujtesa kundër mungesave</h3><p data-t="f2p">Çdo klient merr kujtesë para takimit. Nëse anulon, orari lirohet vetë për dikë tjetër.</p></div>
+    <div class="feat"><span class="ic">📅</span><h3 data-t="f3h">Kalendar i pagabueshëm</h3><p data-t="f3p">AI nuk shpik kurrë orare — ofron vetëm çfarë është realisht e lirë. Dyfishimi është i pamundur.</p></div>
+    <div class="feat"><span class="ic">🌍</span><h3 data-t="f4h">Çdo gjuhë e botës</h3><p data-t="f4p">Klienti të shkruan në çfarëdo gjuhe — AI i përgjigjet në gjuhën e tij. Turistët bëhen klientë.</p></div>
+    <div class="feat"><span class="ic">🎛</span><h3 data-t="f5h">Panel që kuptohet në 30 sekonda</h3><p data-t="f5p">Kalendari, takimet, bllokimet, njoftimet — gjithçka në një vend, e thjeshtë sa s'ka nevojë për shpjegim.</p></div>
+    <div class="feat"><span class="ic">📊</span><h3 data-t="f6h">Statistika që flasin para</h3><p data-t="f6p">Sa rezervoi AI, sa mungesa u shmangën, sa të ardhura u siguruan — e sheh me shifra çdo muaj.</p></div>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="sec-head">
+    <h2 data-t="bizH">Për çdo biznes që punon me orare</h2>
+    <p data-t="bizP">Nëse klientët të zënë kohë, RezervoAI të zë klientë.</p>
+  </div>
+  <div class="biz-chips" id="bizChips"></div>
+</section>
+
+<section class="wrap" id="pricing">
+  <div class="sec-head">
+    <h2 data-t="prH">Çmime të thjeshta, pa befasi</h2>
+    <p data-t="prP">Më pak se sa të kushton një klient i vetëm i humbur në muaj.</p>
+  </div>
+  <div class="pricing">
+    <div class="plan">
+      <h3>Start</h3>
+      <div class="price">$15<small data-t="mo">/muaj</small></div>
+      <div class="for" data-t="p1for">Për biznesin e vogël me një kalendar</div>
+      <ul>
+        <li data-t="p1a">Rezervime automatike në WhatsApp</li>
+        <li data-t="p1b">Kujtesa automatike për klientët</li>
+        <li data-t="p1c">Paneli i plotë + statistika</li>
+        <li class="dim" data-t="p1d">Instagram & Messenger</li>
+        <li class="dim" data-t="p1e">Staf i shumtë</li>
+      </ul>
+      <a class="btn" href="demo.html" data-t="planCta">Provo demon</a>
     </div>
-    <label class="field"><span data-i18n="ui.manClient">Emri i klientit</span><input type="text" id="manClient" maxlength="30"></label>
-    <label class="field"><span data-i18n="ui.manService">Shërbimi</span><select id="manService"></select></label>
-    <label class="field"><span data-i18n="ui.manDate">Data</span><input type="date" id="manDate"></label>
-    <label class="field"><span data-i18n="ui.manTime">Ora</span><select id="manTime"></select></label>
-    <div class="modal-actions">
-      <button class="btn ghost" id="manCancel" data-i18n="ui.manCancel">Anulo</button>
-      <button class="btn primary" id="manSave" data-i18n="ui.manSave">Ruaj takimin</button>
+    <div class="plan featured">
+      <div class="tag" data-t="popular">Më i zgjedhuri</div>
+      <h3>Pro</h3>
+      <div class="price">$49<small data-t="mo">/muaj</small></div>
+      <div class="for" data-t="p2for">Për biznese me staf dhe rrjete sociale</div>
+      <ul>
+        <li data-t="p2a">Gjithçka nga Start</li>
+        <li data-t="p2b">Instagram DM + Messenger</li>
+        <li data-t="p2c">Staf i shumtë (deri 10 kalendarë)</li>
+        <li data-t="p2d">Kërkesa vlerësimesh në Google</li>
+        <li data-t="p2e">Mesazhe marketingu te klientët</li>
+      </ul>
+      <a class="btn primary" href="demo.html" data-t="planCta">Provo demon</a>
+    </div>
+    <div class="plan">
+      <h3>Premium</h3>
+      <div class="price">$99<small data-t="mo">/muaj</small></div>
+      <div class="for" data-t="p3for">Për klinika, zinxhirë dhe shumë lokacione</div>
+      <ul>
+        <li data-t="p3a">Gjithçka nga Pro</li>
+        <li data-t="p3b">Riaktivizim automatik i klientëve me AI</li>
+        <li data-t="p3c">Shumë lokacione në një llogari</li>
+        <li data-t="p3d">Suport prioritar</li>
+      </ul>
+      <a class="btn" href="demo.html" data-t="planCta">Provo demon</a>
     </div>
   </div>
-</div>
+  <p class="trial-note" data-t="trial">✓ 14 ditë provë falas në çdo plan · pa kartë krediti · anulo kur të duash</p>
+</section>
 
-<script src="app.js"></script>
+<section class="final wrap">
+  <div class="glass-cta">
+    <h2 data-t="finH">Shiko vetë si punon — tani</h2>
+    <p class="sub" style="margin-top:14px" data-t="finP">Demoja live hapet në 5 sekonda, pa regjistrim. Luaj rolin e klientit dhe shiko si AI ta mbush kalendarin.</p>
+    <div class="cta" style="margin-top:28px">
+      <a class="btn primary big" href="demo.html" data-t="ctaDemo">▶ Provo demon live — falas</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span data-t="foot">© 2026 RezervoAI · Recepsionisti AI që nuk fle kurrë</span>
+  · <a href="mailto:usingusing44@gmail.com" data-t="contact">Kontakt</a>
+</footer>
+
+<script>
+"use strict";
+const T = {
+  sq: {
+    navDemo: "▶ Provo demon",
+    eyebrow: "Për çdo biznes me takime · Në çdo gjuhë · 24/7",
+    h1html: 'Recepsionisti AI që <span class="grad">nuk fle kurrë</span>',
+    sub: "RezervoAI i përgjigjet klientëve të tu në WhatsApp, rezervon takimet në kalendarin tënd dhe u kujton që të vijnë — 24 orë në ditë, pa lëvizur ti gishtin.",
+    ctaDemo: "▶ Provo demon live — falas", ctaPricing: "Shiko çmimet",
+    s1: "pa pushim, pa pushime", s2: "saktësi e orareve", s3: "nga regjistrimi te klientët", s4: "gjuhë të botës",
+    howH: "Si funksionon — 3 hapa",
+    howP: "Pa instalime të ndërlikuara, pa trajnime, pa IT. Nëse di të përdorësh WhatsApp, di të përdorësh RezervoAI.",
+    st1h: "Regjistrohu për 5 minuta", st1p: "Zgjedh llojin e biznesit, shërbimet mbushen vetë, vendos orarin e punës. Kaq.",
+    st2h: "Lidh WhatsApp-in", st2p: "Numri yt i biznesit lidhet me AI-në tonë. Klientët s'instalojnë asgjë — shkruajnë si gjithmonë.",
+    st3h: "AI punon për ty", st3p: "Përgjigjet në çast, rezervon vetëm orare realisht të lira, dërgon kujtesa. Ti vetëm sheh kalendarin të mbushet.",
+    featH: "Gjithçka që humb klientë, e zgjidhur",
+    featP: "Çdo telefonatë pa përgjigje dhe çdo klient që harron orarin janë para të humbura. RezervoAI i kthen.",
+    f1h: "Rezervime automatike", f1p: "Klienti shkruan në 23:30? AI i përgjigjet në çast dhe e rezervon. Ti fle, kalendari mbushet.",
+    f2h: "Kujtesa kundër mungesave", f2p: "Çdo klient merr kujtesë para takimit. Nëse anulon, orari lirohet vetë për dikë tjetër.",
+    f3h: "Kalendar i pagabueshëm", f3p: "AI nuk shpik kurrë orare — ofron vetëm çfarë është realisht e lirë. Dyfishimi është i pamundur.",
+    f4h: "Çdo gjuhë e botës", f4p: "Klienti të shkruan në çfarëdo gjuhe — AI i përgjigjet në gjuhën e tij. Turistët bëhen klientë.",
+    f5h: "Panel që kuptohet në 30 sekonda", f5p: "Kalendari, takimet, bllokimet, njoftimet — gjithçka në një vend, e thjeshtë sa s'ka nevojë për shpjegim.",
+    f6h: "Statistika që flasin para", f6p: "Sa rezervoi AI, sa mungesa u shmangën, sa të ardhura u siguruan — e sheh me shifra çdo muaj.",
+    bizH: "Për çdo biznes që punon me orare", bizP: "Nëse klientët të zënë kohë, RezervoAI të zë klientë.",
+    chips: ["💈 Berberë","💅 Sallone bukurie","🦷 Dentistë","💆 Fizioterapi","🏋️ Palestra","🚗 Servise makinash","🩺 Klinika","🍽 Restorante","🐾 Veterinerë","⚖️ Avokatë","🎨 Studio tatuazhesh","📸 Fotografë","📚 Mësues & kurse","✨ Dhe çdo biznes tjetër"],
+    prH: "Çmime të thjeshta, pa befasi", prP: "Më pak se sa të kushton një klient i vetëm i humbur në muaj.",
+    mo: "/muaj", popular: "Më i zgjedhuri", planCta: "Provo demon",
+    p1for: "Për biznesin e vogël me një kalendar",
+    p1a: "Rezervime automatike në WhatsApp", p1b: "Kujtesa automatike për klientët", p1c: "Paneli i plotë + statistika",
+    p1d: "Instagram & Messenger", p1e: "Staf i shumtë",
+    p2for: "Për biznese me staf dhe rrjete sociale",
+    p2a: "Gjithçka nga Start", p2b: "Instagram DM + Messenger", p2c: "Staf i shumtë (deri 10 kalendarë)",
+    p2d: "Kërkesa vlerësimesh në Google", p2e: "Mesazhe marketingu te klientët",
+    p3for: "Për klinika, zinxhirë dhe shumë lokacione",
+    p3a: "Gjithçka nga Pro", p3b: "Riaktivizim automatik i klientëve me AI", p3c: "Shumë lokacione në një llogari", p3d: "Suport prioritar",
+    trial: "✓ 14 ditë provë falas në çdo plan · pa kartë krediti · anulo kur të duash",
+    finH: "Shiko vetë si punon — tani",
+    finP: "Demoja live hapet në 5 sekonda, pa regjistrim. Luaj rolin e klientit dhe shiko si AI ta mbush kalendarin.",
+    foot: "© 2026 RezervoAI · Recepsionisti AI që nuk fle kurrë", contact: "Kontakt",
+  },
+  en: {
+    navDemo: "▶ Try the demo",
+    eyebrow: "For every appointment business · In any language · 24/7",
+    h1html: 'The AI receptionist that <span class="grad">never sleeps</span>',
+    sub: "RezervoAI answers your customers on WhatsApp, books appointments into your calendar and reminds them to show up — 24 hours a day, without you lifting a finger.",
+    ctaDemo: "▶ Try the live demo — free", ctaPricing: "See pricing",
+    s1: "no breaks, no holidays", s2: "scheduling accuracy", s3: "from sign-up to customers", s4: "world languages",
+    howH: "How it works — 3 steps",
+    howP: "No complicated installs, no training, no IT. If you can use WhatsApp, you can use RezervoAI.",
+    st1h: "Sign up in 5 minutes", st1p: "Pick your business type, services fill themselves in, set your working hours. Done.",
+    st2h: "Connect WhatsApp", st2p: "Your business number connects to our AI. Customers install nothing — they text like they always do.",
+    st3h: "The AI works for you", st3p: "Replies instantly, books only genuinely free slots, sends reminders. You just watch the calendar fill up.",
+    featH: "Everything that loses you customers, solved",
+    featP: "Every missed call and every no-show is money lost. RezervoAI brings it back.",
+    f1h: "Automatic bookings", f1p: "Customer texts at 11:30 PM? The AI replies instantly and books them in. You sleep, the calendar fills.",
+    f2h: "No-show reminders", f2p: "Every customer gets a reminder before their appointment. If they cancel, the slot frees itself for someone else.",
+    f3h: "An infallible calendar", f3p: "The AI never invents slots — it offers only what's genuinely free. Double-booking is impossible by design.",
+    f4h: "Any language on Earth", f4p: "Customers write in any language — the AI replies in theirs. Tourists become customers.",
+    f5h: "A panel you understand in 30 seconds", f5p: "Calendar, appointments, time blocks, notifications — all in one place, simple enough to need no manual.",
+    f6h: "Statistics that talk money", f6p: "How much the AI booked, how many no-shows were prevented, how much revenue was secured — in numbers, every month.",
+    bizH: "For every business that runs on appointments", bizP: "If customers take your time, RezervoAI gets you customers.",
+    chips: ["💈 Barbershops","💅 Beauty salons","🦷 Dentists","💆 Physiotherapy","🏋️ Gyms","🚗 Car services","🩺 Clinics","🍽 Restaurants","🐾 Veterinarians","⚖️ Lawyers","🎨 Tattoo studios","📸 Photographers","📚 Tutors & courses","✨ And every other business"],
+    prH: "Simple pricing, no surprises", prP: "Less than a single lost customer costs you per month.",
+    mo: "/month", popular: "Most popular", planCta: "Try the demo",
+    p1for: "For small businesses with one calendar",
+    p1a: "Automatic WhatsApp bookings", p1b: "Automatic customer reminders", p1c: "Full panel + statistics",
+    p1d: "Instagram & Messenger", p1e: "Multiple staff",
+    p2for: "For businesses with staff and social media",
+    p2a: "Everything in Start", p2b: "Instagram DM + Messenger", p2c: "Multiple staff (up to 10 calendars)",
+    p2d: "Google review requests", p2e: "Marketing messages to your clients",
+    p3for: "For clinics, chains and multiple locations",
+    p3a: "Everything in Pro", p3b: "AI-powered client reactivation", p3c: "Multiple locations in one account", p3d: "Priority support",
+    trial: "✓ 14-day free trial on every plan · no credit card · cancel anytime",
+    finH: "See it work for yourself — now",
+    finP: "The live demo opens in 5 seconds, no sign-up. Play the customer and watch the AI fill your calendar.",
+    foot: "© 2026 RezervoAI · The AI receptionist that never sleeps", contact: "Contact",
+  },
+};
+
+const LK = "rezervoai_lang";
+let lang = localStorage.getItem(LK) ||
+  ((navigator.language || "").toLowerCase().startsWith("sq") ? "sq" : "en");
+if (!T[lang]) lang = "en";
+
+function apply() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("#lang button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.l === lang));
+  document.querySelectorAll("[data-t]").forEach((el) => {
+    const v = T[lang][el.dataset.t];
+    if (v === undefined) return;
+    if (el.dataset.t === "h1html") el.innerHTML = v;
+    else el.textContent = v;
+  });
+  const chips = document.getElementById("bizChips");
+  chips.innerHTML = "";
+  for (const c of T[lang].chips) {
+    const s = document.createElement("span");
+    s.className = "bchip";
+    s.textContent = c;
+    chips.appendChild(s);
+  }
+}
+document.querySelectorAll("#lang button").forEach((b) => {
+  b.onclick = () => { lang = b.dataset.l; localStorage.setItem(LK, lang); apply(); };
+});
+apply();
+
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
 </body>
 </html>

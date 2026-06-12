@@ -1247,3 +1247,8 @@ if (state.config) {
 } else {
   openSetup(null);
 }
+
+/* PWA: platforma instalohet si app në telefon dhe hapet edhe offline */
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}

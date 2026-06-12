@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RezervoAI — Demo Live</title>
+<meta name="description" content="Demo live e RezervoAI — shiko si AI rezervon takime në WhatsApp për biznesin tënd. | Live demo of RezervoAI — watch the AI book appointments on WhatsApp for your business.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0ca678">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="index.html" style="text-decoration:none;color:inherit">
+    <div class="brand-logo">R</div>
+    <div>
+      <div class="brand-name">RezervoAI</div>
+      <div class="brand-tag" data-i18n="ui.brandTag">Recepsionisti AI që nuk fle kurrë</div>
+    </div>
+  </a>
+  <div class="topbar-actions">
+    <div class="lang-switch" id="langSwitch">
+      <button data-lang="sq">SQ</button>
+      <button data-lang="en">EN</button>
+    </div>
+    <button class="btn ghost" id="btnSettings" data-i18n="ui.settings">⚙ Cilësimet</button>
+    <button class="btn ghost danger" id="btnReset" data-i18n="ui.reset">↺ Rifillo demon</button>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- ====== TELEFONI I KLIENTIT (WhatsApp) ====== -->
+  <section class="phone-col">
+    <div class="phone-hint">
+      <span id="phoneHintText"></span>
+      <div class="hint-chips" id="hintChips"></div>
+    </div>
+
+    <div class="phone">
+      <div class="phone-notch"></div>
+      <div class="wa-header">
+        <div class="wa-avatar" id="waAvatar">T</div>
+        <div class="wa-title">
+          <div class="wa-name" id="waBizName">Biznesi</div>
+          <div class="wa-status" id="waStatus">online</div>
+        </div>
+        <div class="wa-icons">📞 ⋮</div>
+      </div>
+      <div class="wa-chat" id="chat"></div>
+      <div class="wa-quick" id="quickReplies"></div>
+      <form class="wa-input" id="chatForm" autocomplete="off">
+        <input type="text" id="chatInput" data-i18n-ph="ui.inputPlaceholder" placeholder="Shkruaj një mesazh…" maxlength="300">
+        <button type="submit" class="wa-send" aria-label="Send">➤</button>
+      </form>
+    </div>
+
+    <div class="client-identity">
+      <span data-i18n="ui.writingAs">Po shkruan si:</span> <input type="text" id="clientName" value="Andi" maxlength="20">
+    </div>
+  </section>
+
+  <!-- ====== PANELI I PRONARIT ====== -->
+  <section class="panel-col">
+    <div class="panel-head">
+      <div>
+        <h2 id="panelBizName">Paneli i pronarit</h2>
+        <p class="panel-sub" data-i18n="ui.panelSub">Gjithçka që bën AI, e sheh dhe e kontrollon këtu — pa lëvizur gishtin.</p>
+      </div>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="calendar" data-i18n="ui.tabCalendar">📅 Kalendari</button>
+      <button class="tab" data-tab="appointments" data-i18n="ui.tabAppts">📋 Takimet</button>
+      <button class="tab" data-tab="blocks" data-i18n="ui.tabBlocks">⛔ Bllokime</button>
+      <button class="tab" data-tab="notifications"><span data-i18n="ui.tabNotifs">🔔 Njoftimet</span> <span class="badge" id="notifBadge" hidden>0</span></button>
+      <button class="tab" data-tab="stats" data-i18n="ui.tabStats">📊 Statistika</button>
+    </nav>
+
+    <!-- Kalendari -->
+    <div class="tab-pane active" id="pane-calendar">
+      <div class="cal-controls">
+        <button class="btn small" id="calPrev">‹</button>
+        <div class="cal-date" id="calDateLabel"></div>
+        <button class="btn small" id="calNext">›</button>
+        <button class="btn small ghost" id="calToday" data-i18n="ui.today">Sot</button>
+      </div>
+      <div class="timeline" id="timeline"></div>
+    </div>
+
+    <!-- Takimet -->
+    <div class="tab-pane" id="pane-appointments">
+      <div class="pane-toolbar">
+        <button class="btn primary small" id="btnAddAppt" data-i18n="ui.addManual">+ Shto takim manual</button>
+      </div>
+      <div class="appt-list" id="apptList"></div>
+    </div>
+
+    <!-- Bllokime -->
+    <div class="tab-pane" id="pane-blocks">
+      <p class="pane-desc" data-i18n="ui.blocksDesc">Blloko orare kur nuk punon — AI nuk ia ofron askujt.</p>
+      <form class="block-form" id="blockForm">
+        <input type="date" id="blockDate" required>
+        <input type="time" id="blockFrom" required step="1800">
+        <input type="time" id="blockTo" required step="1800">
+        <input type="text" id="blockReason" data-i18n-ph="ui.blockReasonPh" placeholder="Arsyeja (opsionale)" maxlength="40">
+        <button class="btn primary small" type="submit" data-i18n="ui.blockBtn">Blloko</button>
+      </form>
+      <div class="block-list" id="blockList"></div>
+    </div>
+
+    <!-- Njoftimet -->
+    <div class="tab-pane" id="pane-notifications">
+      <p class="pane-desc" data-i18n="ui.notifsDesc">Kur AI nuk është i sigurt, nuk hamendëson — ta kalon ty. Këtu i sheh.</p>
+      <div class="notif-list" id="notifList"></div>
+    </div>
+
+    <!-- Statistika -->
+    <div class="tab-pane" id="pane-stats">
+      <div class="stats-grid" id="statsGrid"></div>
+      <p class="stats-note" data-i18n="ui.statsNote">Këto shifra janë arsyeja pse biznesi e rinovon abonimin çdo muaj pa diskutim.</p>
+    </div>
+  </section>
+</main>
+
+<!-- ====== NAVIGIMI MOBILE (si app nativ) ====== -->
+<nav class="view-switch" id="viewSwitch">
+  <button data-view="client" class="active" data-i18n="ui.viewClient">💬 Klienti</button>
+  <button data-view="panel" data-i18n="ui.viewPanel">📊 Paneli</button>
+</nav>
+
+<!-- ====== MAGJISTARI I REGJISTRIMIT (5 minuta) ====== -->
+<div class="modal-backdrop" id="setupModal" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <h2 data-i18n="ui.setupTitle">Mirë se erdhe! 👋</h2>
+      <p id="setupSub"></p>
+    </div>
+
+    <label class="field">
+      <span data-i18n="ui.setupType">Lloji i biznesit</span>
+      <select id="setupType"></select>
+    </label>
+
+    <label class="field">
+      <span data-i18n="ui.setupName">Emri i biznesit</span>
+      <input type="text" id="setupName" maxlength="40">
+    </label>
+
+    <label class="field">
+      <span data-i18n="ui.setupAddr">Adresa</span>
+      <input type="text" id="setupAddress" data-i18n-ph="ui.setupAddrPh" placeholder="p.sh. Rruga e Durrësit 12, Tiranë" maxlength="60">
+    </label>
+
+    <div class="field">
+      <span data-i18n="ui.setupServices">Shërbimet (emri, minutat, çmimi €)</span>
+      <div id="setupServices"></div>
+      <button class="btn ghost small" id="btnAddService" type="button" data-i18n="ui.addService">+ Shto shërbim</button>
+    </div>
+
+    <div class="field">
+      <span data-i18n="ui.setupHours">Orari i punës</span>
+      <div class="hours-grid" id="setupHours"></div>
+    </div>
+
+    <button class="btn primary big" id="btnFinishSetup" data-i18n="ui.finishSetup">Përfundo — jam gati për klientë ✓</button>
+  </div>
+</div>
+
+<!-- ====== SHTO TAKIM MANUAL ====== -->
+<div class="modal-backdrop" id="apptModal" hidden>
+  <div class="modal small-modal">
+    <div class="modal-head">
+      <h2 data-i18n="ui.manTitle">Takim manual</h2>
+      <p data-i18n="ui.manSub">Për klientin që të vjen në derë ose në telefon.</p>
+    </div>
+    <label class="field"><span data-i18n="ui.manClient">Emri i klientit</span><input type="text" id="manClient" maxlength="30"></label>
+    <label class="field"><span data-i18n="ui.manService">Shërbimi</span><select id="manService"></select></label>
+    <label class="field"><span data-i18n="ui.manDate">Data</span><input type="date" id="manDate"></label>
+    <label class="field"><span data-i18n="ui.manTime">Ora</span><select id="manTime"></select></label>
+    <div class="modal-actions">
+      <button class="btn ghost" id="manCancel" data-i18n="ui.manCancel">Anulo</button>
+      <button class="btn primary" id="manSave" data-i18n="ui.manSave">Ruaj takimin</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

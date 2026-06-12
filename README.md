@@ -9,9 +9,13 @@ Platforma është ndërtuar e pavarur nga modeli AI: në prodhim, "truri" rule-b
 zëvendësohet me cilindo LLM (vendimi merret me test krahasues në fund) dhe
 mbulon automatikisht çdo gjuhë të botës.
 
-## Si ta hapësh demon
+## Live
 
-Hap `index.html` në çdo browser — pa instalim, pa server, pa internet.
+- **Faqja:** https://user555-cyber.github.io/rezervoai/
+- **Demoja:** https://user555-cyber.github.io/rezervoai/demo.html
+
+Lokalisht: hap `index.html` (faqja shitëse) ose `demo.html` (demoja) në çdo browser.
+PWA: nga telefoni, "Add to Home Screen" — instalohet si app dhe hapet edhe offline.
 
 ## Çfarë tregon demo
 
