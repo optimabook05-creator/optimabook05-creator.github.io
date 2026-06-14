@@ -47,6 +47,7 @@ const T = {
     statAi: "Rezervuar nga AI", statConfirmed: "Të konfirmuara",
     manTitle: "Takim manual", manClient: "Emri i klientit", manService: "Shërbimi",
     manDate: "Data", manTime: "Ora", save: "Ruaj", cancel: "Anulo", noSlots: "— s'ka orar të lirë —",
+    pickTime: "Zgjidh një orar (dita është plot ose mbyllur).",
     toastSaved: "✅ U ruajt", toastCancelled: "🗑 U anulua", toastConfirmed: "✓ U konfirmua",
     toastBlocked: "⛔ U bllokua", toastRemind: "🔔 Kujtesa u shënua",
     errFields: "Plotëso email-in dhe fjalëkalimin (min. 6 shkronja).",
@@ -81,6 +82,7 @@ const T = {
     statAi: "Booked by AI", statConfirmed: "Confirmed",
     manTitle: "Manual appointment", manClient: "Customer name", manService: "Service",
     manDate: "Date", manTime: "Time", save: "Save", cancel: "Cancel", noSlots: "— no free slots —",
+    pickTime: "Pick a time (the day is full or closed).",
     toastSaved: "✅ Saved", toastCancelled: "🗑 Cancelled", toastConfirmed: "✓ Confirmed",
     toastBlocked: "⛔ Blocked", toastRemind: "🔔 Reminder noted",
     errFields: "Enter email and password (min. 6 characters).",
@@ -261,7 +263,9 @@ async function blocksForDate(ds) {
 /* ---------------- Motori i orareve të lira ---------------- */
 function svcById(id) { return services.find((s) => s.id === id); }
 
-async function freeSlots(ds, durMin) {
+// includePast=true lejon pronarin të shënojë takime manuale në çdo orar të ditës
+// (p.sh. një klient që sapo erdhi). Klienti/AI s'merr kurrë orare të shkuara.
+async function freeSlots(ds, durMin, includePast = false) {
   const d = parseDate(ds);
   const h = hours[d.getDay()];
   if (!h) return [];
@@ -276,7 +280,7 @@ async function freeSlots(ds, durMin) {
   const nowM = new Date().getHours() * 60 + new Date().getMinutes();
   const out = [];
   for (let t = open; t + durMin <= close; t += SLOT_STEP) {
-    if (isToday && t <= nowM) continue;
+    if (!includePast && isToday && t <= nowM) continue;
     if (!busy.some(([s, e]) => t < e && t + durMin > s)) out.push(toHM(t));
   }
   return out;
@@ -501,14 +505,15 @@ async function openManual() {
 }
 async function refreshManTimes() {
   const s = svcById($("#manService").value);
-  const slots = s && $("#manDate").value ? await freeSlots($("#manDate").value, s.duration_min) : [];
+  const slots = s && $("#manDate").value ? await freeSlots($("#manDate").value, s.duration_min, true) : [];
   $("#manTime").innerHTML = slots.length ? slots.map((x) => `<option>${x}</option>`).join("")
     : `<option value="">${tr("noSlots")}</option>`;
 }
 async function saveManual() {
   const client = $("#manClient").value.trim();
   const time = $("#manTime").value;
-  if (!client || !time) return;
+  if (!client) { $("#manClient").focus(); return; }
+  if (!time) { toast(tr("pickTime")); return; }
   await sb.from("appointments").insert({
     business_id: biz.id, service_id: $("#manService").value,
     client_name: client, appt_date: $("#manDate").value, appt_time: time,
