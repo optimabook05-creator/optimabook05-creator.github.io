@@ -134,11 +134,14 @@
   <button data-view="panel" data-i18n="ui.viewPanel">📊 Paneli</button>
 </nav>
 
+<!-- ====== NJOFTIM TOAST ====== -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <!-- ====== MAGJISTARI I REGJISTRIMIT (5 minuta) ====== -->
-<div class="modal-backdrop" id="setupModal" hidden>
+<div class="modal-backdrop" id="setupModal" role="dialog" aria-modal="true" aria-labelledby="setupTitle" hidden>
   <div class="modal">
     <div class="modal-head">
-      <h2 data-i18n="ui.setupTitle">Mirë se erdhe! 👋</h2>
+      <h2 id="setupTitle" data-i18n="ui.setupTitle">Mirë se erdhe! 👋</h2>
       <p id="setupSub"></p>
     </div>
 
@@ -173,10 +176,10 @@
 </div>
 
 <!-- ====== SHTO TAKIM MANUAL ====== -->
-<div class="modal-backdrop" id="apptModal" hidden>
+<div class="modal-backdrop" id="apptModal" role="dialog" aria-modal="true" aria-labelledby="manTitle" hidden>
   <div class="modal small-modal">
     <div class="modal-head">
-      <h2 data-i18n="ui.manTitle">Takim manual</h2>
+      <h2 id="manTitle" data-i18n="ui.manTitle">Takim manual</h2>
       <p data-i18n="ui.manSub">Për klientin që të vjen në derë ose në telefon.</p>
     </div>
     <label class="field"><span data-i18n="ui.manClient">Emri i klientit</span><input type="text" id="manClient" maxlength="30"></label>

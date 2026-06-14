@@ -131,6 +131,10 @@ const I18N = {
       sysReminder: "Kujtesë automatike — dërguar nga sistemi, pa lëvizur gishtin pronari",
       typing: "po shkruan…",
       viewClient: "💬 Klienti", viewPanel: "📊 Paneli",
+      toastBooked: "✅ Rezervimi u shtua në kalendar",
+      toastCancelled: "🗑 Takimi u anulua — orari u lirua",
+      toastReminder: "🔔 Kujtesa u dërgua te klienti",
+      toastBlocked: "⛔ Orari u bllokua",
     },
     bot: {
       welcome: "Përshëndetje! 👋 Mirë se erdhe te **{biz}**. Jam asistenti i rezervimeve — më shkruaj kur do të vish dhe ta gjej orarin për 10 sekonda, çdo orë të ditës a natës. 🌙",
@@ -281,6 +285,10 @@ const I18N = {
       sysReminder: "Automatic reminder — sent by the system, owner didn't lift a finger",
       typing: "typing…",
       viewClient: "💬 Customer", viewPanel: "📊 Panel",
+      toastBooked: "✅ Booking added to the calendar",
+      toastCancelled: "🗑 Appointment cancelled — slot freed",
+      toastReminder: "🔔 Reminder sent to the customer",
+      toastBlocked: "⛔ Time blocked",
     },
     bot: {
       welcome: "Hello! 👋 Welcome to **{biz}**. I'm the booking assistant — tell me when you'd like to come and I'll find you a slot in 10 seconds, any hour of the day or night. 🌙",
@@ -434,6 +442,7 @@ function cancelAppt(id, byClient) {
   if (byClient) {
     notify(t("bot.notifCancel", { name: a.client, date: humanDate(a.date), time: a.time }));
   }
+  showToast(t("ui.toastCancelled"));
   save();
   renderAll();
   return true;
@@ -590,6 +599,7 @@ function confirmBooking(time) {
     return t("bot.takenNoAlt");
   }
   notify(t("bot.notifBooked", { name: clientName(), svc: svc.name, date: humanDate(chatCtx.date), time }));
+  showToast(t("ui.toastBooked"));
   const msg = t("bot.booked", {
     date: humanDate(chatCtx.date), time, svc: svc.name, dur: svc.dur,
     price: svc.price, biz: state.config.businessName,
@@ -738,6 +748,17 @@ const chatEl = $("#chat");
 
 function clientName() { return $("#clientName").value.trim() || "Andi"; }
 
+/* Njoftim "toast" — feedback i çastit për çdo veprim, si app nativ */
+let toastTimer;
+function showToast(text) {
+  const el = $("#toast");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
 function timeStamp() {
   return new Date().toLocaleTimeString(t("locale"), { hour: "2-digit", minute: "2-digit" });
 }
@@ -810,6 +831,7 @@ function sendReminder(apptId) {
   const svc = serviceById(a.serviceId);
   state.stats.remindersSent++;
   save();
+  showToast(t("ui.toastReminder"));
   addSys(t("ui.sysReminder"));
   botSays(t("bot.reminder", {
     name: a.client, date: humanDate(a.date), time: a.time,
@@ -945,6 +967,7 @@ $("#btnAddAppt").onclick = () => {
   $("#manDate").value = calDate;
   refreshManTimes();
   $("#apptModal").hidden = false;
+  setTimeout(() => $("#manClient").focus(), 60);
 };
 $("#manService").addEventListener("change", refreshManTimes);
 $("#manDate").addEventListener("change", refreshManTimes);
@@ -976,6 +999,7 @@ $("#blockForm").addEventListener("submit", (e) => {
     reason: $("#blockReason").value.trim(),
   });
   save();
+  showToast(t("ui.toastBlocked"));
   e.target.reset();
   renderAll();
 });
@@ -1120,6 +1144,50 @@ function addServiceRow(s) {
 
 $("#btnAddService").onclick = () => addServiceRow(null);
 
+/* ---------------- Të dhëna shembull (demo që duket si biznes i gjallë) ---------------- */
+
+const SAMPLE_NAMES = {
+  sq: ["Andi", "Erjon", "Klara", "Drini", "Megi", "Festim", "Albana", "Gentian", "Sara", "Bledi"],
+  en: ["James", "Olivia", "Liam", "Emma", "Noah", "Sophia", "Lucas", "Mia", "Ethan", "Ava"],
+};
+
+function nextWorkingDays(n) {
+  const out = [];
+  for (let i = 0; i < 21 && out.length < n; i++) {
+    const d = new Date(Date.now() + i * 864e5);
+    if (state.config.hours[d.getDay()]) out.push(fmtDate(d));
+  }
+  return out;
+}
+
+/** Mbush kalendarin me pak takime realiste që demoja të mos jetë bosh. */
+function seedSampleData() {
+  const names = SAMPLE_NAMES[lang] || SAMPLE_NAMES.en;
+  const days = nextWorkingDays(3);
+  let ni = Math.floor(Math.random() * names.length);
+
+  days.forEach((date, di) => {
+    const want = di === 0 ? 2 : 3;
+    for (let k = 0; k < want; k++) {
+      const svc = state.config.services[Math.floor(Math.random() * state.config.services.length)];
+      const slots = freeSlots(date, svc.dur);
+      if (!slots.length) break;
+      const time = slots[Math.floor(Math.random() * slots.length)];
+      const confirmed = Math.random() < 0.5;
+      state.appointments.push({
+        id: uid(), client: names[ni % names.length], serviceId: svc.id,
+        date, time, status: confirmed ? "confirmed" : "pending",
+        source: Math.random() < 0.75 ? "ai" : "manual",
+      });
+      if (state.appointments[state.appointments.length - 1].source === "ai") state.stats.aiBookings++;
+      if (confirmed) state.stats.remindersConfirmed++;
+      ni++;
+    }
+  });
+  state.stats.remindersSent = state.stats.remindersConfirmed + 1;
+  save();
+}
+
 function draftFromForm() {
   const services = [...document.querySelectorAll(".service-row")]
     .map((row, i) => ({
@@ -1148,6 +1216,7 @@ $("#btnFinishSetup").onclick = () => {
   if (!draft.services.length) { addServiceRow(null); return; }
   if (!draft.businessName) draft.businessName = t("presets." + draft.type + ".nameEx");
   state.config = draft;
+  if (!state.appointments.length) seedSampleData(); // demo që duket e gjallë
   save();
   $("#setupModal").hidden = true;
   applyConfig();
@@ -1160,6 +1229,18 @@ $("#btnReset").onclick = () => {
   localStorage.removeItem(STORE_KEY);
   location.reload();
 };
+
+/* ---------------- Aksesueshmëria e modaleve ---------------- */
+// ESC mbyll modalin (setup-in vetëm kur biznesi është konfiguruar tashmë)
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!$("#apptModal").hidden) $("#apptModal").hidden = true;
+  else if (!$("#setupModal").hidden && state.config) $("#setupModal").hidden = true;
+});
+// Klik jashtë kartës mbyll modalin e takimit manual
+$("#apptModal").addEventListener("click", (e) => {
+  if (e.target === $("#apptModal")) $("#apptModal").hidden = true;
+});
 
 /* ---------------- Gjuha / Language ---------------- */
 
