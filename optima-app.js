@@ -28,6 +28,8 @@ const T = {
     toSignup: "S'ke llogari? Regjistrohu falas",
     authWait: "Një moment…",
     confirmEmail: "Të dërguam një email konfirmimi. Hape dhe kliko linkun, pastaj kthehu e hyr.",
+    accountExists: "Kjo llogari ekziston tashmë — fute fjalëkalimin dhe kliko Hyr.",
+    errWrong: "Email ose fjalëkalim i gabuar.",
     obTitle: "Krijo biznesin tënd",
     obSub: "Gati për klientë në nën 5 minuta.",
     obType: "Lloji i biznesit", obName: "Emri i biznesit", obAddress: "Adresa",
@@ -63,6 +65,8 @@ const T = {
     toSignup: "No account? Sign up free",
     authWait: "One moment…",
     confirmEmail: "We sent a confirmation email. Open it, click the link, then come back and sign in.",
+    accountExists: "This account already exists — enter your password and click Sign in.",
+    errWrong: "Wrong email or password.",
     obTitle: "Create your business",
     obSub: "Ready for customers in under 5 minutes.",
     obType: "Business type", obName: "Business name", obAddress: "Address",
@@ -165,7 +169,19 @@ function renderAuthMode() {
   $("#authTitle").textContent = authMode === "signup" ? tr("authSignupTitle") : tr("authLoginTitle");
   $("#authSubmit").textContent = authMode === "signup" ? tr("signup") : tr("login");
   $("#authToggle").textContent = authMode === "signup" ? tr("toLogin") : tr("toSignup");
-  $("#authError").textContent = "";
+  // Shënim: nuk e fshijmë authError këtu — disa mesazhe duhet të mbeten pas rirenderimit.
+}
+
+// Llogaria ekziston: kalo te hyrja, mbaj email-in, trego mesazhin
+function switchToLoginExisting(email) {
+  authMode = "login";
+  renderAuthMode();
+  $("#authEmail").value = email;
+  const err = $("#authError");
+  err.style.color = "var(--accent-deep)";
+  err.textContent = tr("accountExists");
+  $("#authPassword").value = "";
+  $("#authPassword").focus();
 }
 
 function showView(which) {
@@ -179,6 +195,7 @@ async function handleAuth(e) {
   const email = $("#authEmail").value.trim();
   const pass = $("#authPassword").value;
   const err = $("#authError");
+  err.style.color = "var(--red)";
   err.textContent = "";
   if (!email || pass.length < 6) { err.textContent = tr("errFields"); return; }
 
@@ -187,8 +204,16 @@ async function handleAuth(e) {
   try {
     if (authMode === "signup") {
       const { data, error } = await sb.auth.signUp({ email, password: pass });
-      if (error) throw error;
-      if (!data.session) { // kërkohet konfirmim email-i
+      if (error) {
+        // Llogaria ekziston tashmë → drejtoje te hyrja
+        if (/already|registered|exists/i.test(error.message)) { switchToLoginExisting(email); return; }
+        throw error;
+      }
+      // Anti-enumeration i Supabase: përdoruesi ekzistues kthehet me identities bosh
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        switchToLoginExisting(email); return;
+      }
+      if (!data.session) { // llogari e re që kërkon konfirmim email-i
         err.style.color = "var(--accent-deep)";
         err.textContent = tr("confirmEmail");
         return;
@@ -196,7 +221,10 @@ async function handleAuth(e) {
       await afterLogin();
     } else {
       const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-      if (error) throw error;
+      if (error) {
+        if (/invalid login|credentials/i.test(error.message)) { err.textContent = tr("errWrong"); return; }
+        throw error;
+      }
       await afterLogin();
     }
   } catch (ex) {
@@ -544,7 +572,11 @@ function wire() {
       if (!$("#appView").hidden && biz) loadAll(); };
   });
   $("#authForm").addEventListener("submit", handleAuth);
-  $("#authToggle").onclick = () => { authMode = authMode === "signup" ? "login" : "signup"; renderAuthMode(); };
+  $("#authToggle").onclick = () => {
+    authMode = authMode === "signup" ? "login" : "signup";
+    $("#authError").textContent = "";
+    renderAuthMode();
+  };
   $("#obAddService").onclick = () => addServiceRow(null);
   $("#obFinish").onclick = finishOnboard;
   $("#btnLogout").onclick = logout;
