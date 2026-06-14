@@ -1,9 +1,9 @@
-/* RezervoAI service worker — network-first me rezervë nga cache.
+/* OptimaBook service worker — network-first me rezervë nga cache.
    Faqja hapet edhe pa internet pasi është vizituar një herë. */
 
 "use strict";
 
-const CACHE = "rezervoai-v1";
+const CACHE = "optimabook-v1";
 
 self.addEventListener("install", () => self.skipWaiting());
 

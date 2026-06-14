@@ -1,5 +1,5 @@
 /* =====================================================================
-   RezervoAI — Demo i Fazës 1 (dygjuhësh: Shqip + English)
+   OptimaBook — Demo i Fazës 1 (dygjuhësh: Shqip + English)
    Tre shtylla: (1) motori i pagabueshëm i rezervimeve,
    (2) biseda AI që rezervon VETËM orare reale nga kalendari,
    (3) paneli i pronarit.

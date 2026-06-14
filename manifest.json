@@ -1,6 +1,6 @@
 {
-  "name": "RezervoAI — Recepsionisti AI",
-  "short_name": "RezervoAI",
+  "name": "OptimaBook — Recepsionisti AI",
+  "short_name": "OptimaBook",
   "description": "The AI receptionist that never sleeps — bookings, reminders and customer chat on WhatsApp, 24/7, in any language.",
   "start_url": "./demo.html",
   "scope": "./",

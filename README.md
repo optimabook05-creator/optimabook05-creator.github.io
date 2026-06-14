@@ -1,4 +1,4 @@
-# RezervoAI — Recepsionisti AI që nuk fle kurrë
+# OptimaBook — Recepsionisti AI që nuk fle kurrë
 
 Demo i Fazës 1: platforma ku bizneset e shërbimit (berberë, dentistë, sallone…)
 marrin rezervime automatikisht në WhatsApp nga një AI, me kujtesa që ulin mungesat.

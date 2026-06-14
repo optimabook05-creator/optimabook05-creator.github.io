@@ -9,5 +9,5 @@
   <rect width="512" height="512" rx="120" fill="url(#g)"/>
   <rect width="512" height="256" rx="120" fill="#ffffff" opacity=".14"/>
   <text x="256" y="352" font-family="Sora, Segoe UI, sans-serif" font-size="300" font-weight="800"
-        text-anchor="middle" fill="#ffffff">R</text>
+        text-anchor="middle" fill="#ffffff">O</text>
 </svg>
