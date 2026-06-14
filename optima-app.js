@@ -188,6 +188,7 @@ function showView(which) {
   $("#authView").hidden = which !== "auth";
   $("#onboardView").hidden = which !== "onboard";
   $("#appView").hidden = which !== "app";
+  $("#btnLogout").hidden = which === "auth"; // "Dil" shfaqet kur je brenda
 }
 
 async function handleAuth(e) {
@@ -450,8 +451,9 @@ function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
 
 async function renderAppointments() {
   const list = $("#apptList"); list.innerHTML = "";
+  const today = fmtDate(new Date());
   const { data } = await sb.from("appointments").select("*").eq("business_id", biz.id)
-    .order("appt_date").order("appt_time");
+    .gte("appt_date", today).order("appt_date").order("appt_time");
   const appts = data || [];
   if (!appts.length) { list.innerHTML = `<div class="empty">${tr("emptyAppt")}</div>`; return; }
   for (const a of appts) {
@@ -561,6 +563,9 @@ function applyLang() {
     b.classList.toggle("active", b.dataset.l === lang));
   document.querySelectorAll("[data-t]").forEach((el) => {
     const v = T[lang][el.dataset.t]; if (v !== undefined) el.textContent = v;
+  });
+  document.querySelectorAll("[data-t-ph]").forEach((el) => {
+    const v = T[lang][el.dataset.tPh]; if (v !== undefined) el.placeholder = v;
   });
   renderAuthMode();
 }
