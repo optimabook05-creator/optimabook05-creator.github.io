@@ -244,7 +244,6 @@ async function loadHours() {
 async function loadAll() {
   await Promise.all([loadServices(), loadHours()]);
   $("#bizName").textContent = tr("panelPrefix") + biz.name;
-  $("#bizAvatar").textContent = biz.name.charAt(0).toUpperCase();
   await renderAll();
 }
 
