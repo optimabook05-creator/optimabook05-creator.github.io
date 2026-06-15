@@ -51,9 +51,13 @@ const SQ_MON = ["janar", "shkurt", "mars", "prill", "maj", "qershor", "korrik", 
 const EN_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const EN_MON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-// Konfirmim i përsosur, i ndërtuar në kod — gjithmonë i plotë dhe i bukur.
-function buildConfirmation(svc: any, dateStr: string, time: string, biz: any): string {
-  const isSq = biz.lang !== "en";
+// Konfirmim i përsosur, i ndërtuar në kod për shqip/anglisht (tregjet tona).
+// Për gjuhë të tjera kthen null → përdoret përgjigja e AI-së në atë gjuhë.
+function buildConfirmation(svc: any, dateStr: string, time: string, biz: any, lang?: string): string | null {
+  const code = (lang || biz.lang || "sq").toLowerCase();
+  const isSq = code.startsWith("sq");
+  const isEn = code.startsWith("en");
+  if (!isSq && !isEn) return null;
   const d = parseDate(dateStr);
   const today = fmtDate(new Date());
   const tom = fmtDate(new Date(Date.now() + 864e5));
@@ -69,8 +73,11 @@ function buildConfirmation(svc: any, dateStr: string, time: string, biz: any): s
     : `✅ Booked! ${svc.name} — ${dayLabel}, ${time}${price}${addr}\nSee you! 🙌`;
 }
 
-function buildCancellation(dateStr: string, time: string, biz: any): string {
-  const isSq = biz.lang !== "en";
+function buildCancellation(dateStr: string, time: string, biz: any, lang?: string): string | null {
+  const code = (lang || biz.lang || "sq").toLowerCase();
+  const isSq = code.startsWith("sq");
+  const isEn = code.startsWith("en");
+  if (!isSq && !isEn) return null;
   const d = parseDate(dateStr);
   const days = isSq ? SQ_DAYS : EN_DAYS;
   const mon = isSq ? SQ_MON : EN_MON;
@@ -165,6 +172,7 @@ async function askGemini(system: string, contents: any[]) {
             type: "OBJECT",
             properties: {
               reply: { type: "STRING" },
+              lang: { type: "STRING" },
               wants_to_book: { type: "BOOLEAN" },
               wants_to_cancel: { type: "BOOLEAN" },
               service: { type: "STRING" },
@@ -241,6 +249,7 @@ Deno.serve(async (req) => {
       `LANGUAGE (critical):`,
       `- ALWAYS write the "reply" field in ${bizLang}. Only exception: the customer writes a full sentence clearly in another language — then mirror it.`,
       `- Greetings, "ok", "/start", names, numbers and single words are ALWAYS ${bizLang}. Never drift to English.`,
+      `- Always set the "lang" field to the ISO code of the language you are writing the reply in (e.g. "sq", "en", "it", "de", "fr").`,
       ``,
       `SERVICES (name — duration minutes — price):`,
       services.map((s: any) => `- ${s.name} — ${s.duration_min} min — ${s.price}`).join("\n"),
@@ -255,7 +264,7 @@ Deno.serve(async (req) => {
       ``,
       `TIMES: "ora 2 pasdite"/"2pm" = 14:00, "ora 3" afternoon = 15:00, "ora 10" morning = 10:00. Map to one of the available start times.`,
       ``,
-      `BOOKING: the moment you can determine service + a real date + an available time, set wants_to_book=true and fill service (exact name from the list), date (YYYY-MM-DD), time (HH:MM). Do not re-confirm what you already have. Only ask when something essential is genuinely missing. (The system writes the final confirmation message itself, so keep your reply short when booking.)`,
+      `BOOKING: the moment you can determine service + a real date + an available time, set wants_to_book=true and fill service (exact name from the list), date (YYYY-MM-DD), time (HH:MM). Do not re-confirm what you already have. Only ask when something essential is genuinely missing. When booking, also write a complete, warm confirmation in your reply — include the service, the day, the time and the price — in the customer's language.`,
       ``,
       `CANCELLING: if the customer wants to cancel their appointment or says they can't come (e.g. "anulo", "s'vij dot", "nuk mund të vij", "cancel", "can't make it"), set wants_to_cancel=true. (The system writes the cancellation message itself.)`,
       ``,
@@ -290,7 +299,7 @@ Deno.serve(async (req) => {
           });
           if (!error) {
             booked = true;
-            reply = buildConfirmation(svc, out.date, wantTime, biz);
+            reply = buildConfirmation(svc, out.date, wantTime, biz, out.lang) || reply;
             await supabase.from("notifications").insert({
               business_id,
               text: `✅ AI booking: ${client_name || "client"} — ${svc.name}, ${out.date} ${wantTime}`,
@@ -314,7 +323,7 @@ Deno.serve(async (req) => {
       if (up) {
         await supabase.from("appointments").update({ status: "cancelled" }).eq("id", up.id);
         cancelled = true;
-        reply = buildCancellation(up.appt_date, hm(up.appt_time), biz);
+        reply = buildCancellation(up.appt_date, hm(up.appt_time), biz, out.lang) || reply;
         await supabase.from("notifications").insert({
           business_id,
           text: `❌ AI cancel: ${up.client_name} — ${up.appt_date} ${hm(up.appt_time)}`,
