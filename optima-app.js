@@ -253,7 +253,9 @@ async function logout() {
    DATA
    ===================================================================== */
 async function loadBusiness() {
-  const { data } = await sb.from("businesses").select("*").limit(1).maybeSingle();
+  // Gjithmonë biznesi i parë (më i vjetri) — i njëjti panel çdo herë
+  const { data } = await sb.from("businesses").select("*")
+    .order("created_at", { ascending: true }).limit(1).maybeSingle();
   biz = data || null;
 }
 
@@ -378,6 +380,10 @@ async function finishOnboard() {
 
   btn.disabled = true; btn.textContent = tr("authWait");
   try {
+    // Mbrojtje nga dublikatat: nëse biznesi ekziston tashmë, hap panelin
+    await loadBusiness();
+    if (biz) { await loadAll(); showView("app"); return; }
+
     const { data: { user } } = await sb.auth.getUser();
     const { data: b, error } = await sb.from("businesses").insert({
       owner_id: user.id, name, type: $("#obType").value,
