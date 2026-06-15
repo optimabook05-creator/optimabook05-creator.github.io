@@ -45,6 +45,30 @@ function norm(s: string) {
   return (s || "").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c").trim();
 }
 
+const parseDate = (s: string) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const SQ_DAYS = ["E diel", "E hënë", "E martë", "E mërkurë", "E enjte", "E premte", "E shtunë"];
+const SQ_MON = ["janar", "shkurt", "mars", "prill", "maj", "qershor", "korrik", "gusht", "shtator", "tetor", "nëntor", "dhjetor"];
+const EN_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const EN_MON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+// Konfirmim i përsosur, i ndërtuar në kod — gjithmonë i plotë dhe i bukur.
+function buildConfirmation(svc: any, dateStr: string, time: string, biz: any): string {
+  const isSq = biz.lang !== "en";
+  const d = parseDate(dateStr);
+  const today = fmtDate(new Date());
+  const tom = fmtDate(new Date(Date.now() + 864e5));
+  const days = isSq ? SQ_DAYS : EN_DAYS;
+  const mon = isSq ? SQ_MON : EN_MON;
+  let dayLabel = `${days[d.getDay()]}, ${d.getDate()} ${mon[d.getMonth()]}`;
+  if (dateStr === today) dayLabel = (isSq ? "sot, " : "today, ") + dayLabel;
+  else if (dateStr === tom) dayLabel = (isSq ? "nesër, " : "tomorrow, ") + dayLabel;
+  const addr = biz.address ? `\n📍 ${biz.name}, ${biz.address}` : `\n📍 ${biz.name}`;
+  const price = Number(svc.price) ? ` · ${svc.price}€` : "";
+  return isSq
+    ? `✅ U rezervua! ${svc.name} — ${dayLabel}, ora ${time}${price}${addr}\nTë presim! 🙌`
+    : `✅ Booked! ${svc.name} — ${dayLabel}, ${time}${price}${addr}\nSee you! 🙌`;
+}
+
 /* ---------------- Motori i orareve ---------------- */
 function freeSlots(
   dateStr: string,
@@ -168,14 +192,42 @@ Deno.serve(async (req) => {
     const todayStr = fmtDate(new Date());
 
     const bizLang = biz.lang === "en" ? "English" : "Albanian";
+    const firstName = (client_name || "").trim().split(" ")[0];
+    const examples = biz.lang === "en"
+      ? [
+          `Customer: do you have a slot tomorrow for a haircut?`,
+          `You: Yes, of course! Tomorrow I have 2:00 PM, 3:30 PM or 5:00 PM free — which works best for you? 😊`,
+          `Customer: 3pm`,
+          `You: Perfect, you're all set! ✅`,
+          `Customer: how much is it?`,
+          `You: A haircut is 15€. Want me to find you a time? 😊`,
+          `Customer: where are you?`,
+          `You: We're easy to find — want me to book you in while you're here?`,
+        ].join("\n")
+      : [
+          `Klienti: a ke nesër një orar për qethje?`,
+          `Ti: Po, patjetër! Nesër kam të lira 14:00, 15:30 ose 17:00 — cila të rri më mirë? 😊`,
+          `Klienti: ora 3`,
+          `Ti: Perfekt, je sistemuar! ✅`,
+          `Klienti: sa kushton?`,
+          `Ti: Qethja është 15€. Të gjej një orar? 😊`,
+          `Klienti: ku ndodheni?`,
+          `Ti: Na gjen lehtë — të të rezervoj një orar ndërkohë?`,
+        ].join("\n");
+
     const system = [
-      `You are the warm, professional booking receptionist for "${biz.name}".`,
+      `You are the booking receptionist for "${biz.name}" — warm, friendly and efficient, like the best human receptionist a customer has ever talked to.${firstName ? ` The customer's name is ${firstName}; use it naturally and warmly now and then.` : ""}`,
       biz.address ? `Address: ${biz.address}.` : "",
       `Today is ${DOW[new Date().getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
       ``,
+      `STYLE — this is what makes you world-class, not beginner:`,
+      `- Warm, human, natural — sound genuinely happy to help. Acknowledge, then act.`,
+      `- Keep it to 1–2 short sentences. Never robotic, never a wall of text or a dump of all times.`,
+      `- When offering times, suggest only 2–3 good options.`,
+      `- Use one tasteful emoji now and then (not in every message).`,
+      ``,
       `LANGUAGE (critical):`,
-      `- ALWAYS write the "reply" field in ${bizLang}, no matter what the message is.`,
-      `- The ONLY exception: the customer writes a COMPLETE sentence clearly in another language — then mirror that language and keep using it.`,
+      `- ALWAYS write the "reply" field in ${bizLang}. Only exception: the customer writes a full sentence clearly in another language — then mirror it.`,
       `- Greetings, "ok", "/start", names, numbers and single words are ALWAYS ${bizLang}. Never drift to English.`,
       ``,
       `SERVICES (name — duration minutes — price):`,
@@ -185,15 +237,16 @@ Deno.serve(async (req) => {
       availability,
       ``,
       `CONTEXT (critical) — read the WHOLE conversation history:`,
-      `- Information is spread across earlier messages. The date is often in a previous message (e.g. "nesër" = tomorrow = the next calendar day). Compute the real date yourself.`,
+      `- The date is often in an earlier message (e.g. "nesër" = tomorrow = the next calendar day). Compute the real date yourself.`,
       `- NEVER ask again for the service, date or time if it already appears anywhere in the conversation.`,
       `- If the business has only one service and the customer asked about it, assume that service.`,
       ``,
-      `TIMES: understand informal times — "ora 2 pasdite"/"2pm" = 14:00, "ora 3" afternoon = 15:00, "ora 10" morning = 10:00. Map to one of the available start times.`,
+      `TIMES: "ora 2 pasdite"/"2pm" = 14:00, "ora 3" afternoon = 15:00, "ora 10" morning = 10:00. Map to one of the available start times.`,
       ``,
-      `BOOKING: the moment you can determine service + a real date + an available time (from the conversation and availability), you MUST set wants_to_book=true and fill service (exact name from the list), date (YYYY-MM-DD), time (HH:MM). Do not re-confirm what you already have. Only ask when something essential is genuinely missing. A service needs enough consecutive time for its full duration.`,
+      `BOOKING: the moment you can determine service + a real date + an available time, set wants_to_book=true and fill service (exact name from the list), date (YYYY-MM-DD), time (HH:MM). Do not re-confirm what you already have. Only ask when something essential is genuinely missing. (The system writes the final confirmation message itself, so keep your reply short when booking.)`,
       ``,
-      `"reply" is the exact message the customer reads — short, warm, natural, never robotic.`,
+      `EXAMPLES of your tone for the "reply" field — match this warmth and brevity:`,
+      examples,
     ].filter(Boolean).join("\n");
 
     const contents: any[] = [];
@@ -222,6 +275,7 @@ Deno.serve(async (req) => {
           });
           if (!error) {
             booked = true;
+            reply = buildConfirmation(svc, out.date, wantTime, biz);
             await supabase.from("notifications").insert({
               business_id,
               text: `✅ AI booking: ${client_name || "client"} — ${svc.name}, ${out.date} ${wantTime}`,
