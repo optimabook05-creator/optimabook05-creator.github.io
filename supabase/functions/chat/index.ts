@@ -69,6 +69,17 @@ function buildConfirmation(svc: any, dateStr: string, time: string, biz: any): s
     : `✅ Booked! ${svc.name} — ${dayLabel}, ${time}${price}${addr}\nSee you! 🙌`;
 }
 
+function buildCancellation(dateStr: string, time: string, biz: any): string {
+  const isSq = biz.lang !== "en";
+  const d = parseDate(dateStr);
+  const days = isSq ? SQ_DAYS : EN_DAYS;
+  const mon = isSq ? SQ_MON : EN_MON;
+  const dayLabel = `${days[d.getDay()]}, ${d.getDate()} ${mon[d.getMonth()]}`;
+  return isSq
+    ? `Takimi yt i ${dayLabel} në orën ${time} u anulua dhe orari u lirua. Kur të duash një tjetër, më shkruaj! 😊`
+    : `Your appointment on ${dayLabel} at ${time} has been cancelled and the slot is free again. Message me anytime to rebook! 😊`;
+}
+
 /* ---------------- Motori i orareve ---------------- */
 function freeSlots(
   dateStr: string,
@@ -155,6 +166,7 @@ async function askGemini(system: string, contents: any[]) {
             properties: {
               reply: { type: "STRING" },
               wants_to_book: { type: "BOOLEAN" },
+              wants_to_cancel: { type: "BOOLEAN" },
               service: { type: "STRING" },
               date: { type: "STRING" },
               time: { type: "STRING" },
@@ -175,7 +187,7 @@ async function askGemini(system: string, contents: any[]) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const { business_id, text, client_name, client_phone, history } = await req.json();
+    const { business_id, text, client_name, client_phone, history, channel, chat_id } = await req.json();
     if (!business_id || !text) {
       return json({ error: "business_id and text are required" }, 400);
     }
@@ -245,6 +257,8 @@ Deno.serve(async (req) => {
       ``,
       `BOOKING: the moment you can determine service + a real date + an available time, set wants_to_book=true and fill service (exact name from the list), date (YYYY-MM-DD), time (HH:MM). Do not re-confirm what you already have. Only ask when something essential is genuinely missing. (The system writes the final confirmation message itself, so keep your reply short when booking.)`,
       ``,
+      `CANCELLING: if the customer wants to cancel their appointment or says they can't come (e.g. "anulo", "s'vij dot", "nuk mund të vij", "cancel", "can't make it"), set wants_to_cancel=true. (The system writes the cancellation message itself.)`,
+      ``,
       `EXAMPLES of your tone for the "reply" field — match this warmth and brevity:`,
       examples,
     ].filter(Boolean).join("\n");
@@ -270,8 +284,9 @@ Deno.serve(async (req) => {
         if (free.includes(wantTime)) {
           const { error } = await supabase.from("appointments").insert({
             business_id, service_id: svc.id,
-            client_name: client_name || "WhatsApp", client_phone: client_phone || null,
+            client_name: client_name || "Klient", client_phone: client_phone || null,
             appt_date: out.date, appt_time: wantTime, status: "pending", source: "ai",
+            channel: channel || null, chat_id: chat_id || null,
           });
           if (!error) {
             booked = true;
@@ -289,7 +304,25 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ reply, booked });
+    // ---- Anulim: lirohet orari automatikisht ----
+    let cancelled = false;
+    if (out.wants_to_cancel && chat_id) {
+      const today = fmtDate(new Date());
+      const { data: up } = await supabase.from("appointments").select("*")
+        .eq("business_id", business_id).eq("chat_id", chat_id).neq("status", "cancelled")
+        .gte("appt_date", today).order("appt_date").order("appt_time").limit(1).maybeSingle();
+      if (up) {
+        await supabase.from("appointments").update({ status: "cancelled" }).eq("id", up.id);
+        cancelled = true;
+        reply = buildCancellation(up.appt_date, hm(up.appt_time), biz);
+        await supabase.from("notifications").insert({
+          business_id,
+          text: `❌ AI cancel: ${up.client_name} — ${up.appt_date} ${hm(up.appt_time)}`,
+        });
+      }
+    }
+
+    return json({ reply, booked, cancelled });
   } catch (e) {
     return json({ error: String(e?.message || e) }, 500);
   }

@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
     const r = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${PUBLISHABLE}` },
-      body: JSON.stringify({ business_id: businessId, text: msg.text, client_name: name, history }),
+      body: JSON.stringify({ business_id: businessId, text: msg.text, client_name: name, history, channel: "telegram", chat_id: chatId }),
     });
     const out = await r.json().catch(() => ({}));
     const reply = out.reply || "…";
