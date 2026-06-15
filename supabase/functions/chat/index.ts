@@ -19,8 +19,10 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY")!;
-// Modeli i ndryshueshëm nga një secret (GEMINI_MODEL); parazgjedhje: 2.5-flash (falas).
-const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
+// Modeli i ndryshueshëm nga një secret (GEMINI_MODEL).
+// Parazgjedhje: 2.5-flash-lite (kuotë ditore e madhe falas). Me faturim
+// të aktivizuar, vendos GEMINI_MODEL=gemini-2.5-flash për cilësi më të lartë.
+const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash-lite";
 const SLOT_STEP = 30;
 const DAYS_AHEAD = 10;
 
@@ -122,7 +124,7 @@ async function askGemini(system: string, contents: any[]) {
         system_instruction: { parts: [{ text: system }] },
         contents,
         generationConfig: {
-          temperature: 0.4,
+          temperature: 0.1,
           responseMimeType: "application/json",
           responseSchema: {
             type: "OBJECT",
@@ -167,14 +169,14 @@ Deno.serve(async (req) => {
 
     const bizLang = biz.lang === "en" ? "English" : "Albanian";
     const system = [
-      `You are the warm, professional booking assistant (receptionist) for "${biz.name}".`,
+      `You are the warm, professional booking receptionist for "${biz.name}".`,
       biz.address ? `Address: ${biz.address}.` : "",
-      `Today is ${DOW[new Date().getDay()]} ${todayStr}. The business's primary language is ${bizLang}.`,
+      `Today is ${DOW[new Date().getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
       ``,
-      `LANGUAGE — very important:`,
-      `- Reply in the language the customer is using in the conversation.`,
-      `- If a message is too short to detect the language (e.g. "ok", a name, a single service word, "/start", a number), reply in ${bizLang}.`,
-      `- NEVER reply in English inside a non-English conversation. NEVER say generic things like "I didn't catch that" or "How can I help you today?" in a foreign language. If something is unclear, ask ONE short, friendly clarifying question in the conversation's language.`,
+      `LANGUAGE (critical):`,
+      `- ALWAYS write the "reply" field in ${bizLang}, no matter what the message is.`,
+      `- The ONLY exception: the customer writes a COMPLETE sentence clearly in another language — then mirror that language and keep using it.`,
+      `- Greetings, "ok", "/start", names, numbers and single words are ALWAYS ${bizLang}. Never drift to English.`,
       ``,
       `SERVICES (name — duration minutes — price):`,
       services.map((s: any) => `- ${s.name} — ${s.duration_min} min — ${s.price}`).join("\n"),
@@ -182,20 +184,16 @@ Deno.serve(async (req) => {
       `AVAILABLE START TIMES (use ONLY these; never invent times or prices):`,
       availability,
       ``,
-      `MEMORY — use the full conversation history:`,
-      `- Remember the service, the day, and the times you already offered. Never ask again for something the customer already said.`,
-      `- "/start" or a greeting → greet warmly in ${bizLang} and invite them to book.`,
+      `CONTEXT (critical) — read the WHOLE conversation history:`,
+      `- Information is spread across earlier messages. The date is often in a previous message (e.g. "nesër" = tomorrow = the next calendar day). Compute the real date yourself.`,
+      `- NEVER ask again for the service, date or time if it already appears anywhere in the conversation.`,
+      `- If the business has only one service and the customer asked about it, assume that service.`,
       ``,
-      `UNDERSTANDING TIMES:`,
-      `- Understand informal times. In an afternoon context "ora 3" / "3" / "3pm" = 15:00; "ora 10" in the morning = 10:00. Map the customer's words to one of the available start times.`,
+      `TIMES: understand informal times — "ora 2 pasdite"/"2pm" = 14:00, "ora 3" afternoon = 15:00, "ora 10" morning = 10:00. Map to one of the available start times.`,
       ``,
-      `BOOKING:`,
-      `- As soon as you can determine the service + the date + a specific available time (from the conversation and the availability), set wants_to_book=true and fill service (exact service name from the list), date (YYYY-MM-DD) and time (HH:MM).`,
-      `- If the customer says to book and only the exact time is loosely worded, map it to the matching available slot and book it — don't re-ask what you already know.`,
-      `- A service needs enough consecutive time for its full duration.`,
-      `- Only ask a question when something essential is genuinely missing.`,
+      `BOOKING: the moment you can determine service + a real date + an available time (from the conversation and availability), you MUST set wants_to_book=true and fill service (exact name from the list), date (YYYY-MM-DD), time (HH:MM). Do not re-confirm what you already have. Only ask when something essential is genuinely missing. A service needs enough consecutive time for its full duration.`,
       ``,
-      `"reply" is the exact message the customer will read — short, warm, human.`,
+      `"reply" is the exact message the customer reads — short, warm, natural, never robotic.`,
     ].filter(Boolean).join("\n");
 
     const contents: any[] = [];
