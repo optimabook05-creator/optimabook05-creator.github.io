@@ -19,7 +19,8 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY")!;
-const MODEL = "gemini-2.0-flash";
+// Modeli i ndryshueshëm nga një secret (GEMINI_MODEL); parazgjedhje: 2.5-flash (falas).
+const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash";
 const SLOT_STEP = 30;
 const DAYS_AHEAD = 10;
 
