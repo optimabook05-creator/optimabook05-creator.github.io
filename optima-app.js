@@ -47,6 +47,14 @@ const T = {
     emptyBlock: "Asnjë bllokim.", remove: "Hiq",
     statActive: "Takime aktive", statRevenue: "Të ardhura të rezervuara",
     statAi: "Rezervuar nga AI", statConfirmed: "Të konfirmuara",
+    statThisMonth: "Të ardhura këtë muaj", statVsLast: "vs muaji i kaluar",
+    statPeakDay: "Dita më e ngarkuar", statPeakHour: "Ora e pikut",
+    statCancelRate: "Norma e anulimeve", statAiShare: "Punon AI për ty",
+    statNoShow: "rrezik mungese", secInsights: "Çfarë të thotë biznesi",
+    secTopServices: "Shërbimet më të kërkuara", secVip: "Klientët më besnikë",
+    secLoad: "Ngarkesa — 7 ditët e ardhshme", visitsW: "vizita", bookingsW: "rezervime",
+    statNoData: "Ende pa të dhëna — sapo të vijnë takimet, këtu shfaqet analiza e biznesit tënd.",
+    aiSaved: "takime të zëna nga AI pa ty", revTrendUp: "rritje", revTrendDown: "rënie", revTrendFlat: "njësoj",
     manTitle: "Takim manual", manClient: "Emri i klientit", manService: "Shërbimi",
     manDate: "Data", manTime: "Ora", save: "Ruaj", cancel: "Anulo", noSlots: "— s'ka orar të lirë —",
     pickTime: "Zgjidh një orar (dita është plot ose mbyllur).",
@@ -84,6 +92,14 @@ const T = {
     emptyBlock: "No blocks.", remove: "Remove",
     statActive: "Active appointments", statRevenue: "Booked revenue",
     statAi: "Booked by AI", statConfirmed: "Confirmed",
+    statThisMonth: "Revenue this month", statVsLast: "vs last month",
+    statPeakDay: "Busiest day", statPeakHour: "Peak hour",
+    statCancelRate: "Cancellation rate", statAiShare: "AI works for you",
+    statNoShow: "no-show risk", secInsights: "What your business tells you",
+    secTopServices: "Top services", secVip: "Most loyal clients",
+    secLoad: "Load — next 7 days", visitsW: "visits", bookingsW: "bookings",
+    statNoData: "No data yet — once appointments arrive, your business analytics appear here.",
+    aiSaved: "appointments handled by AI without you", revTrendUp: "up", revTrendDown: "down", revTrendFlat: "flat",
     manTitle: "Manual appointment", manClient: "Customer name", manService: "Service",
     manDate: "Date", manTime: "Time", save: "Save", cancel: "Cancel", noSlots: "— no free slots —",
     pickTime: "Pick a time (the day is full or closed).",
@@ -518,17 +534,143 @@ async function renderBlocks() {
 }
 
 async function renderStats() {
-  const { data } = await sb.from("appointments").select("service_id,status,source").eq("business_id", biz.id);
+  // Marrim çdo takim me emrin/çmimin e shërbimit (edhe nëse shërbimi është çaktivizuar)
+  const { data } = await sb.from("appointments")
+    .select("appt_date, appt_time, status, source, client_name, services(name, price)")
+    .eq("business_id", biz.id);
   const appts = data || [];
+  const grid = $("#statsGrid");
+
+  if (!appts.length) {
+    grid.innerHTML = `<div class="bi-empty">${tr("statNoData")}</div>`;
+    return;
+  }
+
   const active = appts.filter((a) => a.status !== "cancelled");
-  const revenue = active.reduce((s, a) => { const v = svcById(a.service_id); return s + (v ? Number(v.price) : 0); }, 0);
-  const ai = appts.filter((a) => a.source === "ai" && a.status !== "cancelled").length;
-  const conf = appts.filter((a) => a.status === "confirmed").length;
-  $("#statsGrid").innerHTML = `
-    <div class="stat-card"><div class="num">${active.length}</div><div class="lbl">${tr("statActive")}</div></div>
-    <div class="stat-card highlight"><div class="num">${revenue}€</div><div class="lbl">${tr("statRevenue")}</div></div>
-    <div class="stat-card"><div class="num">${ai}</div><div class="lbl">${tr("statAi")}</div></div>
-    <div class="stat-card highlight"><div class="num">${conf}</div><div class="lbl">${tr("statConfirmed")}</div></div>`;
+  const price = (a) => (a.services ? Number(a.services.price) || 0 : 0);
+  const svcName = (a) => (a.services ? a.services.name : "—");
+
+  // ----- Të ardhura këtë muaj vs muaji i kaluar -----
+  const now = new Date();
+  const ym = (d) => d.getFullYear() * 12 + d.getMonth();
+  const thisYM = ym(now), lastYM = thisYM - 1;
+  let revThis = 0, revLast = 0;
+  for (const a of active) {
+    const m = ym(parseDate(a.appt_date));
+    if (m === thisYM) revThis += price(a);
+    else if (m === lastYM) revLast += price(a);
+  }
+  let trendHtml = "";
+  if (revLast > 0) {
+    const pct = Math.round(((revThis - revLast) / revLast) * 100);
+    const word = pct > 0 ? tr("revTrendUp") : pct < 0 ? tr("revTrendDown") : tr("revTrendFlat");
+    const cls = pct > 0 ? "up" : pct < 0 ? "down" : "";
+    const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "■";
+    trendHtml = `<span class="trend ${cls}">${arrow} ${Math.abs(pct)}% ${word}</span>`;
+  }
+
+  // ----- Norma e anulimeve -----
+  const cancelled = appts.length - active.length;
+  const cancelRate = appts.length ? Math.round((cancelled / appts.length) * 100) : 0;
+
+  // ----- Pjesa e AI -----
+  const aiCount = active.filter((a) => a.source === "ai").length;
+  const aiShare = active.length ? Math.round((aiCount / active.length) * 100) : 0;
+
+  // ----- Dita më e ngarkuar + ora e pikut -----
+  const byDow = Array(7).fill(0), byHour = {};
+  for (const a of active) {
+    byDow[parseDate(a.appt_date).getDay()]++;
+    const h = parseInt(hm(a.appt_time).slice(0, 2), 10);
+    byHour[h] = (byHour[h] || 0) + 1;
+  }
+  const peakDowIdx = byDow.indexOf(Math.max(...byDow));
+  const peakDay = Math.max(...byDow) > 0 ? T[lang].dayNames[peakDowIdx] : "—";
+  const peakHourNum = Object.keys(byHour).sort((a, b) => byHour[b] - byHour[a])[0];
+  const peakHour = peakHourNum !== undefined ? `${pad(peakHourNum)}:00` : "—";
+
+  // ----- Shërbimet TOP -----
+  const svcMap = {};
+  for (const a of active) { const n = svcName(a); svcMap[n] = (svcMap[n] || 0) + 1; }
+  const topSvc = Object.entries(svcMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const maxSvc = topSvc.length ? topSvc[0][1] : 1;
+
+  // ----- Klientët VIP -----
+  const cliMap = {};
+  for (const a of active) { const n = a.client_name || "—"; cliMap[n] = (cliMap[n] || 0) + 1; }
+  const vip = Object.entries(cliMap).filter(([, c]) => c >= 1).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  // ----- Ngarkesa 7 ditë -----
+  const next7 = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    const ds = fmtDate(d);
+    next7.push([d, active.filter((a) => a.appt_date === ds).length]);
+  }
+  const maxLoad = Math.max(1, ...next7.map((x) => x[1]));
+
+  const cancelCls = cancelRate >= 25 ? "warn" : "";
+
+  grid.innerHTML = `
+    <div class="stats-grid-top">
+      <div class="stat-card highlight">
+        <div class="num">${revThis}€</div>
+        <div class="lbl">${tr("statThisMonth")}</div>
+        ${trendHtml || `<span class="trend muted">${tr("statVsLast")}: ${revLast}€</span>`}
+      </div>
+      <div class="stat-card">
+        <div class="num">${active.length}</div>
+        <div class="lbl">${tr("statActive")}</div>
+      </div>
+      <div class="stat-card ai">
+        <div class="num">${aiShare}%</div>
+        <div class="lbl">${tr("statAiShare")}</div>
+        <span class="trend muted">${aiCount} ${tr("aiSaved")}</span>
+      </div>
+      <div class="stat-card ${cancelCls}">
+        <div class="num">${cancelRate}%</div>
+        <div class="lbl">${tr("statCancelRate")}</div>
+      </div>
+    </div>
+
+    <h3 class="bi-h">${tr("secInsights")}</h3>
+    <div class="bi-insights">
+      <div class="bi-chip"><span class="bi-ico">📅</span><div><div class="bi-k">${tr("statPeakDay")}</div><div class="bi-v">${peakDay}</div></div></div>
+      <div class="bi-chip"><span class="bi-ico">⏰</span><div><div class="bi-k">${tr("statPeakHour")}</div><div class="bi-v">${peakHour}</div></div></div>
+    </div>
+
+    <div class="bi-cols">
+      <div class="bi-box">
+        <h3 class="bi-h">${tr("secTopServices")}</h3>
+        ${topSvc.map(([n, c]) => `
+          <div class="bi-bar-row">
+            <span class="bi-bar-lbl">${esc(n)}</span>
+            <span class="bi-bar"><span class="bi-bar-fill" style="width:${Math.round((c / maxSvc) * 100)}%"></span></span>
+            <span class="bi-bar-num">${c}</span>
+          </div>`).join("")}
+      </div>
+      <div class="bi-box">
+        <h3 class="bi-h">${tr("secVip")}</h3>
+        ${vip.map(([n, c], i) => `
+          <div class="bi-vip-row">
+            <span class="bi-rank">${["🥇","🥈","🥉","4","5"][i]}</span>
+            <span class="bi-vip-name">${esc(n)}</span>
+            <span class="bi-vip-c">${c} ${tr("visitsW")}</span>
+          </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="bi-box">
+      <h3 class="bi-h">${tr("secLoad")}</h3>
+      <div class="bi-load">
+        ${next7.map(([d, c]) => `
+          <div class="bi-load-col">
+            <span class="bi-load-num">${c || ""}</span>
+            <span class="bi-load-bar" style="height:${Math.max(6, Math.round((c / maxLoad) * 90))}px"></span>
+            <span class="bi-load-day">${T[lang].dayNames[d.getDay()].slice(0, lang === "sq" ? 3 : 3)}</span>
+          </div>`).join("")}
+      </div>
+    </div>`;
 }
 
 /* ---------------- Takim manual ---------------- */
