@@ -1,15 +1,13 @@
 // =====================================================================
-// OptimaBook — Truri AI (Edge Function "chat")
-// Merr mesazhin e klientit → Gemini kupton → motori jep orare reale /
-// rezervon → kthen përgjigjen. Flet ÇDO gjuhë (Gemini).
+// OptimaBook — Truri AI (HIBRID)
+// Shtresa 1: RREGULLA falas (përshëndetje, çmime, orar, rezervim i plotë,
+//            anulim) — pa kuotë, punojnë gjithmonë.
+// Shtresa 2: AI (Gemini) — vetëm për mesazhet që rregullat s'i kapin dot
+//            (dialekt, fraza të paqarta, gjuhë të tjera).
+// Nëse AI s'është i disponueshëm (kuotë), kthen mesazh të sjellshëm, jo "...".
 //
-// Parime "më i miri në botë":
-//   • AI NUK shpik kurrë orare — i jepen vetëm oraret reale nga databaza.
-//   • Rezervimi RIKONTROLLOHET në moment (transaksional) → s'dyfishohet.
-//   • Çelësi Gemini + service role rrinë VETËM në server (asnjëherë frontend).
-//
-// Hyrje (POST JSON): { business_id, text, client_name?, client_phone?, history? }
-// Dalje (JSON):      { reply, booked? }
+// Hyrje (POST JSON): { business_id, text, client_name?, client_phone?, history?, channel?, chat_id? }
+// Dalje (JSON):      { reply, booked?, cancelled?, via }
 // =====================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -19,9 +17,6 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY")!;
-// Modeli i ndryshueshëm nga një secret (GEMINI_MODEL).
-// Parazgjedhje: 2.5-flash-lite (kuotë ditore e madhe falas). Me faturim
-// të aktivizuar, vendos GEMINI_MODEL=gemini-2.5-flash për cilësi më të lartë.
 const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash-lite";
 const SLOT_STEP = 30;
 const DAYS_AHEAD = 10;
@@ -38,63 +33,52 @@ const hm = (t: string) => (t ? t.slice(0, 5) : t);
 const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 const toHM = (m: number) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseDate = (s: string) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-function norm(s: string) {
-  return (s || "").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c").trim();
-}
-
-const parseDate = (s: string) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const SQ_DAYS = ["E diel", "E hënë", "E martë", "E mërkurë", "E enjte", "E premte", "E shtunë"];
 const SQ_MON = ["janar", "shkurt", "mars", "prill", "maj", "qershor", "korrik", "gusht", "shtator", "tetor", "nëntor", "dhjetor"];
 const EN_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const EN_MON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-// Konfirmim i përsosur, i ndërtuar në kod për shqip/anglisht (tregjet tona).
-// Për gjuhë të tjera kthen null → përdoret përgjigja e AI-së në atë gjuhë.
-function buildConfirmation(svc: any, dateStr: string, time: string, biz: any, lang?: string): string | null {
-  const code = (lang || biz.lang || "sq").toLowerCase();
-  const isSq = code.startsWith("sq");
-  const isEn = code.startsWith("en");
-  if (!isSq && !isEn) return null;
+function norm(s: string) {
+  return (s || "").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c").replace(/['']/g, " ").replace(/\s+/g, " ").trim();
+}
+const isSqLang = (biz: any, lang?: string) => (lang || biz.lang || "sq").toLowerCase().startsWith("sq");
+const isEnLang = (biz: any, lang?: string) => (lang || biz.lang || "sq").toLowerCase().startsWith("en");
+
+function humanDay(dateStr: string, sq: boolean): string {
   const d = parseDate(dateStr);
   const today = fmtDate(new Date());
   const tom = fmtDate(new Date(Date.now() + 864e5));
-  const days = isSq ? SQ_DAYS : EN_DAYS;
-  const mon = isSq ? SQ_MON : EN_MON;
-  let dayLabel = `${days[d.getDay()]}, ${d.getDate()} ${mon[d.getMonth()]}`;
-  if (dateStr === today) dayLabel = (isSq ? "sot, " : "today, ") + dayLabel;
-  else if (dateStr === tom) dayLabel = (isSq ? "nesër, " : "tomorrow, ") + dayLabel;
+  const days = sq ? SQ_DAYS : EN_DAYS;
+  const mon = sq ? SQ_MON : EN_MON;
+  let label = `${days[d.getDay()]}, ${d.getDate()} ${mon[d.getMonth()]}`;
+  if (dateStr === today) label = (sq ? "sot, " : "today, ") + label;
+  else if (dateStr === tom) label = (sq ? "nesër, " : "tomorrow, ") + label;
+  return label;
+}
+
+function buildConfirmation(svc: any, dateStr: string, time: string, biz: any, lang?: string): string | null {
+  if (!isSqLang(biz, lang) && !isEnLang(biz, lang)) return null;
+  const sq = isSqLang(biz, lang);
   const addr = biz.address ? `\n📍 ${biz.name}, ${biz.address}` : `\n📍 ${biz.name}`;
   const price = Number(svc.price) ? ` · ${svc.price}€` : "";
-  return isSq
-    ? `✅ U rezervua! ${svc.name} — ${dayLabel}, ora ${time}${price}${addr}\nTë presim! 🙌`
-    : `✅ Booked! ${svc.name} — ${dayLabel}, ${time}${price}${addr}\nSee you! 🙌`;
+  return sq
+    ? `✅ U rezervua! ${svc.name} — ${humanDay(dateStr, true)}, ora ${time}${price}${addr}\nTë presim! 🙌`
+    : `✅ Booked! ${svc.name} — ${humanDay(dateStr, false)}, ${time}${price}${addr}\nSee you! 🙌`;
 }
 
 function buildCancellation(dateStr: string, time: string, biz: any, lang?: string): string | null {
-  const code = (lang || biz.lang || "sq").toLowerCase();
-  const isSq = code.startsWith("sq");
-  const isEn = code.startsWith("en");
-  if (!isSq && !isEn) return null;
-  const d = parseDate(dateStr);
-  const days = isSq ? SQ_DAYS : EN_DAYS;
-  const mon = isSq ? SQ_MON : EN_MON;
-  const dayLabel = `${days[d.getDay()]}, ${d.getDate()} ${mon[d.getMonth()]}`;
-  return isSq
-    ? `Takimi yt i ${dayLabel} në orën ${time} u anulua dhe orari u lirua. Kur të duash një tjetër, më shkruaj! 😊`
-    : `Your appointment on ${dayLabel} at ${time} has been cancelled and the slot is free again. Message me anytime to rebook! 😊`;
+  if (!isSqLang(biz, lang) && !isEnLang(biz, lang)) return null;
+  const sq = isSqLang(biz, lang);
+  return sq
+    ? `Takimi yt i ${humanDay(dateStr, true)} në orën ${time} u anulua dhe orari u lirua. Kur të duash një tjetër, më shkruaj! 😊`
+    : `Your appointment on ${humanDay(dateStr, false)} at ${time} has been cancelled and the slot is free again. Message me anytime to rebook! 😊`;
 }
 
 /* ---------------- Motori i orareve ---------------- */
-function freeSlots(
-  dateStr: string,
-  durMin: number,
-  hoursRow: { open_time: string | null; close_time: string | null; is_closed: boolean } | undefined,
-  appts: { appt_time: string; dur: number }[],
-  blocks: { from_time: string; to_time: string }[],
-): string[] {
+function freeSlots(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], includePast = false): string[] {
   if (!hoursRow || hoursRow.is_closed || !hoursRow.open_time || !hoursRow.close_time) return [];
   const open = toMin(hm(hoursRow.open_time));
   const close = toMin(hm(hoursRow.close_time));
@@ -104,13 +88,12 @@ function freeSlots(
   const nowM = new Date().getHours() * 60 + new Date().getMinutes();
   const out: string[] = [];
   for (let t = open; t + durMin <= close; t += SLOT_STEP) {
-    if (isToday && t <= nowM) continue;
+    if (!includePast && isToday && t <= nowM) continue;
     if (!busy.some(([s, e]) => t < e && t + durMin > s)) out.push(toHM(t));
   }
   return out;
 }
 
-/* ---------------- Ngarkesa e biznesit ---------------- */
 async function loadContext(businessId: string) {
   const [{ data: biz }, { data: services }, { data: hours }] = await Promise.all([
     supabase.from("businesses").select("*").eq("id", businessId).maybeSingle(),
@@ -128,10 +111,8 @@ function hoursByDow(hours: any[]) {
 
 async function busyFor(businessId: string, dateStr: string, svcDur: Record<string, number>) {
   const [{ data: appts }, { data: blocks }] = await Promise.all([
-    supabase.from("appointments").select("appt_time,service_id")
-      .eq("business_id", businessId).eq("appt_date", dateStr).neq("status", "cancelled"),
-    supabase.from("time_blocks").select("from_time,to_time")
-      .eq("business_id", businessId).eq("block_date", dateStr),
+    supabase.from("appointments").select("appt_time,service_id").eq("business_id", businessId).eq("appt_date", dateStr).neq("status", "cancelled"),
+    supabase.from("time_blocks").select("from_time,to_time").eq("business_id", businessId).eq("block_date", dateStr),
   ]);
   return {
     appts: (appts || []).map((a) => ({ appt_time: a.appt_time, dur: svcDur[a.service_id] || SLOT_STEP })),
@@ -139,56 +120,272 @@ async function busyFor(businessId: string, dateStr: string, svcDur: Record<strin
   };
 }
 
-/* ---------------- Disponueshmëria për promptin ---------------- */
-async function buildAvailability(businessId: string, services: any[], hMap: Record<number, any>, svcDur: Record<string, number>) {
-  const minDur = Math.min(...services.map((s) => s.duration_min), SLOT_STEP);
+/* ---------------- Parsuesi (shqip + anglisht) ---------------- */
+function parseDay(tx: string): string | null {
+  if (tx.includes("pasneser") || tx.includes("day after tomorrow")) return fmtDate(new Date(Date.now() + 2 * 864e5));
+  if (tx.includes("neser") || tx.includes("tomorrow")) return fmtDate(new Date(Date.now() + 864e5));
+  if (/\bsot\b/.test(tx) || /\btoday\b/.test(tx) || /\btonight\b/.test(tx)) return fmtDate(new Date());
+  const days: [string, number][] = [
+    ["e diel", 0], ["sunday", 0], ["e hene", 1], ["te henen", 1], ["monday", 1],
+    ["e marte", 2], ["te marten", 2], ["tuesday", 2], ["e merkure", 3], ["te merkuren", 3], ["wednesday", 3],
+    ["e enjte", 4], ["te enjten", 4], ["thursday", 4], ["e premte", 5], ["te premten", 5], ["friday", 5],
+    ["e shtune", 6], ["te shtunen", 6], ["saturday", 6],
+  ];
+  for (const [name, dow] of days) {
+    if (tx.includes(name)) {
+      const d = new Date();
+      let diff = (dow - d.getDay() + 7) % 7;
+      if (diff === 0) diff = 7;
+      d.setDate(d.getDate() + diff);
+      return fmtDate(d);
+    }
+  }
+  return null;
+}
+function parsePeriod(tx: string): [number, number] | null {
+  if (tx.includes("paradite") || tx.includes("mengjes") || tx.includes("morning")) return [0, 12 * 60];
+  if (tx.includes("pasdite") || tx.includes("dreke") || tx.includes("afternoon") || tx.includes("noon")) return [12 * 60, 18 * 60];
+  if (tx.includes("mbremje") || tx.includes("darke") || tx.includes("evening") || tx.includes("tonight")) return [17 * 60, 24 * 60];
+  return null;
+}
+function parseTime(tx: string): string | null {
+  let h: number | null = null, min = 0, mer: string | null = null;
+  let m = tx.match(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/);
+  if (m) { h = +m[1]; min = +m[2]; mer = m[3] || null; }
+  else {
+    m = tx.match(/\b(\d{1,2})\s*(am|pm)\b/);
+    if (m) { h = +m[1]; mer = m[2]; }
+    else { m = tx.match(/\b(?:ora|oren|ne|tek?|at)\s+(\d{1,2})\b/) || tx.match(/^(\d{1,2})$/); if (m) h = +m[1]; }
+  }
+  if (h === null || h > 23 || min > 59) return null;
+  if (mer === "pm" && h < 12) h += 12;
+  else if (mer === "am" && h === 12) h = 0;
+  else if (!mer && h >= 1 && h <= 7) h += 12; // pasdite si parazgjedhje
+  return toHM(h * 60 + min);
+}
+function parseService(tx: string, services: any[]): any {
+  let best = null, bestScore = 0;
+  for (const s of services) {
+    const words = norm(s.name).split(/[^a-z0-9]+/).filter((w) => w.length > 2);
+    const score = words.filter((w) => tx.includes(w.slice(0, 4))).length;
+    if (score > bestScore) { bestScore = score; best = s; }
+  }
+  return best;
+}
+
+/* ---------------- Veprime (të përbashkëta për rregullat dhe AI) ---------------- */
+async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: string) {
+  const { businessId, biz, svcDur, client_name, client_phone, channel, chat_id } = ctx;
+  const { appts, blocks } = await busyFor(businessId, dateStr, svcDur);
+  const free = freeSlots(dateStr, svc.duration_min, ctx.hMap[parseDate(dateStr).getDay()], appts, blocks);
+  if (!free.includes(time)) {
+    return { booked: false, reply: null, alternatives: free.slice(0, 3) };
+  }
+  const { error } = await supabase.from("appointments").insert({
+    business_id: businessId, service_id: svc.id,
+    client_name: client_name || "Klient", client_phone: client_phone || null,
+    appt_date: dateStr, appt_time: time, status: "pending", source: "ai",
+    channel: channel || null, chat_id: chat_id || null,
+  });
+  if (error) return { booked: false, reply: null, alternatives: [] };
+  await supabase.from("notifications").insert({ business_id: businessId, text: `✅ ${client_name || "Klient"} — ${svc.name}, ${dateStr} ${time}` });
+  return { booked: true, reply: buildConfirmation(svc, dateStr, time, biz, lang) };
+}
+
+async function doCancel(ctx: any, lang?: string) {
+  const { businessId, biz, chat_id } = ctx;
+  if (!chat_id) return { cancelled: false, reply: null };
+  const today = fmtDate(new Date());
+  const { data: up } = await supabase.from("appointments").select("*")
+    .eq("business_id", businessId).eq("chat_id", chat_id).neq("status", "cancelled")
+    .gte("appt_date", today).order("appt_date").order("appt_time").limit(1).maybeSingle();
+  if (!up) return { cancelled: false, reply: null };
+  await supabase.from("appointments").update({ status: "cancelled" }).eq("id", up.id);
+  await supabase.from("notifications").insert({ business_id: businessId, text: `❌ ${up.client_name} anuloi — ${up.appt_date} ${hm(up.appt_time)}` });
+  return { cancelled: true, reply: buildCancellation(up.appt_date, hm(up.appt_time), biz, lang) };
+}
+
+/* ---------------- Shtresa 1: RREGULLAT (falas) ---------------- */
+function svcListText(services: any[]) {
+  return services.map((s) => `• ${s.name} — ${s.duration_min} min — ${s.price}€`).join("\n");
+}
+function hoursListText(hours: any[], sq: boolean) {
+  const map = hoursByDow(hours);
+  const days = sq ? SQ_DAYS : EN_DAYS;
+  return days.map((n, i) => `${n}: ${map[i] && !map[i].is_closed ? hm(map[i].open_time) + "–" + hm(map[i].close_time) : (sq ? "pushim" : "closed")}`).join("\n");
+}
+
+async function tryRules(ctx: any): Promise<any | null> {
+  const { biz, services, hours, hMap, svcDur, businessId, text, client_name } = ctx;
+  // Rregullat japin përgjigje vetëm për biznese shqip/anglisht
+  if (!isSqLang(biz) && !isEnLang(biz)) return null;
+  const sq = isSqLang(biz);
+  const tx = norm(text);
+  const name = (client_name || "").split(" ")[0];
+
+  // Anulim
+  if (/(anulo|anullo|nuk vij|s vij|s mund|nuk mund|hiqe takimin|fshije takimin|\bcancel\b|can ?t (come|make)|cannot come)/.test(tx)) {
+    const r = await doCancel(ctx);
+    if (r.cancelled) return { reply: r.reply, cancelled: true, via: "rule" };
+    return null; // s'kishte takim → le ta marrë AI/ose njoftim
+  }
+  // Çmimet
+  if (/(sa kushton|cmim|qmim|sa eshte|cmimet|sa ben|\bprice|\bcost|how much|pricing)/.test(tx)) {
+    const r = sq
+      ? `Ja shërbimet tona:\n${svcListText(services)}\n\nTë rezervoj një orar? Më thuaj ditën. 📅`
+      : `Here are our services:\n${svcListText(services)}\n\nShall I book you a slot? Tell me the day. 📅`;
+    return { reply: r, via: "rule" };
+  }
+  // Orari / adresa
+  if (/(orari|kur (jeni )?hapur|sa hapeni|kur mbyllni|ku ndodheni|ku jeni|adresa|opening hours|working hours|when.*open|where are you|address|location)/.test(tx)) {
+    const addr = biz.address ? (sq ? `📍 ${biz.name}, ${biz.address}\n\n` : `📍 ${biz.name}, ${biz.address}\n\n`) : "";
+    const r = sq ? `${addr}Orari ynë:\n${hoursListText(hours, true)}\n\nDo një rezervim? Më thuaj ditën!`
+                 : `${addr}Our hours:\n${hoursListText(hours, false)}\n\nWant to book? Tell me the day!`;
+    return { reply: r, via: "rule" };
+  }
+
+  // Rezervim: nxjerr ditën/orën/shërbimin nga mesazhi + historiku i afërt
+  const wantsBooking = /(orar|rezervo|prenot|takim|termin|te vij|a ke|a keni|dua|kur ke|\bbook\b|appointment|reserve|slot|availab|do you have|qeth|qethje)/.test(tx);
+  let day = parseDay(tx);
+  const period = parsePeriod(tx);
+  const time = parseTime(tx);
+  let svc = parseService(tx, services);
+
+  // Konteksti nga historiku (për mesazhe si "ne 3" pas një oferte)
+  const hist: any[] = ctx.history || [];
+  if (!day || !svc) {
+    for (let i = hist.length - 1; i >= 0 && i >= hist.length - 6; i--) {
+      const ht = norm(hist[i].text || "");
+      if (!day) day = parseDay(ht);
+      if (!svc) svc = parseService(ht, services);
+    }
+  }
+  if (!svc && services.length === 1) svc = services[0];
+
+  if (wantsBooking || (time && (day || svc))) {
+    if (!svc || !day) return null; // mungon info → AI e trajton më mirë
+    // Kemi shërbim + ditë
+    const { appts, blocks } = await busyFor(businessId, day, svcDur);
+    let slots = freeSlots(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks);
+    if (period) slots = slots.filter((x) => toMin(x) >= period[0] && toMin(x) < period[1]);
+    if (time) {
+      // ka orë konkrete → rezervo nëse e lirë
+      const all = freeSlots(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks);
+      if (all.includes(time)) {
+        const r = await doBook(ctx, svc, day, time);
+        if (r.booked) return { reply: r.reply, booked: true, via: "rule" };
+      }
+      const alt = all.slice(0, 3);
+      if (alt.length) {
+        return { reply: sq ? `Në ${time} jam i zënë. Të lira: ${alt.join(", ")} — cila të rri?` : `${time} is taken. Free: ${alt.join(", ")} — which works?`, via: "rule" };
+      }
+      return null;
+    }
+    // s'ka orë → ofro 2-3
+    if (slots.length) {
+      const offer = slots.slice(0, 3).join(", ");
+      return { reply: sq ? `Po, për ${humanDay(day, true)} kam të lira: ${offer}. Cila të rri më mirë? 😊` : `Yes, for ${humanDay(day, false)} I have: ${offer}. Which suits you? 😊`, via: "rule" };
+    }
+    return null; // ditë plot → le ta shpjegojë AI/ose s'ka
+  }
+
+  // Përshëndetje
+  if (/^(pershendetje|ckemi|tung|tungjatjeta|hello|hi|hey|miremengjes|mirembrema|miredita|start|\/start|alo)\b/.test(tx) && tx.length < 30) {
+    return { reply: sq ? `Përshëndetje${name ? " " + name : ""}! 👋 Si mund të ndihmoj? Mund të rezervosh orar këtu — vetëm më thuaj ditën. 😊`
+                       : `Hello${name ? " " + name : ""}! 👋 How can I help? You can book a slot here — just tell me the day. 😊`, via: "rule" };
+  }
+  // Falënderim
+  if (/(faleminderit|flm|rrofsh|thanks|thank you|thx)/.test(tx)) {
+    return { reply: sq ? "Me kënaqësi! 😊" : "You're welcome! 😊", via: "rule" };
+  }
+
+  return null; // → AI
+}
+
+/* ---------------- Shtresa 2: AI (Gemini) ---------------- */
+async function askGemini(system: string, contents: any[]) {
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_KEY}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: system }] },
+      contents,
+      generationConfig: {
+        temperature: 0.1, responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            reply: { type: "STRING" }, lang: { type: "STRING" },
+            wants_to_book: { type: "BOOLEAN" }, wants_to_cancel: { type: "BOOLEAN" },
+            service: { type: "STRING" }, date: { type: "STRING" }, time: { type: "STRING" },
+          },
+          required: ["reply", "wants_to_book"],
+        },
+      },
+    }),
+  });
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Gemini: " + JSON.stringify(data).slice(0, 200));
+  return JSON.parse(text);
+}
+
+async function buildAvailability(businessId: string, services: any[], hMap: any, svcDur: Record<string, number>) {
+  const minDur = Math.min(...services.map((s: any) => s.duration_min), SLOT_STEP);
   const lines: string[] = [];
   for (let i = 0; i < DAYS_AHEAD; i++) {
     const d = new Date(Date.now() + i * 864e5);
     const ds = fmtDate(d);
     const { appts, blocks } = await busyFor(businessId, ds, svcDur);
     const slots = freeSlots(ds, minDur, hMap[d.getDay()], appts, blocks);
-    if (slots.length) {
-      lines.push(`${DOW[d.getDay()]} ${ds} (${d.getDate()} ${MON[d.getMonth()]}): ${slots.join(", ")}`);
-    }
+    if (slots.length) lines.push(`${DOW[d.getDay()]} ${ds} (${d.getDate()} ${MON[d.getMonth()]}): ${slots.join(", ")}`);
   }
   return lines.join("\n") || "(no free slots in the next 10 days)";
 }
 
-/* ---------------- Gemini ---------------- */
-async function askGemini(system: string, contents: any[]) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: system }] },
-        contents,
-        generationConfig: {
-          temperature: 0.1,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              reply: { type: "STRING" },
-              lang: { type: "STRING" },
-              wants_to_book: { type: "BOOLEAN" },
-              wants_to_cancel: { type: "BOOLEAN" },
-              service: { type: "STRING" },
-              date: { type: "STRING" },
-              time: { type: "STRING" },
-            },
-            required: ["reply", "wants_to_book"],
-          },
-        },
-      }),
-    },
-  );
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("Gemini: " + JSON.stringify(data).slice(0, 300));
-  return JSON.parse(text);
+async function runAI(ctx: any) {
+  const { biz, services, hMap, svcDur, businessId, text, client_name, history } = ctx;
+  const availability = await buildAvailability(businessId, services, hMap, svcDur);
+  const todayStr = fmtDate(new Date());
+  const bizLang = biz.lang === "en" ? "English" : "Albanian";
+  const firstName = (client_name || "").trim().split(" ")[0];
+  const system = [
+    `You are the warm, friendly booking receptionist for "${biz.name}".${firstName ? ` The customer's name is ${firstName}.` : ""}`,
+    biz.address ? `Address: ${biz.address}.` : "",
+    `Today is ${DOW[new Date().getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
+    `STYLE: warm, human, 1–2 short sentences, offer only 2–3 times, occasional tasteful emoji, never robotic.`,
+    `LANGUAGE: ALWAYS reply in ${bizLang} unless the customer writes a full sentence clearly in another language (then mirror it). Set "lang" to the ISO code of your reply language (sq, en, it, ...).`,
+    `SERVICES (name — minutes — price):`,
+    services.map((s: any) => `- ${s.name} — ${s.duration_min} min — ${s.price}`).join("\n"),
+    `AVAILABLE START TIMES (use ONLY these; never invent):`,
+    availability,
+    `CONTEXT: read the whole history; the date is often in an earlier message ("nesër"=tomorrow); never re-ask what's known; if one service exists assume it.`,
+    `TIMES: "ora 2 pasdite"/"2pm"=14:00, "ora 3" afternoon=15:00.`,
+    `BOOKING: when service+date+available time are known, set wants_to_book=true (exact service, date YYYY-MM-DD, time HH:MM) and write a complete warm confirmation in the customer's language.`,
+    `CANCELLING: if they want to cancel / can't come, set wants_to_cancel=true.`,
+  ].filter(Boolean).join("\n");
+
+  const contents: any[] = [];
+  for (const m of (history || []).slice(-10)) contents.push({ role: m.role === "bot" ? "model" : "user", parts: [{ text: String(m.text || "") }] });
+  contents.push({ role: "user", parts: [{ text: String(text) }] });
+
+  const out = await askGemini(system, contents);
+  let reply = out.reply || "";
+  let booked = false, cancelled = false;
+
+  if (out.wants_to_book && out.service && out.date && out.time) {
+    const svc = services.find((s: any) => norm(s.name) === norm(out.service))
+      || services.find((s: any) => norm(s.name).includes(norm(out.service)) || norm(out.service).includes(norm(s.name)));
+    if (svc) {
+      const r = await doBook(ctx, svc, out.date, hm(out.time), out.lang);
+      if (r.booked) { booked = true; reply = r.reply || reply; }
+      else if (r.alternatives?.length) reply = (reply ? reply + "\n\n" : "") + `(${r.alternatives.join(", ")})`;
+    }
+  }
+  if (out.wants_to_cancel && !booked) {
+    const r = await doCancel(ctx, out.lang);
+    if (r.cancelled) { cancelled = true; reply = r.reply || reply; }
+  }
+  return { reply, booked, cancelled, via: "ai" };
 }
 
 /* ---------------- Handler ---------------- */
@@ -196,9 +393,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const { business_id, text, client_name, client_phone, history, channel, chat_id } = await req.json();
-    if (!business_id || !text) {
-      return json({ error: "business_id and text are required" }, 400);
-    }
+    if (!business_id || !text) return json({ error: "business_id and text are required" }, 400);
 
     const { biz, services, hours } = await loadContext(business_id);
     if (!biz) return json({ error: "business not found" }, 404);
@@ -207,139 +402,28 @@ Deno.serve(async (req) => {
     const hMap = hoursByDow(hours);
     const svcDur: Record<string, number> = {};
     for (const s of services) svcDur[s.id] = s.duration_min;
+    const ctx = { businessId: business_id, biz, services, hours, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history };
 
-    const availability = await buildAvailability(business_id, services, hMap, svcDur);
-    const todayStr = fmtDate(new Date());
+    // Shtresa 1: rregullat falas
+    const ruled = await tryRules(ctx);
+    if (ruled) return json(ruled);
 
-    const bizLang = biz.lang === "en" ? "English" : "Albanian";
-    const firstName = (client_name || "").trim().split(" ")[0];
-    const examples = biz.lang === "en"
-      ? [
-          `Customer: do you have a slot tomorrow for a haircut?`,
-          `You: Yes, of course! Tomorrow I have 2:00 PM, 3:30 PM or 5:00 PM free — which works best for you? 😊`,
-          `Customer: 3pm`,
-          `You: Perfect, you're all set! ✅`,
-          `Customer: how much is it?`,
-          `You: A haircut is 15€. Want me to find you a time? 😊`,
-          `Customer: where are you?`,
-          `You: We're easy to find — want me to book you in while you're here?`,
-        ].join("\n")
-      : [
-          `Klienti: a ke nesër një orar për qethje?`,
-          `Ti: Po, patjetër! Nesër kam të lira 14:00, 15:30 ose 17:00 — cila të rri më mirë? 😊`,
-          `Klienti: ora 3`,
-          `Ti: Perfekt, je sistemuar! ✅`,
-          `Klienti: sa kushton?`,
-          `Ti: Qethja është 15€. Të gjej një orar? 😊`,
-          `Klienti: ku ndodheni?`,
-          `Ti: Na gjen lehtë — të të rezervoj një orar ndërkohë?`,
-        ].join("\n");
-
-    const system = [
-      `You are the booking receptionist for "${biz.name}" — warm, friendly and efficient, like the best human receptionist a customer has ever talked to.${firstName ? ` The customer's name is ${firstName}; use it naturally and warmly now and then.` : ""}`,
-      biz.address ? `Address: ${biz.address}.` : "",
-      `Today is ${DOW[new Date().getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
-      ``,
-      `STYLE — this is what makes you world-class, not beginner:`,
-      `- Warm, human, natural — sound genuinely happy to help. Acknowledge, then act.`,
-      `- Keep it to 1–2 short sentences. Never robotic, never a wall of text or a dump of all times.`,
-      `- When offering times, suggest only 2–3 good options.`,
-      `- Use one tasteful emoji now and then (not in every message).`,
-      ``,
-      `LANGUAGE (critical):`,
-      `- ALWAYS write the "reply" field in ${bizLang}. Only exception: the customer writes a full sentence clearly in another language — then mirror it.`,
-      `- Greetings, "ok", "/start", names, numbers and single words are ALWAYS ${bizLang}. Never drift to English.`,
-      `- Always set the "lang" field to the ISO code of the language you are writing the reply in (e.g. "sq", "en", "it", "de", "fr").`,
-      ``,
-      `SERVICES (name — duration minutes — price):`,
-      services.map((s: any) => `- ${s.name} — ${s.duration_min} min — ${s.price}`).join("\n"),
-      ``,
-      `AVAILABLE START TIMES (use ONLY these; never invent times or prices):`,
-      availability,
-      ``,
-      `CONTEXT (critical) — read the WHOLE conversation history:`,
-      `- The date is often in an earlier message (e.g. "nesër" = tomorrow = the next calendar day). Compute the real date yourself.`,
-      `- NEVER ask again for the service, date or time if it already appears anywhere in the conversation.`,
-      `- If the business has only one service and the customer asked about it, assume that service.`,
-      ``,
-      `TIMES: "ora 2 pasdite"/"2pm" = 14:00, "ora 3" afternoon = 15:00, "ora 10" morning = 10:00. Map to one of the available start times.`,
-      ``,
-      `BOOKING: the moment you can determine service + a real date + an available time, set wants_to_book=true and fill service (exact name from the list), date (YYYY-MM-DD), time (HH:MM). Do not re-confirm what you already have. Only ask when something essential is genuinely missing. When booking, also write a complete, warm confirmation in your reply — include the service, the day, the time and the price — in the customer's language.`,
-      ``,
-      `CANCELLING: if the customer wants to cancel their appointment or says they can't come (e.g. "anulo", "s'vij dot", "nuk mund të vij", "cancel", "can't make it"), set wants_to_cancel=true. (The system writes the cancellation message itself.)`,
-      ``,
-      `EXAMPLES of your tone for the "reply" field — match this warmth and brevity:`,
-      examples,
-    ].filter(Boolean).join("\n");
-
-    const contents: any[] = [];
-    for (const m of (history || []).slice(-10)) {
-      contents.push({ role: m.role === "bot" ? "model" : "user", parts: [{ text: String(m.text || "") }] });
+    // Shtresa 2: AI (me mesazh të sjellshëm nëse s'është i disponueshëm)
+    try {
+      const out = await runAI(ctx);
+      return json(out);
+    } catch (_aiErr) {
+      const sq = isSqLang(biz);
+      const reply = sq
+        ? "Më fal, pata një vështirësi të vogël teknike. Mund të më shkruash ditën dhe orën që dëshiron (p.sh. \"nesër në 15:00\") dhe ta rezervoj? 🙏"
+        : "Sorry, I had a small technical hiccup. Could you tell me the day and time you'd like (e.g. \"tomorrow at 3pm\") and I'll book it? 🙏";
+      return json({ reply, via: "fallback" });
     }
-    contents.push({ role: "user", parts: [{ text: String(text) }] });
-
-    const out = await askGemini(system, contents);
-    let reply = out.reply || "";
-    let booked = false;
-
-    // ---- Rezervim transaksional: rikontroll në moment ----
-    if (out.wants_to_book && out.service && out.date && out.time) {
-      const svc = services.find((s: any) => norm(s.name) === norm(out.service))
-        || services.find((s: any) => norm(s.name).includes(norm(out.service)) || norm(out.service).includes(norm(s.name)));
-      if (svc) {
-        const wantTime = hm(out.time);
-        const { appts, blocks } = await busyFor(business_id, out.date, svcDur);
-        const free = freeSlots(out.date, svc.duration_min, hMap[new Date(out.date + "T00:00:00").getDay()], appts, blocks);
-        if (free.includes(wantTime)) {
-          const { error } = await supabase.from("appointments").insert({
-            business_id, service_id: svc.id,
-            client_name: client_name || "Klient", client_phone: client_phone || null,
-            appt_date: out.date, appt_time: wantTime, status: "pending", source: "ai",
-            channel: channel || null, chat_id: chat_id || null,
-          });
-          if (!error) {
-            booked = true;
-            reply = buildConfirmation(svc, out.date, wantTime, biz, out.lang) || reply;
-            await supabase.from("notifications").insert({
-              business_id,
-              text: `✅ AI booking: ${client_name || "client"} — ${svc.name}, ${out.date} ${wantTime}`,
-            });
-          }
-        } else if (free.length) {
-          // Orari u zu ndërkohë — ofro alternativa, mos e konfirmo
-          reply = (reply ? reply + "\n\n" : "") +
-            `(That time was just taken — still free on ${out.date}: ${free.slice(0, 4).join(", ")})`;
-        }
-      }
-    }
-
-    // ---- Anulim: lirohet orari automatikisht ----
-    let cancelled = false;
-    if (out.wants_to_cancel && chat_id) {
-      const today = fmtDate(new Date());
-      const { data: up } = await supabase.from("appointments").select("*")
-        .eq("business_id", business_id).eq("chat_id", chat_id).neq("status", "cancelled")
-        .gte("appt_date", today).order("appt_date").order("appt_time").limit(1).maybeSingle();
-      if (up) {
-        await supabase.from("appointments").update({ status: "cancelled" }).eq("id", up.id);
-        cancelled = true;
-        reply = buildCancellation(up.appt_date, hm(up.appt_time), biz, out.lang) || reply;
-        await supabase.from("notifications").insert({
-          business_id,
-          text: `❌ AI cancel: ${up.client_name} — ${up.appt_date} ${hm(up.appt_time)}`,
-        });
-      }
-    }
-
-    return json({ reply, booked, cancelled });
   } catch (e) {
-    return json({ error: String(e?.message || e) }, 500);
+    return json({ error: String((e as any)?.message || e) }, 500);
   }
 });
 
 function json(obj: unknown, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
+  return new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } });
 }
