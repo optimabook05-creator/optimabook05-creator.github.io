@@ -20,6 +20,10 @@ const supabase = createClient(
 );
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash-lite";
+// Model-agnostik: nëse vendos OPENAI_API_KEY + AI_PROVIDER=openai → përdor ChatGPT (GPT-4o-mini si parazgjedhje).
+const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
+const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+const AI_PROVIDER = (Deno.env.get("AI_PROVIDER") || "").toLowerCase();
 const SLOT_STEP = 30;
 const DAYS_AHEAD = 10;
 
@@ -407,6 +411,44 @@ async function askGemini(system: string, contents: any[]) {
   return JSON.parse(text);
 }
 
+// ChatGPT (OpenAI) — i njëjti rezultat JSON, me dalje të strukturuar (strict).
+async function askOpenAI(system: string, contents: any[]) {
+  const messages: any[] = [{ role: "system", content: system }];
+  for (const c of contents) messages.push({ role: c.role === "model" ? "assistant" : "user", content: c.parts?.[0]?.text || "" });
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_KEY}` },
+    body: JSON.stringify({
+      model: OPENAI_MODEL, temperature: 0.1, messages,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "booking", strict: true,
+          schema: {
+            type: "object", additionalProperties: false,
+            properties: {
+              reply: { type: "string" }, lang: { type: "string" },
+              wants_to_book: { type: "boolean" }, wants_to_cancel: { type: "boolean" },
+              service: { type: "string" }, date: { type: "string" }, time: { type: "string" },
+            },
+            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "service", "date", "time"],
+          },
+        },
+      },
+    }),
+  });
+  const data = await res.json();
+  const txt = data?.choices?.[0]?.message?.content;
+  if (!txt) throw new Error("OpenAI: " + JSON.stringify(data).slice(0, 200));
+  return JSON.parse(txt);
+}
+
+// Përzgjedhësi: GPT nëse është konfiguruar, përndryshe Gemini.
+async function askAI(system: string, contents: any[]) {
+  const useOpenAI = OPENAI_KEY && (AI_PROVIDER === "openai" || !GEMINI_KEY);
+  return useOpenAI ? askOpenAI(system, contents) : askGemini(system, contents);
+}
+
 async function buildAvailability(businessId: string, services: any[], hMap: any, svcDur: Record<string, number>, staff: any[]) {
   const minDur = Math.min(...services.map((s: any) => s.duration_min), SLOT_STEP);
   const lines: string[] = [];
@@ -447,7 +489,7 @@ async function runAI(ctx: any) {
   for (const m of (history || []).slice(-10)) contents.push({ role: m.role === "bot" ? "model" : "user", parts: [{ text: String(m.text || "") }] });
   contents.push({ role: "user", parts: [{ text: String(text) }] });
 
-  const out = await askGemini(system, contents);
+  const out = await askAI(system, contents);
   let reply = out.reply || "";
   let booked = false, cancelled = false;
 
