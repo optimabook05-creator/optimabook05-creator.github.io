@@ -1,3 +1,5 @@
+// @ts-nocheck  — Ekzekutohet në DENO (Supabase Edge Functions), jo në Node.
+// VSCode i shfaq gabimet si false (Deno.*, import nga URL janë të vlefshme në Deno).
 // =====================================================================
 // OptimaBook — Truri AI (HIBRID)
 // Shtresa 1: RREGULLA falas (përshëndetje, çmime, orar, rezervim i plotë,

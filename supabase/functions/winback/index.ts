@@ -1,3 +1,5 @@
+// @ts-nocheck  — Ekzekutohet në DENO (Supabase Edge Functions), jo në Node.
+// VSCode i shfaq gabimet si false (Deno.*, import nga URL janë të vlefshme në Deno).
 // =====================================================================
 // OptimaBook — Rikthimi i klientëve të humbur ("winback")
 // Thirret nga një cron (një herë në ditë). Gjen klientët që s'kanë ardhur

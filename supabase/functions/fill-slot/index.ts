@@ -1,3 +1,5 @@
+// @ts-nocheck  — Ekzekutohet në DENO (Supabase Edge Functions), jo në Node.
+// VSCode i shfaq gabimet si false (Deno.*, import nga URL janë të vlefshme në Deno).
 // =====================================================================
 // OptimaBook — Mbushja automatike e orareve bosh ("fill-slot")
 // Thirret nga një trigger në databazë kur një takim ANULOHET.

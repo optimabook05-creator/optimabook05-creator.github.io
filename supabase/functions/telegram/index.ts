@@ -1,3 +1,5 @@
+// @ts-nocheck  — Ekzekutohet në DENO (Supabase Edge Functions), jo në Node.
+// VSCode i shfaq gabimet si false (Deno.*, import nga URL janë të vlefshme në Deno).
 // =====================================================================
 // OptimaBook — Lidhësi Telegram
 // Mesazhi i klientit në Telegram → truri "chat" (AI) → përgjigja kthehet.
