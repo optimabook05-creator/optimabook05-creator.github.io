@@ -45,6 +45,10 @@ const T = {
     remind: "🔔 Kujto", confirmBtn: "✓ Konfirmo", cancelBtn: "Anulo",
     blockDesc: "Blloko orare kur s'punon.", reasonPh: "Arsyeja (opsionale)", blockBtn: "Blloko",
     emptyBlock: "Asnjë bllokim.", remove: "Hiq",
+    tabWait: "⏳ Lista e pritjes",
+    waitDesc: "Klientët që presin një orar. AI i lajmëron vetë kur lirohet një orar.",
+    emptyWait: "Asnjë në listën e pritjes.", waitWaiting: "në pritje", waitNotified: "u lajmërua",
+    periodAny: "çdo orë", periodMorning: "paradite", periodAfternoon: "pasdite", periodEvening: "mbrëmje",
     statActive: "Takime aktive", statRevenue: "Të ardhura të rezervuara",
     statAi: "Rezervuar nga AI", statConfirmed: "Të konfirmuara",
     statThisMonth: "Të ardhura këtë muaj", statVsLast: "vs muaji i kaluar",
@@ -90,6 +94,10 @@ const T = {
     remind: "🔔 Remind", confirmBtn: "✓ Confirm", cancelBtn: "Cancel",
     blockDesc: "Block times when you're off.", reasonPh: "Reason (optional)", blockBtn: "Block",
     emptyBlock: "No blocks.", remove: "Remove",
+    tabWait: "⏳ Waiting list",
+    waitDesc: "Customers waiting for a slot. AI notifies them automatically when one frees up.",
+    emptyWait: "No one waiting.", waitWaiting: "waiting", waitNotified: "notified",
+    periodAny: "any time", periodMorning: "morning", periodAfternoon: "afternoon", periodEvening: "evening",
     statActive: "Active appointments", statRevenue: "Booked revenue",
     statAi: "Booked by AI", statConfirmed: "Confirmed",
     statThisMonth: "Revenue this month", statVsLast: "vs last month",
@@ -433,7 +441,33 @@ async function finishOnboard() {
    PANELI
    ===================================================================== */
 async function renderAll() {
-  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats()]);
+  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist()]);
+}
+
+const PERIOD_LBL = { morning: "periodMorning", afternoon: "periodAfternoon", evening: "periodEvening" };
+async function renderWaitlist() {
+  const list = $("#waitList"); if (!list) return;
+  const today = fmtDate(new Date());
+  const { data } = await sb.from("waitlist").select("*, services(name)")
+    .eq("business_id", biz.id).gte("desired_date", today)
+    .in("status", ["waiting", "notified"]).order("desired_date").order("created_at");
+  const rows = data || [];
+  if (!rows.length) { list.innerHTML = `<div class="empty">${tr("emptyWait")}</div>`; return; }
+  list.innerHTML = "";
+  for (const w of rows) {
+    const svc = w.services ? w.services.name : "—";
+    const per = w.period && PERIOD_LBL[w.period] ? tr(PERIOD_LBL[w.period]) : tr("periodAny");
+    const st = w.status === "notified" ? tr("waitNotified") : tr("waitWaiting");
+    const item = document.createElement("div");
+    item.className = "block-item";
+    item.innerHTML = `<span class="grow">⏳ <strong>${esc(w.client_name || "Klient")}</strong> — ${esc(svc)} • ${humanDate(w.desired_date)} • ${per}
+      <span class="tag ${w.status === "notified" ? "confirmed" : "pending"}">${st}</span></span>`;
+    const del = document.createElement("button");
+    del.className = "btn small ghost danger"; del.textContent = tr("remove");
+    del.onclick = async () => { await sb.from("waitlist").delete().eq("id", w.id); await renderWaitlist(); };
+    item.appendChild(del);
+    list.appendChild(item);
+  }
 }
 
 async function renderCalendar() {

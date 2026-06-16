@@ -148,6 +148,12 @@ function parsePeriod(tx: string): [number, number] | null {
   if (tx.includes("mbremje") || tx.includes("darke") || tx.includes("evening") || tx.includes("tonight")) return [17 * 60, 24 * 60];
   return null;
 }
+function periodLabel(tx: string): string | null {
+  if (tx.includes("paradite") || tx.includes("mengjes") || tx.includes("morning")) return "morning";
+  if (tx.includes("pasdite") || tx.includes("dreke") || tx.includes("afternoon") || tx.includes("noon")) return "afternoon";
+  if (tx.includes("mbremje") || tx.includes("darke") || tx.includes("evening") || tx.includes("tonight")) return "evening";
+  return null;
+}
 function parseTime(tx: string): string | null {
   let h: number | null = null, min = 0, mer: string | null = null;
   let m = tx.match(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/);
@@ -205,6 +211,16 @@ async function doCancel(ctx: any, lang?: string) {
   return { cancelled: true, reply: buildCancellation(up.appt_date, hm(up.appt_time), biz, lang) };
 }
 
+// Shton klientin në listën e pritjes (mbushja automatike e orareve bosh).
+async function addWaitlist(ctx: any, svc: any, dateStr: string, period: string | null) {
+  const { businessId, channel, chat_id, client_name } = ctx;
+  await supabase.from("waitlist").insert({
+    business_id: businessId, service_id: svc?.id || null,
+    client_name: client_name || "Klient", channel: channel || null, chat_id: chat_id || null,
+    desired_date: dateStr, period: period || null, status: "waiting",
+  });
+}
+
 /* ---------------- Shtresa 1: RREGULLAT (falas) ---------------- */
 function svcListText(services: any[]) {
   return services.map((s) => `• ${s.name} — ${s.duration_min} min — ${s.price}€`).join("\n");
@@ -222,6 +238,25 @@ async function tryRules(ctx: any): Promise<any | null> {
   const sq = isSqLang(biz);
   const tx = norm(text);
   const name = (client_name || "").split(" ")[0];
+  const hist: any[] = ctx.history || [];
+
+  // Pranim i listës së pritjes (klienti tha "po" pas ofertës për mbushje orari)
+  const lastBot = [...hist].reverse().find((m: any) => m.role === "bot");
+  if (lastBot && /(list[eë]n e pritjes|waiting list)/i.test(lastBot.text || "") &&
+      /^(po|yes|dakord|okay|ok|sure|patjet[eë]r|e dua|me intereson|yes please|po ju lutem)\b/.test(tx) && ctx.chat_id) {
+    let wDay = parseDay(tx), wPeriod = periodLabel(tx), wSvc = parseService(tx, services);
+    for (let i = hist.length - 1; i >= 0 && i >= hist.length - 8; i--) {
+      const ht = norm(hist[i].text || "");
+      if (!wDay) wDay = parseDay(ht);
+      if (!wSvc) wSvc = parseService(ht, services);
+      if (!wPeriod) wPeriod = periodLabel(ht);
+    }
+    if (!wSvc && services.length === 1) wSvc = services[0];
+    if (wDay) {
+      await addWaitlist(ctx, wSvc, wDay, wPeriod);
+      return { reply: sq ? `U shtove në listën e pritjes për ${humanDay(wDay, true)} ✅ Të lajmëroj menjëherë sapo lirohet një orar! 🙌` : `You're on the waiting list for ${humanDay(wDay, false)} ✅ I'll message you the moment a slot frees up! 🙌`, via: "rule" };
+    }
+  }
 
   // Anulim
   if (/(anulo|anullo|nuk vij|s vij|s mund|nuk mund|hiqe takimin|fshije takimin|\bcancel\b|can ?t (come|make)|cannot come)/.test(tx)) {
@@ -252,7 +287,6 @@ async function tryRules(ctx: any): Promise<any | null> {
   let svc = parseService(tx, services);
 
   // Konteksti nga historiku (për mesazhe si "ne 3" pas një oferte)
-  const hist: any[] = ctx.history || [];
   if (!day || !svc) {
     for (let i = hist.length - 1; i >= 0 && i >= hist.length - 6; i--) {
       const ht = norm(hist[i].text || "");
@@ -279,14 +313,22 @@ async function tryRules(ctx: any): Promise<any | null> {
       if (alt.length) {
         return { reply: sq ? `Në ${time} jam i zënë. Të lira: ${alt.join(", ")} — cila të rri?` : `${time} is taken. Free: ${alt.join(", ")} — which works?`, via: "rule" };
       }
+      if (ctx.chat_id) {
+        return { reply: sq ? `${humanDay(day, true)} është plot 😕 Të të shtoj në listën e pritjes dhe të lajmëroj sapo lirohet një orar? Shkruaj "po". 🙌` : `${humanDay(day, false)} is full 😕 Shall I add you to the waiting list and tell you the moment a slot frees up? Reply "yes". 🙌`, via: "rule" };
+      }
       return null;
     }
-    // s'ka orë → ofro 2-3
+    // s'ka orë konkrete → ofro 2-3 (fallback te gjithë dita nëse periudha s'ka)
+    if (!slots.length && period) slots = freeSlots(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks);
     if (slots.length) {
       const offer = slots.slice(0, 3).join(", ");
       return { reply: sq ? `Po, për ${humanDay(day, true)} kam të lira: ${offer}. Cila të rri më mirë? 😊` : `Yes, for ${humanDay(day, false)} I have: ${offer}. Which suits you? 😊`, via: "rule" };
     }
-    return null; // ditë plot → le ta shpjegojë AI/ose s'ka
+    // ditë plot → ofro listën e pritjes (mbushja automatike)
+    if (ctx.chat_id) {
+      return { reply: sq ? `${humanDay(day, true)} është plot 😕 Të të shtoj në listën e pritjes dhe të lajmëroj sapo lirohet një orar? Shkruaj "po". 🙌` : `${humanDay(day, false)} is full 😕 Shall I add you to the waiting list and tell you the moment a slot frees up? Reply "yes". 🙌`, via: "rule" };
+    }
+    return null;
   }
 
   // Përshëndetje

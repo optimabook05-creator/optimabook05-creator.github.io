@@ -111,6 +111,7 @@
       <button class="tab" data-tab="appointments" data-t="tabAppt">📋 Takimet</button>
       <button class="tab" data-tab="blocks" data-t="tabBlock">⛔ Bllokime</button>
       <button class="tab" data-tab="stats" data-t="tabStat">📊 Statistika</button>
+      <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
     </nav>
 
     <div class="tab-pane active" id="pane-calendar">
@@ -142,6 +143,11 @@
 
     <div class="tab-pane" id="pane-stats">
       <div class="stats-grid" id="statsGrid"></div>
+    </div>
+
+    <div class="tab-pane" id="pane-waitlist">
+      <p class="pane-desc" data-t="waitDesc">Klientët që presin një orar. AI i lajmëron vetë kur lirohet.</p>
+      <div class="block-list" id="waitList"></div>
     </div>
   </div>
 </section>
