@@ -278,7 +278,7 @@ async function handleAuth(e) {
 
 async function afterLogin() {
   await loadBusiness();
-  if (biz) { await loadAll(); showView("app"); }
+  if (biz) { showView("app"); await loadAll(); }   // shfaq panelin së pari → s'mbetet kurrë bosh
   else { openOnboard(); showView("onboard"); }
 }
 
@@ -928,8 +928,14 @@ function wire() {
 async function init() {
   applyLang();
   wire();
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) { await afterLogin(); }
-  else { showView("auth"); }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) { await afterLogin(); }
+    else { showView("auth"); }
+  } catch (e) {
+    // Çfarëdo gabimi gjatë nisjes → trego të paktën hyrjen, kurrë faqe bosh
+    console.error("init error:", e);
+    showView("auth");
+  }
 }
 init();
