@@ -50,6 +50,11 @@ const T = {
     emptyWait: "Asnjë në listën e pritjes.", waitWaiting: "në pritje", waitNotified: "u lajmërua",
     periodAny: "çdo orë", periodMorning: "paradite", periodAfternoon: "pasdite", periodEvening: "mbrëmje",
     reviewUrlLbl: "⭐ Linku i vlerësimeve Google (për kërkesa automatike pas takimit)",
+    tabStaff: "👥 Stafi", staffDesc: "Shto staf dhe lokacione. Çdo person pret klientë paralelisht në të njëjtën orë.",
+    locNamePh: "Emri i lokacionit", locAddrPh: "Adresa (opsionale)", addLoc: "+ Lokacion",
+    staffNamePh: "Emri i personit", staffRolePh: "Roli (p.sh. berber)", addStaff: "+ Staf",
+    manStaff: "Stafi", emptyStaff: "Asnjë staf — biznes me një person.", emptyLoc: "Asnjë lokacion.",
+    allStaff: "Të gjithë stafin", noLoc: "Pa lokacion",
     statActive: "Takime aktive", statRevenue: "Të ardhura të rezervuara",
     statAi: "Rezervuar nga AI", statConfirmed: "Të konfirmuara",
     statThisMonth: "Të ardhura këtë muaj", statVsLast: "vs muaji i kaluar",
@@ -100,6 +105,11 @@ const T = {
     emptyWait: "No one waiting.", waitWaiting: "waiting", waitNotified: "notified",
     periodAny: "any time", periodMorning: "morning", periodAfternoon: "afternoon", periodEvening: "evening",
     reviewUrlLbl: "⭐ Google review link (for automatic requests after the appointment)",
+    tabStaff: "👥 Staff", staffDesc: "Add staff and locations. Each person serves customers in parallel at the same time.",
+    locNamePh: "Location name", locAddrPh: "Address (optional)", addLoc: "+ Location",
+    staffNamePh: "Person's name", staffRolePh: "Role (e.g. barber)", addStaff: "+ Staff",
+    manStaff: "Staff", emptyStaff: "No staff — single-person business.", emptyLoc: "No locations.",
+    allStaff: "All staff", noLoc: "No location",
     statActive: "Active appointments", statRevenue: "Booked revenue",
     statAi: "Booked by AI", statConfirmed: "Confirmed",
     statThisMonth: "Revenue this month", statVsLast: "vs last month",
@@ -184,6 +194,9 @@ function humanDate(ds) {
 let biz = null;            // {id, name, type, address}
 let services = [];         // [{id, name, duration_min, price}]
 let hours = {};            // weekday -> {open, close} ose null
+let staff = [];            // [{id, name, role, location_id}] — bosh = biznes me një person
+let locations = [];        // [{id, name, address}]
+let calStaff = null;       // filtri i kalendarit (id stafi) ose null = të gjithë
 let calDate = fmtDate(new Date());
 
 /* =====================================================================
@@ -300,11 +313,37 @@ async function loadHours() {
   });
 }
 
+// Stafi/lokacionet — tabela mund të mos ekzistojnë para enterprise.sql → trajtohet si biznes me një person.
+async function loadStaff() {
+  const { data } = await sb.from("staff").select("*").eq("business_id", biz.id).eq("active", true).order("sort_order").order("created_at");
+  staff = data || [];
+}
+async function loadLocations() {
+  const { data } = await sb.from("locations").select("*").eq("business_id", biz.id).order("sort_order").order("created_at");
+  locations = data || [];
+}
+
 async function loadAll() {
-  await Promise.all([loadServices(), loadHours()]);
+  await Promise.all([loadServices(), loadHours(), loadStaff(), loadLocations()]);
   $("#bizName").textContent = tr("panelPrefix") + biz.name;
   const ru = $("#reviewUrl"); if (ru) ru.value = biz.review_url || "";
+  setupStaffUI();
   await renderAll();
+}
+
+// Përgatit selektorët e stafit (filtri i kalendarit + fusha te takimi manual)
+function setupStaffUI() {
+  const has = staff.length > 0;
+  const cs = $("#calStaff");
+  if (cs) {
+    cs.hidden = !has;
+    if (has) {
+      if (calStaff && !staff.some((s) => s.id === calStaff)) calStaff = null;
+      cs.innerHTML = `<option value="">${tr("allStaff")}</option>` + staff.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+      cs.value = calStaff || "";
+    } else { calStaff = null; }
+  }
+  const mf = $("#manStaffField"); if (mf) mf.hidden = !has;
 }
 
 async function apptsForDate(ds) {
@@ -323,13 +362,18 @@ function svcById(id) { return services.find((s) => s.id === id); }
 
 // includePast=true lejon pronarin të shënojë takime manuale në çdo orar të ditës
 // (p.sh. një klient që sapo erdhi). Klienti/AI s'merr kurrë orare të shkuara.
-async function freeSlots(ds, durMin, includePast = false) {
+async function freeSlots(ds, durMin, includePast = false, staffId = null) {
   const d = parseDate(ds);
   const h = hours[d.getDay()];
   if (!h) return [];
   const open = toMin(h.open), close = toMin(h.close);
-  const appts = await apptsForDate(ds);
-  const blocks = await blocksForDate(ds);
+  let appts = await apptsForDate(ds);
+  let blocks = await blocksForDate(ds);
+  if (staffId) {
+    // Vetëm takimet/bllokimet e këtij stafi (+ bllokimet e gjithë biznesit)
+    appts = appts.filter((a) => a.staff_id === staffId);
+    blocks = blocks.filter((b) => !b.staff_id || b.staff_id === staffId);
+  }
   const busy = appts.map((a) => {
     const s = svcById(a.service_id);
     return [toMin(hm(a.appt_time)), toMin(hm(a.appt_time)) + (s ? s.duration_min : SLOT_STEP)];
@@ -444,7 +488,42 @@ async function finishOnboard() {
    PANELI
    ===================================================================== */
 async function renderAll() {
+  renderStaffPane();
   await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist()]);
+}
+
+function staffName(id) { const s = staff.find((x) => x.id === id); return s ? s.name : null; }
+
+function renderStaffPane() {
+  const sl = $("#staffLoc");
+  if (sl) sl.innerHTML = `<option value="">${tr("noLoc")}</option>` + locations.map((l) => `<option value="${l.id}">${esc(l.name)}</option>`).join("");
+
+  const ll = $("#locList");
+  if (ll) {
+    ll.innerHTML = "";
+    if (!locations.length) ll.innerHTML = `<div class="empty">${tr("emptyLoc")}</div>`;
+    for (const l of locations) {
+      const item = document.createElement("div"); item.className = "block-item";
+      item.innerHTML = `<span class="grow">📍 <strong>${esc(l.name)}</strong>${l.address ? " — " + esc(l.address) : ""}</span>`;
+      const del = document.createElement("button"); del.className = "btn small ghost danger"; del.textContent = tr("remove");
+      del.onclick = async () => { await sb.from("locations").delete().eq("id", l.id); await loadLocations(); setupStaffUI(); renderStaffPane(); };
+      item.appendChild(del); ll.appendChild(item);
+    }
+  }
+
+  const stl = $("#staffList");
+  if (stl) {
+    stl.innerHTML = "";
+    if (!staff.length) stl.innerHTML = `<div class="empty">${tr("emptyStaff")}</div>`;
+    for (const s of staff) {
+      const loc = locations.find((l) => l.id === s.location_id);
+      const item = document.createElement("div"); item.className = "block-item";
+      item.innerHTML = `<span class="grow">👤 <strong>${esc(s.name)}</strong>${s.role && s.role !== "staff" ? " • " + esc(s.role) : ""}${loc ? " • 📍 " + esc(loc.name) : ""}</span>`;
+      const del = document.createElement("button"); del.className = "btn small ghost danger"; del.textContent = tr("remove");
+      del.onclick = async () => { await sb.from("staff").update({ active: false }).eq("id", s.id); await loadStaff(); setupStaffUI(); await renderAll(); };
+      item.appendChild(del); stl.appendChild(item);
+    }
+  }
 }
 
 const PERIOD_LBL = { morning: "periodMorning", afternoon: "periodAfternoon", evening: "periodEvening" };
@@ -480,8 +559,12 @@ async function renderCalendar() {
   const h = hours[d.getDay()];
   if (!h) { tl.innerHTML = `<div class="empty">${tr("dayOff")}</div>`; return; }
   const open = toMin(h.open), close = toMin(h.close);
-  const appts = await apptsForDate(calDate);
-  const blocks = await blocksForDate(calDate);
+  let appts = await apptsForDate(calDate);
+  let blocks = await blocksForDate(calDate);
+  if (calStaff) {
+    appts = appts.filter((a) => a.staff_id === calStaff);
+    blocks = blocks.filter((b) => !b.staff_id || b.staff_id === calStaff);
+  }
   for (let t = open; t < close; t += SLOT_STEP) {
     const row = document.createElement("div");
     const appt = appts.find((a) => {
@@ -491,9 +574,10 @@ async function renderCalendar() {
     const block = blocks.find((b) => t >= toMin(hm(b.from_time)) && t < toMin(hm(b.to_time)));
     if (appt) {
       const s = svcById(appt.service_id); const isStart = toMin(hm(appt.appt_time)) === t;
+      const stf = staffName(appt.staff_id);
       row.className = "slot busy";
       row.innerHTML = `<span class="time">${toHM(t)}</span>
-        <span class="label">${isStart ? `<strong>${esc(appt.client_name)}</strong> — ${s ? esc(s.name) : ""}` : tr("cont")}</span>
+        <span class="label">${isStart ? `<strong>${esc(appt.client_name)}</strong> — ${s ? esc(s.name) : ""}${stf && !calStaff ? ` · 👤 ${esc(stf)}` : ""}` : tr("cont")}</span>
         ${isStart ? `<span class="tag ${appt.status === "confirmed" ? "confirmed" : "pending"}">${appt.status === "confirmed" ? tr("confirmed") : tr("pending")}</span>` : ""}`;
     } else if (block) {
       row.className = "slot blocked";
@@ -523,7 +607,7 @@ async function renderAppointments() {
       <div class="appt-when">${hm(a.appt_time)}<small>${d.getDate()} ${T[lang].months[d.getMonth()]}</small></div>
       <div class="appt-info">
         <div class="who">${esc(a.client_name)}</div>
-        <div class="what">${s ? esc(s.name) + " • " + s.price + "€" : ""} • ${a.source === "ai" ? tr("bookedAi") : tr("manual")}
+        <div class="what">${s ? esc(s.name) + " • " + s.price + "€" : ""} • ${a.source === "ai" ? tr("bookedAi") : tr("manual")}${staffName(a.staff_id) ? " • 👤 " + esc(staffName(a.staff_id)) : ""}
           ${a.status === "confirmed" ? ` • <span style="color:var(--accent-deep)">${tr("confirmedW")}</span>` : ""}
           ${a.status === "cancelled" ? ` • <span style="color:var(--red)">${tr("cancelledW")}</span>` : ""}
         </div>
@@ -713,14 +797,19 @@ async function renderStats() {
 /* ---------------- Takim manual ---------------- */
 async function openManual() {
   $("#manService").innerHTML = services.map((s) => `<option value="${s.id}">${esc(s.name)} (${s.duration_min} min)</option>`).join("");
+  if (staff.length) {
+    $("#manStaff").innerHTML = staff.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+    $("#manStaff").value = calStaff || staff[0].id;
+  }
   $("#manDate").value = calDate;
   await refreshManTimes();
   $("#manModal").hidden = false;
   setTimeout(() => $("#manClient").focus(), 60);
 }
+function manStaffId() { return staff.length ? ($("#manStaff").value || null) : null; }
 async function refreshManTimes() {
   const s = svcById($("#manService").value);
-  const slots = s && $("#manDate").value ? await freeSlots($("#manDate").value, s.duration_min, true) : [];
+  const slots = s && $("#manDate").value ? await freeSlots($("#manDate").value, s.duration_min, true, manStaffId()) : [];
   $("#manTime").innerHTML = slots.length ? slots.map((x) => `<option>${x}</option>`).join("")
     : `<option value="">${tr("noSlots")}</option>`;
 }
@@ -729,11 +818,16 @@ async function saveManual() {
   const time = $("#manTime").value;
   if (!client) { $("#manClient").focus(); return; }
   if (!time) { toast(tr("pickTime")); return; }
-  await sb.from("appointments").insert({
+  const sid = manStaffId();
+  const st = sid ? staff.find((x) => x.id === sid) : null;
+  const row = {
     business_id: biz.id, service_id: $("#manService").value,
     client_name: client, appt_date: $("#manDate").value, appt_time: time,
     status: "pending", source: "manual",
-  });
+  };
+  // Vendos staf vetëm kur ka staf (enterprise.sql i ekzekutuar)
+  if (sid) { row.staff_id = sid; row.location_id = st ? st.location_id : null; }
+  await sb.from("appointments").insert(row);
   $("#manModal").hidden = true; $("#manClient").value = "";
   toast(tr("toastSaved"));
   await renderAll();
@@ -785,6 +879,8 @@ function wire() {
   $("#btnAddAppt").onclick = openManual;
   $("#manService").onchange = refreshManTimes;
   $("#manDate").onchange = refreshManTimes;
+  if ($("#manStaff")) $("#manStaff").onchange = refreshManTimes;
+  if ($("#calStaff")) $("#calStaff").onchange = (e) => { calStaff = e.target.value || null; renderCalendar(); };
   $("#manCancel").onclick = () => { $("#manModal").hidden = true; };
   $("#manSave").onclick = saveManual;
   $("#manModal").addEventListener("click", (e) => { if (e.target === $("#manModal")) $("#manModal").hidden = true; });
@@ -806,6 +902,25 @@ function wire() {
       from_time: from, to_time: to, reason: $("#blockReason").value.trim() || null,
     });
     e.target.reset(); toast(tr("toastBlocked")); await renderAll();
+  });
+  if ($("#locForm")) $("#locForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = $("#locName").value.trim(); if (!name) return;
+    const { error } = await sb.from("locations").insert({
+      business_id: biz.id, name, address: $("#locAddr").value.trim() || null, sort_order: locations.length,
+    });
+    if (error) { alert(error.message); return; }
+    e.target.reset(); await loadLocations(); setupStaffUI(); renderStaffPane(); toast(tr("toastSaved"));
+  });
+  if ($("#staffForm")) $("#staffForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = $("#staffName").value.trim(); if (!name) return;
+    const { error } = await sb.from("staff").insert({
+      business_id: biz.id, name, role: $("#staffRole").value.trim() || "staff",
+      location_id: $("#staffLoc").value || null, sort_order: staff.length,
+    });
+    if (error) { alert(error.message); return; }
+    e.target.reset(); await loadStaff(); setupStaffUI(); await renderAll(); toast(tr("toastSaved"));
   });
 }
 

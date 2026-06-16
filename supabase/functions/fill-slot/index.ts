@@ -60,6 +60,19 @@ function freeSlots(dateStr: string, durMin: number, hoursRow: any, appts: any[],
   return out;
 }
 
+function freeSlotsForStaff(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staffId: string): string[] {
+  const fAppts = appts.filter((a) => a.staff_id === staffId);
+  const fBlocks = blocks.filter((b: any) => !b.staff_id || b.staff_id === staffId);
+  return freeSlots(dateStr, durMin, hoursRow, fAppts, fBlocks);
+}
+// Bashkimi mbi gjithë stafin (kapacitet paralel). Pa staf → kapacitet 1.
+function freeSlotsUnion(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staff: any[]): string[] {
+  if (!staff || !staff.length) return freeSlots(dateStr, durMin, hoursRow, appts, blocks);
+  const set = new Set<string>();
+  for (const s of staff) for (const t of freeSlotsForStaff(dateStr, durMin, hoursRow, appts, blocks, s.id)) set.add(t);
+  return [...set].sort();
+}
+
 async function sendTelegram(chatId: string, text: string) {
   await fetch(`https://api.telegram.org/bot${BOT}/sendMessage`, {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -88,12 +101,15 @@ Deno.serve(async (req) => {
     for (const s of (services || [])) svcDur[s.id] = s.duration_min;
     const minDur = Math.min(SLOT_STEP, ...(services || []).map((s: any) => s.duration_min));
 
+    // Stafi aktiv (për kapacitet paralel; bosh = biznes me një person)
+    const { data: staff } = await supabase.from("staff").select("id").eq("business_id", business_id).eq("active", true);
+
     // Të zëna për atë ditë
     const [{ data: appts }, { data: blocks }] = await Promise.all([
-      supabase.from("appointments").select("appt_time, service_id").eq("business_id", business_id).eq("appt_date", date).neq("status", "cancelled"),
-      supabase.from("time_blocks").select("from_time, to_time").eq("business_id", business_id).eq("block_date", date),
+      supabase.from("appointments").select("appt_time, service_id, staff_id").eq("business_id", business_id).eq("appt_date", date).neq("status", "cancelled"),
+      supabase.from("time_blocks").select("from_time, to_time, staff_id").eq("business_id", business_id).eq("block_date", date),
     ]);
-    const busyAppts = (appts || []).map((a: any) => ({ appt_time: a.appt_time, dur: svcDur[a.service_id] || SLOT_STEP }));
+    const busyAppts = (appts || []).map((a: any) => ({ appt_time: a.appt_time, dur: svcDur[a.service_id] || SLOT_STEP, staff_id: a.staff_id }));
 
     // Lista e pritjes për atë ditë (më të vjetrit të parët)
     const { data: waiters } = await supabase.from("waitlist")
@@ -104,7 +120,7 @@ Deno.serve(async (req) => {
     for (const w of (waiters || [])) {
       if (w.channel !== "telegram" || !w.chat_id) continue; // tani vetëm Telegram
       const dur = (w.service_id && svcDur[w.service_id]) ? svcDur[w.service_id] : minDur;
-      let slots = freeSlots(date, dur, hoursRow, busyAppts, blocks || []);
+      let slots = freeSlotsUnion(date, dur, hoursRow, busyAppts, blocks || [], staff || []);
       if (w.period && PERIODS[w.period]) {
         const [a, b] = PERIODS[w.period];
         const f = slots.filter((x) => toMin(x) >= a && toMin(x) < b);

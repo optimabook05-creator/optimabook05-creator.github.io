@@ -95,12 +95,13 @@ function freeSlots(dateStr: string, durMin: number, hoursRow: any, appts: any[],
 }
 
 async function loadContext(businessId: string) {
-  const [{ data: biz }, { data: services }, { data: hours }] = await Promise.all([
+  const [{ data: biz }, { data: services }, { data: hours }, { data: staff }] = await Promise.all([
     supabase.from("businesses").select("*").eq("id", businessId).maybeSingle(),
     supabase.from("services").select("*").eq("business_id", businessId).eq("active", true).order("sort_order"),
     supabase.from("working_hours").select("*").eq("business_id", businessId),
+    supabase.from("staff").select("id,name,location_id").eq("business_id", businessId).eq("active", true).order("sort_order"),
   ]);
-  return { biz, services: services || [], hours: hours || [] };
+  return { biz, services: services || [], hours: hours || [], staff: staff || [] };
 }
 
 function hoursByDow(hours: any[]) {
@@ -111,13 +112,37 @@ function hoursByDow(hours: any[]) {
 
 async function busyFor(businessId: string, dateStr: string, svcDur: Record<string, number>) {
   const [{ data: appts }, { data: blocks }] = await Promise.all([
-    supabase.from("appointments").select("appt_time,service_id").eq("business_id", businessId).eq("appt_date", dateStr).neq("status", "cancelled"),
-    supabase.from("time_blocks").select("from_time,to_time").eq("business_id", businessId).eq("block_date", dateStr),
+    supabase.from("appointments").select("appt_time,service_id,staff_id").eq("business_id", businessId).eq("appt_date", dateStr).neq("status", "cancelled"),
+    supabase.from("time_blocks").select("from_time,to_time,staff_id").eq("business_id", businessId).eq("block_date", dateStr),
   ]);
   return {
-    appts: (appts || []).map((a) => ({ appt_time: a.appt_time, dur: svcDur[a.service_id] || SLOT_STEP })),
+    appts: (appts || []).map((a) => ({ appt_time: a.appt_time, dur: svcDur[a.service_id] || SLOT_STEP, staff_id: a.staff_id })),
     blocks: blocks || [],
   };
+}
+
+// Oraret e lira për një staf të vetëm (filtron takimet/bllokimet e tij + bllokimet e gjithë biznesit).
+function freeSlotsForStaff(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staffId: string, includePast = false): string[] {
+  const fAppts = appts.filter((a) => a.staff_id === staffId);
+  const fBlocks = blocks.filter((b: any) => !b.staff_id || b.staff_id === staffId);
+  return freeSlots(dateStr, durMin, hoursRow, fAppts, fBlocks, includePast);
+}
+
+// Bashkimi i orareve të lira mbi gjithë stafin (kapacitet paralel). Pa staf → sjellja e vjetër (kapacitet 1).
+function freeSlotsUnion(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staff: any[], includePast = false): string[] {
+  if (!staff || !staff.length) return freeSlots(dateStr, durMin, hoursRow, appts, blocks, includePast);
+  const set = new Set<string>();
+  for (const s of staff) for (const t of freeSlotsForStaff(dateStr, durMin, hoursRow, appts, blocks, s.id, includePast)) set.add(t);
+  return [...set].sort();
+}
+
+// Kthen një staf të lirë për këtë orë (ose null nëse pa staf / asnjë i lirë).
+function pickStaffFor(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staff: any[], time: string): string | null {
+  if (!staff || !staff.length) return null;
+  for (const s of staff) {
+    if (freeSlotsForStaff(dateStr, durMin, hoursRow, appts, blocks, s.id).includes(time)) return s.id;
+  }
+  return null;
 }
 
 /* ---------------- Parsuesi (shqip + anglisht) ---------------- */
@@ -181,20 +206,27 @@ function parseService(tx: string, services: any[]): any {
 
 /* ---------------- Veprime (të përbashkëta për rregullat dhe AI) ---------------- */
 async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: string) {
-  const { businessId, biz, svcDur, client_name, client_phone, channel, chat_id } = ctx;
+  const { businessId, biz, svcDur, staff, client_name, client_phone, channel, chat_id } = ctx;
   const { appts, blocks } = await busyFor(businessId, dateStr, svcDur);
-  const free = freeSlots(dateStr, svc.duration_min, ctx.hMap[parseDate(dateStr).getDay()], appts, blocks);
+  const hoursRow = ctx.hMap[parseDate(dateStr).getDay()];
+  const free = freeSlotsUnion(dateStr, svc.duration_min, hoursRow, appts, blocks, staff);
   if (!free.includes(time)) {
     return { booked: false, reply: null, alternatives: free.slice(0, 3) };
   }
-  const { error } = await supabase.from("appointments").insert({
+  // Zgjedh një staf të lirë (null nëse biznes me një person)
+  const staffId = pickStaffFor(dateStr, svc.duration_min, hoursRow, appts, blocks, staff, time);
+  const st = staffId ? (staff || []).find((x: any) => x.id === staffId) : null;
+  const row: any = {
     business_id: businessId, service_id: svc.id,
     client_name: client_name || "Klient", client_phone: client_phone || null,
     appt_date: dateStr, appt_time: time, status: "pending", source: "ai",
     channel: channel || null, chat_id: chat_id || null,
-  });
+  };
+  // Vendos staf vetëm kur ka staf (do të thotë që enterprise.sql është ekzekutuar)
+  if (staffId) { row.staff_id = staffId; row.location_id = st ? st.location_id : null; }
+  const { error } = await supabase.from("appointments").insert(row);
   if (error) return { booked: false, reply: null, alternatives: [] };
-  await supabase.from("notifications").insert({ business_id: businessId, text: `✅ ${client_name || "Klient"} — ${svc.name}, ${dateStr} ${time}` });
+  await supabase.from("notifications").insert({ business_id: businessId, text: `✅ ${client_name || "Klient"} — ${svc.name}, ${dateStr} ${time}${st ? " (" + st.name + ")" : ""}` });
   return { booked: true, reply: buildConfirmation(svc, dateStr, time, biz, lang) };
 }
 
@@ -232,7 +264,7 @@ function hoursListText(hours: any[], sq: boolean) {
 }
 
 async function tryRules(ctx: any): Promise<any | null> {
-  const { biz, services, hours, hMap, svcDur, businessId, text, client_name } = ctx;
+  const { biz, services, hours, hMap, svcDur, businessId, text, client_name, staff } = ctx;
   // Rregullat japin përgjigje vetëm për biznese shqip/anglisht
   if (!isSqLang(biz) && !isEnLang(biz)) return null;
   const sq = isSqLang(biz);
@@ -300,11 +332,11 @@ async function tryRules(ctx: any): Promise<any | null> {
     if (!svc || !day) return null; // mungon info → AI e trajton më mirë
     // Kemi shërbim + ditë
     const { appts, blocks } = await busyFor(businessId, day, svcDur);
-    let slots = freeSlots(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks);
+    let slots = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff);
     if (period) slots = slots.filter((x) => toMin(x) >= period[0] && toMin(x) < period[1]);
     if (time) {
       // ka orë konkrete → rezervo nëse e lirë
-      const all = freeSlots(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks);
+      const all = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff);
       if (all.includes(time)) {
         const r = await doBook(ctx, svc, day, time);
         if (r.booked) return { reply: r.reply, booked: true, via: "rule" };
@@ -319,7 +351,7 @@ async function tryRules(ctx: any): Promise<any | null> {
       return null;
     }
     // s'ka orë konkrete → ofro 2-3 (fallback te gjithë dita nëse periudha s'ka)
-    if (!slots.length && period) slots = freeSlots(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks);
+    if (!slots.length && period) slots = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff);
     if (slots.length) {
       const offer = slots.slice(0, 3).join(", ");
       return { reply: sq ? `Po, për ${humanDay(day, true)} kam të lira: ${offer}. Cila të rri më mirë? 😊` : `Yes, for ${humanDay(day, false)} I have: ${offer}. Which suits you? 😊`, via: "rule" };
@@ -371,22 +403,22 @@ async function askGemini(system: string, contents: any[]) {
   return JSON.parse(text);
 }
 
-async function buildAvailability(businessId: string, services: any[], hMap: any, svcDur: Record<string, number>) {
+async function buildAvailability(businessId: string, services: any[], hMap: any, svcDur: Record<string, number>, staff: any[]) {
   const minDur = Math.min(...services.map((s: any) => s.duration_min), SLOT_STEP);
   const lines: string[] = [];
   for (let i = 0; i < DAYS_AHEAD; i++) {
     const d = new Date(Date.now() + i * 864e5);
     const ds = fmtDate(d);
     const { appts, blocks } = await busyFor(businessId, ds, svcDur);
-    const slots = freeSlots(ds, minDur, hMap[d.getDay()], appts, blocks);
+    const slots = freeSlotsUnion(ds, minDur, hMap[d.getDay()], appts, blocks, staff);
     if (slots.length) lines.push(`${DOW[d.getDay()]} ${ds} (${d.getDate()} ${MON[d.getMonth()]}): ${slots.join(", ")}`);
   }
   return lines.join("\n") || "(no free slots in the next 10 days)";
 }
 
 async function runAI(ctx: any) {
-  const { biz, services, hMap, svcDur, businessId, text, client_name, history } = ctx;
-  const availability = await buildAvailability(businessId, services, hMap, svcDur);
+  const { biz, services, hMap, svcDur, businessId, text, client_name, history, staff } = ctx;
+  const availability = await buildAvailability(businessId, services, hMap, svcDur, staff);
   const todayStr = fmtDate(new Date());
   const bizLang = biz.lang === "en" ? "English" : "Albanian";
   const firstName = (client_name || "").trim().split(" ")[0];
@@ -437,14 +469,14 @@ Deno.serve(async (req) => {
     const { business_id, text, client_name, client_phone, history, channel, chat_id } = await req.json();
     if (!business_id || !text) return json({ error: "business_id and text are required" }, 400);
 
-    const { biz, services, hours } = await loadContext(business_id);
+    const { biz, services, hours, staff } = await loadContext(business_id);
     if (!biz) return json({ error: "business not found" }, 404);
     if (!services.length) return json({ reply: "Booking is not set up yet." });
 
     const hMap = hoursByDow(hours);
     const svcDur: Record<string, number> = {};
     for (const s of services) svcDur[s.id] = s.duration_min;
-    const ctx = { businessId: business_id, biz, services, hours, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history };
+    const ctx = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history };
 
     // Shtresa 1: rregullat falas
     const ruled = await tryRules(ctx);

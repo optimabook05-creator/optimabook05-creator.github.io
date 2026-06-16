@@ -112,6 +112,7 @@
       <button class="tab" data-tab="blocks" data-t="tabBlock">⛔ Bllokime</button>
       <button class="tab" data-tab="stats" data-t="tabStat">📊 Statistika</button>
       <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
+      <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
     </nav>
 
     <div class="tab-pane active" id="pane-calendar">
@@ -120,6 +121,7 @@
         <div class="cal-date" id="calLabel"></div>
         <button class="btn small" id="calNext">›</button>
         <button class="btn small ghost" id="calToday" data-t="today">Sot</button>
+        <select id="calStaff" class="cal-staff" hidden></select>
       </div>
       <div class="timeline" id="timeline"></div>
     </div>
@@ -156,6 +158,23 @@
       <p class="pane-desc" data-t="waitDesc">Klientët që presin një orar. AI i lajmëron vetë kur lirohet.</p>
       <div class="block-list" id="waitList"></div>
     </div>
+
+    <div class="tab-pane" id="pane-staff">
+      <p class="pane-desc" data-t="staffDesc">Shto staf dhe lokacione. Çdo person pret klientë paralelisht në të njëjtën orë.</p>
+      <form class="staff-form" id="locForm">
+        <input type="text" id="locName" data-t-ph="locNamePh" placeholder="Emri i lokacionit" maxlength="40" required>
+        <input type="text" id="locAddr" data-t-ph="locAddrPh" placeholder="Adresa (opsionale)" maxlength="60">
+        <button class="btn primary small" type="submit" data-t="addLoc">+ Lokacion</button>
+      </form>
+      <div class="block-list" id="locList"></div>
+      <form class="staff-form" id="staffForm">
+        <input type="text" id="staffName" data-t-ph="staffNamePh" placeholder="Emri i personit" maxlength="40" required>
+        <input type="text" id="staffRole" data-t-ph="staffRolePh" placeholder="Roli (p.sh. berber)" maxlength="30">
+        <select id="staffLoc"></select>
+        <button class="btn primary small" type="submit" data-t="addStaff">+ Staf</button>
+      </form>
+      <div class="block-list" id="staffList"></div>
+    </div>
   </div>
 </section>
 
@@ -166,6 +185,7 @@
     <div class="modal-head"><h2 data-t="manTitle">Takim manual</h2></div>
     <label class="field"><span data-t="manClient">Emri i klientit</span><input type="text" id="manClient" maxlength="30"></label>
     <label class="field"><span data-t="manService">Shërbimi</span><select id="manService"></select></label>
+    <label class="field" id="manStaffField" hidden><span data-t="manStaff">Stafi</span><select id="manStaff"></select></label>
     <label class="field"><span data-t="manDate">Data</span><input type="date" id="manDate"></label>
     <label class="field"><span data-t="manTime">Ora</span><select id="manTime"></select></label>
     <div class="modal-actions">

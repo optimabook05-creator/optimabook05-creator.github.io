@@ -618,6 +618,18 @@ body::after {
 }
 .settings-input input:focus-visible { outline: 3px solid var(--accent-glow); outline-offset: 1px; }
 
+/* Stafi & Lokacionet */
+.staff-form { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.staff-form input, .staff-form select {
+  flex: 1; min-width: 130px; padding: 9px 12px; font-size: 14px; color: var(--ink);
+  background: var(--glass-strong); border: 1px solid var(--glass-edge); border-radius: 11px;
+}
+.staff-form input:focus-visible, .staff-form select:focus-visible { outline: 3px solid var(--accent-glow); outline-offset: 1px; }
+.cal-staff {
+  padding: 6px 11px; border-radius: 10px; border: 1px solid var(--glass-edge);
+  background: var(--glass-strong); color: var(--ink); font-size: 13px; font-weight: 600; max-width: 160px;
+}
+
 /* ---------- Modalet: xham i thellë mbi vello qumështi ---------- */
 .modal-backdrop {
   position: fixed; inset: 0;
