@@ -1,23 +1,34 @@
-# Vendosja — Mbushja automatike e orareve bosh (Faza 2)
+# Vendosja — Faza 2 (veçoritë "punonjës i mirë")
 
-Çfarë bën: kur dita është plot, AI fton klientin në **listën e pritjes**. Kur dikush **anulon**, sistemi lajmëron automatikisht klientin e parë në pritje që u lirua një orar. Orari bosh mbushet vetë.
+Tre veçori të reja (plani Pro): **mbushja automatike e orareve bosh**, **rikthimi i klientëve të humbur**, **vlerësime Google automatike**.
 
-## Hapat (në Supabase)
+> Të gjitha lajmërimet tani punojnë për **Telegram** (kanali ynë live). WhatsApp shtohet kur të lidhet (Faza 3) — kodi është gati.
 
-1. **SQL Editor** → ngjit & ekzekuto skedarin `supabase/waitlist.sql`
-   *(krijon tabelën `waitlist` + RLS + triggerin që ndizet kur anulohet një takim)*
+## Hapat në Supabase (një herë)
 
-2. **Edge Functions** → vendos funksionin e ri **`fill-slot`** (dosja `supabase/functions/fill-slot/`)
-   - Pas vendosjes: **Settings → Verify JWT = OFF** (thirret nga databaza)
+### 1. SQL Editor — ekzekuto këto 3 skedarë
+- `supabase/waitlist.sql` → tabela `waitlist` + RLS + triggeri që ndizet kur anulohet një takim
+- `supabase/winback.sql` → tabela `winback_log` + cron ditor (10:00 UTC)
+- `supabase/reviews.sql` → shton `businesses.review_url` + `appointments.review_requested` + cron ditor (11:00 UTC)
 
-3. **Edge Functions** → **ri-vendos** funksionin **`chat`** (u përditësua me logjikën e listës së pritjes)
+### 2. Edge Functions — vendos 3 funksione të reja (Verify JWT = OFF te secili)
+- `fill-slot`  (dosja `supabase/functions/fill-slot/`)
+- `winback`    (dosja `supabase/functions/winback/`)
+- `reviews`    (dosja `supabase/functions/reviews/`)
 
-4. **Faqja/Paneli**: bëj push (`git push origin master`) — shtohet skeda **⏳ Lista e pritjes**
+### 3. Edge Functions — ri-vendos funksionin ekzistues
+- `chat` (u përditësua me logjikën e listës së pritjes)
 
-## Si ta testosh
-1. Mbush një ditë plot (ose blloko oraret), pastaj në Telegram kërko atë ditë → AI ofron listën e pritjes → shkruaj **"po"**.
-2. Te paneli, anulo një takim të asaj dite (ose klienti shkruan "anulo").
-3. Klienti në pritje merr automatikisht mesazh: *"🎉 U lirua një orar…"*.
-4. Te paneli, skeda **Lista e pritjes** e tregon si **"u lajmërua"**.
+### 4. Frontend — bëj push
+`git push origin master` → del skeda **⏳ Lista e pritjes** + fusha **⭐ Linku i vlerësimeve Google** te Statistikat.
 
-> Shënim: tani lajmërimi punon për **Telegram** (kanali ynë live). WhatsApp shtohet kur të lidhet (Faza 3) — kodi është gati ta mbështesë.
+## Si t'i provosh
+
+**Mbushja automatike:** mbush një ditë plot → në Telegram kërko atë ditë → AI ofron listën e pritjes → shkruaj "po". Pastaj anulo një takim të asaj dite → klienti në pritje merr menjëherë "🎉 U lirua një orar…".
+
+**Vlerësime:** te paneli (Statistika) vendos linkun e Google → ditën pas një takimi, klienti merr kërkesën për vlerësim.
+
+**Rikthim:** ndodh vetë — klientët pa ardhur prej > 60 ditësh (pa takim të ardhshëm) marrin një ftesë miqësore. (Mund ta ndryshosh me secret-in `WINBACK_DAYS`.)
+
+## Cilësime opsionale (Edge Function secrets)
+- `WINBACK_DAYS` — sa ditë pa ardhur quhet "i humbur" (parazgjedhje 60)

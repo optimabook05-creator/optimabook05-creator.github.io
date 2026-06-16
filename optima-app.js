@@ -49,6 +49,7 @@ const T = {
     waitDesc: "Klientët që presin një orar. AI i lajmëron vetë kur lirohet një orar.",
     emptyWait: "Asnjë në listën e pritjes.", waitWaiting: "në pritje", waitNotified: "u lajmërua",
     periodAny: "çdo orë", periodMorning: "paradite", periodAfternoon: "pasdite", periodEvening: "mbrëmje",
+    reviewUrlLbl: "⭐ Linku i vlerësimeve Google (për kërkesa automatike pas takimit)",
     statActive: "Takime aktive", statRevenue: "Të ardhura të rezervuara",
     statAi: "Rezervuar nga AI", statConfirmed: "Të konfirmuara",
     statThisMonth: "Të ardhura këtë muaj", statVsLast: "vs muaji i kaluar",
@@ -98,6 +99,7 @@ const T = {
     waitDesc: "Customers waiting for a slot. AI notifies them automatically when one frees up.",
     emptyWait: "No one waiting.", waitWaiting: "waiting", waitNotified: "notified",
     periodAny: "any time", periodMorning: "morning", periodAfternoon: "afternoon", periodEvening: "evening",
+    reviewUrlLbl: "⭐ Google review link (for automatic requests after the appointment)",
     statActive: "Active appointments", statRevenue: "Booked revenue",
     statAi: "Booked by AI", statConfirmed: "Confirmed",
     statThisMonth: "Revenue this month", statVsLast: "vs last month",
@@ -301,6 +303,7 @@ async function loadHours() {
 async function loadAll() {
   await Promise.all([loadServices(), loadHours()]);
   $("#bizName").textContent = tr("panelPrefix") + biz.name;
+  const ru = $("#reviewUrl"); if (ru) ru.value = biz.review_url || "";
   await renderAll();
 }
 
@@ -767,6 +770,15 @@ function wire() {
   $("#obAddService").onclick = () => addServiceRow(null);
   $("#obFinish").onclick = finishOnboard;
   $("#btnLogout").onclick = logout;
+  const srBtn = $("#saveReviewUrl");
+  if (srBtn) srBtn.onclick = async () => {
+    const url = $("#reviewUrl").value.trim();
+    try {
+      await sb.from("businesses").update({ review_url: url || null }).eq("id", biz.id);
+      biz.review_url = url || null;
+      toast(tr("toastSaved"));
+    } catch (ex) { alert(ex.message || String(ex)); }
+  };
   $("#calPrev").onclick = () => { const d = parseDate(calDate); d.setDate(d.getDate() - 1); calDate = fmtDate(d); renderCalendar(); };
   $("#calNext").onclick = () => { const d = parseDate(calDate); d.setDate(d.getDate() + 1); calDate = fmtDate(d); renderCalendar(); };
   $("#calToday").onclick = () => { calDate = fmtDate(new Date()); renderCalendar(); };
