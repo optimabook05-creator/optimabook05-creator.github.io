@@ -272,9 +272,11 @@ async function tryRules(ctx: any): Promise<any | null> {
   const name = (client_name || "").split(" ")[0];
   const hist: any[] = ctx.history || [];
 
-  // Pranim i listës së pritjes (klienti tha "po" pas ofertës për mbushje orari)
+  // Pranim i listës së pritjes (klienti tha "po" pas OFERTËS për mbushje orari).
+  // Kërkojmë frazën unike të ofertës (jo thjesht "listën e pritjes"), që mesazhi
+  // i konfirmimit ("U shtove në listën e pritjes…") të mos ri-shtojë gabimisht.
   const lastBot = [...hist].reverse().find((m: any) => m.role === "bot");
-  if (lastBot && /(list[eë]n e pritjes|waiting list)/i.test(lastBot.text || "") &&
+  if (lastBot && /(shkruaj "po"|reply "yes")/i.test(lastBot.text || "") &&
       /^(po|yes|dakord|okay|ok|sure|patjet[eë]r|e dua|me intereson|yes please|po ju lutem)\b/.test(tx) && ctx.chat_id) {
     let wDay = parseDay(tx), wPeriod = periodLabel(tx), wSvc = parseService(tx, services);
     for (let i = hist.length - 1; i >= 0 && i >= hist.length - 8; i--) {
