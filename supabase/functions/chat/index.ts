@@ -110,6 +110,40 @@ async function loadContext(businessId: string) {
   return { biz, services: services || [], hours: hours || [], staff: staff || [] };
 }
 
+/* ---------------- State Machine: kujtesa e strukturuar e bisedës ---------------- */
+const STATE_TTL_MS = 2 * 60 * 60 * 1000; // 2 orë → pas kësaj, gjendja konsiderohet e vjetër
+function freshState(businessId: string, channel?: string, chat_id?: string) {
+  return { business_id: businessId, channel: channel || null, chat_id: chat_id || null, intent: null, service_id: null, appt_date: null, appt_time: null, persons: 1, step: "idle" };
+}
+async function loadState(businessId: string, channel?: string, chat_id?: string) {
+  if (!channel || !chat_id) return freshState(businessId, channel, chat_id);
+  try {
+    const { data } = await supabase.from("conversation_state").select("*")
+      .eq("business_id", businessId).eq("channel", channel).eq("chat_id", chat_id).maybeSingle();
+    if (!data) return freshState(businessId, channel, chat_id);
+    if (data.updated_at && (Date.now() - new Date(data.updated_at).getTime() > STATE_TTL_MS)) return freshState(businessId, channel, chat_id);
+    return data;
+  } catch (_e) { return freshState(businessId, channel, chat_id); } // tabela s'ekziston → sjellja e vjetër
+}
+async function saveState(s: any) {
+  if (!s?.channel || !s?.chat_id) return;
+  try {
+    await supabase.from("conversation_state").upsert({
+      business_id: s.business_id, channel: s.channel, chat_id: s.chat_id,
+      intent: s.intent || null, service_id: s.service_id || null,
+      appt_date: s.appt_date || null, appt_time: s.appt_time || null,
+      persons: s.persons || 1, step: s.step || "idle", updated_at: new Date().toISOString(),
+    }, { onConflict: "business_id,channel,chat_id" });
+  } catch (_e) { /* tabela s'ekziston → injoro */ }
+}
+async function clearState(businessId: string, channel?: string, chat_id?: string) {
+  if (!channel || !chat_id) return;
+  try {
+    await supabase.from("conversation_state").delete()
+      .eq("business_id", businessId).eq("channel", channel).eq("chat_id", chat_id);
+  } catch (_e) { /* injoro */ }
+}
+
 function hoursByDow(hours: any[]) {
   const map: Record<number, any> = {};
   for (const h of hours) map[h.weekday] = h;
@@ -299,6 +333,7 @@ async function tryRules(ctx: any): Promise<any | null> {
     if (!wSvc && services.length === 1) wSvc = services[0];
     if (wDay) {
       await addWaitlist(ctx, wSvc, wDay, wPeriod);
+      await clearState(businessId, ctx.channel, ctx.chat_id);
       return { reply: sq ? `U shtove në listën e pritjes për ${humanDay(wDay, true)} ✅ Të lajmëroj menjëherë sapo lirohet një orar! 🙌` : `You're on the waiting list for ${humanDay(wDay, false)} ✅ I'll message you the moment a slot frees up! 🙌`, via: "rule" };
     }
   }
@@ -306,7 +341,7 @@ async function tryRules(ctx: any): Promise<any | null> {
   // Anulim
   if (/(anulo|anullo|nuk vij|s vij|s mund|nuk mund|hiqe takimin|fshije takimin|\bcancel\b|can ?t (come|make)|cannot come)/.test(tx)) {
     const r = await doCancel(ctx);
-    if (r.cancelled) return { reply: r.reply, cancelled: true, via: "rule" };
+    if (r.cancelled) { await clearState(businessId, ctx.channel, ctx.chat_id); return { reply: r.reply, cancelled: true, via: "rule" }; }
     return null; // s'kishte takim → le ta marrë AI/ose njoftim
   }
   // Çmimet
@@ -341,8 +376,17 @@ async function tryRules(ctx: any): Promise<any | null> {
   }
   if (!svc && services.length === 1) svc = services[0];
 
+  // Kujtesa e strukturuar (më e besueshme se skanimi i historikut)
+  const st = ctx.state;
+  if (st) {
+    if (!day && st.appt_date) day = st.appt_date;
+    if (!svc && st.service_id) svc = services.find((s: any) => s.id === st.service_id) || svc;
+  }
+
   if (wantsBooking || (time && (day || svc))) {
     if (!svc || !day) return null; // mungon info → AI e trajton më mirë
+    // Ruaj gjendjen: dimë shërbimin + datën → më vonë mjafton vetëm ora ("në 11")
+    await saveState({ ...st, business_id: businessId, channel: ctx.channel, chat_id: ctx.chat_id, intent: "booking", service_id: svc.id, appt_date: day, step: "awaiting_time" });
     // Kemi shërbim + ditë
     const { appts, blocks } = await busyFor(businessId, day, svcDur);
     let slots = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff);
@@ -352,7 +396,7 @@ async function tryRules(ctx: any): Promise<any | null> {
       const all = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff);
       if (all.includes(time)) {
         const r = await doBook(ctx, svc, day, time);
-        if (r.booked) return { reply: r.reply, booked: true, via: "rule" };
+        if (r.booked) { await clearState(businessId, ctx.channel, ctx.chat_id); return { reply: r.reply, booked: true, via: "rule" }; }
       }
       const alt = all.slice(0, 3);
       if (alt.length) {
@@ -378,6 +422,7 @@ async function tryRules(ctx: any): Promise<any | null> {
 
   // Përshëndetje
   if (/^(pershendetje|ckemi|tung|tungjatjeta|hello|hi|hey|miremengjes|mirembrema|miredita|start|\/start|alo)\b/.test(tx) && tx.length < 30) {
+    await clearState(businessId, ctx.channel, ctx.chat_id);
     return { reply: sq ? `Përshëndetje${name ? " " + name : ""}! 👋 Si mund të ndihmoj? Mund të rezervosh orar këtu — vetëm më thuaj ditën. 😊`
                        : `Hello${name ? " " + name : ""}! 👋 How can I help? You can book a slot here — just tell me the day. 😊`, via: "rule" };
   }
@@ -503,13 +548,13 @@ async function runAI(ctx: any) {
       || services.find((s: any) => norm(s.name).includes(norm(out.service)) || norm(out.service).includes(norm(s.name)));
     if (svc) {
       const r = await doBook(ctx, svc, out.date, hm(out.time), out.lang);
-      if (r.booked) { booked = true; reply = r.reply || reply; }
+      if (r.booked) { booked = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
       else if (r.alternatives?.length) reply = (reply ? reply + "\n\n" : "") + `(${r.alternatives.join(", ")})`;
     }
   }
   if (out.wants_to_cancel && !booked) {
     const r = await doCancel(ctx, out.lang);
-    if (r.cancelled) { cancelled = true; reply = r.reply || reply; }
+    if (r.cancelled) { cancelled = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
   }
   return { reply, booked, cancelled, via: "ai" };
 }
@@ -528,7 +573,8 @@ Deno.serve(async (req) => {
     const hMap = hoursByDow(hours);
     const svcDur: Record<string, number> = {};
     for (const s of services) svcDur[s.id] = s.duration_min;
-    const ctx = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history };
+    const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history };
+    ctx.state = await loadState(business_id, channel, chat_id); // kujtesa e strukturuar
 
     // Shtresa 1: rregullat falas
     const ruled = await tryRules(ctx);
