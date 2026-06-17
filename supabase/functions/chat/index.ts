@@ -174,8 +174,14 @@ function parseDay(tx: string): string | null {
   return null;
 }
 function parsePeriod(tx: string): [number, number] | null {
+  // "mas 4" / "pas ore 4" / "after 4" → pas asaj ore (1-11 → pasdite)
+  let mm = tx.match(/\b(?:mas|pas|after)\s+(?:ore[sn]?\s+)?(\d{1,2})\b/);
+  if (mm) { let h = +mm[1]; if (h >= 1 && h <= 11) h += 12; if (h >= 0 && h <= 23) return [h * 60, 24 * 60]; }
+  // "para 5" / "before 5"
+  mm = tx.match(/\b(?:para|before)\s+(?:ore[sn]?\s+)?(\d{1,2})\b/);
+  if (mm) { let h = +mm[1]; if (h >= 1 && h <= 11) h += 12; if (h >= 0 && h <= 23) return [0, h * 60]; }
   if (tx.includes("paradite") || tx.includes("mengjes") || tx.includes("morning")) return [0, 12 * 60];
-  if (tx.includes("pasdite") || tx.includes("dreke") || tx.includes("afternoon") || tx.includes("noon")) return [12 * 60, 18 * 60];
+  if (tx.includes("pasdite") || tx.includes("mbasdite") || tx.includes("dreke") || tx.includes("afternoon") || tx.includes("noon")) return [12 * 60, 18 * 60];
   if (tx.includes("mbremje") || tx.includes("darke") || tx.includes("evening") || tx.includes("tonight")) return [17 * 60, 24 * 60];
   return null;
 }
@@ -187,13 +193,12 @@ function periodLabel(tx: string): string | null {
 }
 function parseTime(tx: string): string | null {
   let h: number | null = null, min = 0, mer: string | null = null;
-  let m = tx.match(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/);
+  let m = tx.match(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/);          // 11:00 / 11.00
   if (m) { h = +m[1]; min = +m[2]; mer = m[3] || null; }
-  else {
-    m = tx.match(/\b(\d{1,2})\s*(am|pm)\b/);
-    if (m) { h = +m[1]; mer = m[2]; }
-    else { m = tx.match(/\b(?:ora|oren|ne|tek?|at)\s+(\d{1,2})\b/) || tx.match(/^(\d{1,2})$/); if (m) h = +m[1]; }
-  }
+  else if ((m = tx.match(/\b(\d{1,2})\s*(am|pm)\b/))) { h = +m[1]; mer = m[2]; }   // 11am
+  else if ((m = tx.match(/\b(?:ora|oren|ne|tek?|at)\s+(\d{1,2})\b/))) { h = +m[1]; } // ora 11
+  else if ((m = tx.match(/\b([01]?\d|2[0-3])([0-5]\d)\b/))) { h = +m[1]; min = +m[2]; } // 1100 / 930
+  else if ((m = tx.match(/^(\d{1,2})$/))) { h = +m[1]; }            // vetëm "11"
   if (h === null || h > 23 || min > 59) return null;
   if (mer === "pm" && h < 12) h += 12;
   else if (mer === "am" && h === 12) h = 0;
