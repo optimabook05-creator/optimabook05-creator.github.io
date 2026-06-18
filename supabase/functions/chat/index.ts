@@ -40,6 +40,20 @@ const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h
 const toHM = (m: number) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const parseDate = (s: string) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+
+// P0-2: ora/data AKTUALE në timezone-in e biznesit (jo UTC të serverit).
+function nowInTz(tz: string): { todayStr: string; nowMin: number } {
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
+    }).formatToParts(new Date());
+    const g = (t: string) => parts.find((p) => p.type === t)?.value || "";
+    let hh = parseInt(g("hour"), 10); if (hh === 24) hh = 0;
+    return { todayStr: `${g("year")}-${g("month")}-${g("day")}`, nowMin: hh * 60 + parseInt(g("minute"), 10) };
+  } catch {
+    const d = new Date(); return { todayStr: fmtDate(d), nowMin: d.getHours() * 60 + d.getMinutes() };
+  }
+}
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const SQ_DAYS = ["E diel", "E hënë", "E martë", "E mërkurë", "E enjte", "E premte", "E shtunë"];
@@ -84,14 +98,14 @@ function buildCancellation(dateStr: string, time: string, biz: any, lang?: strin
 }
 
 /* ---------------- Motori i orareve ---------------- */
-function freeSlots(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], includePast = false): string[] {
+function freeSlots(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], includePast = false, now?: { todayStr: string; nowMin: number }): string[] {
   if (!hoursRow || hoursRow.is_closed || !hoursRow.open_time || !hoursRow.close_time) return [];
   const open = toMin(hm(hoursRow.open_time));
   const close = toMin(hm(hoursRow.close_time));
   const busy = appts.map((a) => [toMin(hm(a.appt_time)), toMin(hm(a.appt_time)) + a.dur])
     .concat(blocks.map((b) => [toMin(hm(b.from_time)), toMin(hm(b.to_time))]));
-  const isToday = dateStr === fmtDate(new Date());
-  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+  const isToday = dateStr === (now?.todayStr || fmtDate(new Date()));
+  const nowM = now?.nowMin != null ? now.nowMin : (new Date().getHours() * 60 + new Date().getMinutes());
   const out: string[] = [];
   for (let t = open; t + durMin <= close; t += SLOT_STEP) {
     if (!includePast && isToday && t <= nowM) continue;
@@ -162,35 +176,37 @@ async function busyFor(businessId: string, dateStr: string, svcDur: Record<strin
 }
 
 // Oraret e lira për një staf të vetëm (filtron takimet/bllokimet e tij + bllokimet e gjithë biznesit).
-function freeSlotsForStaff(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staffId: string, includePast = false): string[] {
+function freeSlotsForStaff(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staffId: string, includePast = false, now?: any): string[] {
   const fAppts = appts.filter((a) => a.staff_id === staffId);
   const fBlocks = blocks.filter((b: any) => !b.staff_id || b.staff_id === staffId);
-  return freeSlots(dateStr, durMin, hoursRow, fAppts, fBlocks, includePast);
+  return freeSlots(dateStr, durMin, hoursRow, fAppts, fBlocks, includePast, now);
 }
 
 // Bashkimi i orareve të lira mbi gjithë stafin (kapacitet paralel). Pa staf → sjellja e vjetër (kapacitet 1).
-function freeSlotsUnion(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staff: any[], includePast = false): string[] {
-  if (!staff || !staff.length) return freeSlots(dateStr, durMin, hoursRow, appts, blocks, includePast);
+function freeSlotsUnion(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staff: any[], includePast = false, now?: any): string[] {
+  if (!staff || !staff.length) return freeSlots(dateStr, durMin, hoursRow, appts, blocks, includePast, now);
   const set = new Set<string>();
-  for (const s of staff) for (const t of freeSlotsForStaff(dateStr, durMin, hoursRow, appts, blocks, s.id, includePast)) set.add(t);
+  for (const s of staff) for (const t of freeSlotsForStaff(dateStr, durMin, hoursRow, appts, blocks, s.id, includePast, now)) set.add(t);
   return [...set].sort();
 }
 
 // Kthen një staf të lirë për këtë orë (ose null nëse pa staf / asnjë i lirë).
-function pickStaffFor(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staff: any[], time: string): string | null {
+function pickStaffFor(dateStr: string, durMin: number, hoursRow: any, appts: any[], blocks: any[], staff: any[], time: string, now?: any): string | null {
   if (!staff || !staff.length) return null;
   for (const s of staff) {
-    if (freeSlotsForStaff(dateStr, durMin, hoursRow, appts, blocks, s.id).includes(time)) return s.id;
+    if (freeSlotsForStaff(dateStr, durMin, hoursRow, appts, blocks, s.id, false, now).includes(time)) return s.id;
   }
   return null;
 }
 
 /* ---------------- Parsuesi (shqip + anglisht) ---------------- */
-function parseDay(tx: string): string | null {
-  if (tx.includes("pasneser") || tx.includes("pasneser") || tx.includes("day after tomorrow")) return fmtDate(new Date(Date.now() + 2 * 864e5));
-  if (tx.includes("neser") || tx.includes("nesr") || tx.includes("tomorrow")) return fmtDate(new Date(Date.now() + 864e5));
+function parseDay(tx: string, todayStr?: string): string | null {
+  const base = todayStr ? parseDate(todayStr) : new Date();   // bazë në timezone-in e biznesit
+  const add = (n: number) => { const d = new Date(base); d.setDate(d.getDate() + n); return fmtDate(d); };
+  if (tx.includes("pasneser") || tx.includes("day after tomorrow")) return add(2);
+  if (tx.includes("neser") || tx.includes("nesr") || tx.includes("tomorrow")) return add(1);
   // "sot/sonte" + gabime të shpeshta drejtshkrimore (sont, somte, sonet)
-  if (/\bsot\b|\bsonte\b|\bsont\b|\bsomte\b|\bsonet\b|\btoday\b|\btonight\b/.test(tx)) return fmtDate(new Date());
+  if (/\bsot\b|\bsonte\b|\bsont\b|\bsomte\b|\bsonet\b|\btoday\b|\btonight\b/.test(tx)) return fmtDate(base);
   const days: [string, number][] = [
     ["e diel", 0], ["sunday", 0], ["e hene", 1], ["te henen", 1], ["monday", 1],
     ["e marte", 2], ["te marten", 2], ["tuesday", 2], ["e merkure", 3], ["te merkuren", 3], ["wednesday", 3],
@@ -199,7 +215,7 @@ function parseDay(tx: string): string | null {
   ];
   for (const [name, dow] of days) {
     if (tx.includes(name)) {
-      const d = new Date();
+      const d = new Date(base);
       let diff = (dow - d.getDay() + 7) % 7;
       if (diff === 0) diff = 7;
       d.setDate(d.getDate() + diff);
@@ -266,12 +282,12 @@ async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: 
   const { businessId, biz, svcDur, staff, client_name, client_phone, channel, chat_id } = ctx;
   const { appts, blocks } = await busyFor(businessId, dateStr, svcDur);
   const hoursRow = ctx.hMap[parseDate(dateStr).getDay()];
-  const free = freeSlotsUnion(dateStr, svc.duration_min, hoursRow, appts, blocks, staff);
+  const free = freeSlotsUnion(dateStr, svc.duration_min, hoursRow, appts, blocks, staff, false, ctx.now);
   if (!free.includes(time)) {
     return { booked: false, reply: null, alternatives: free.slice(0, 3) };
   }
   // Zgjedh një staf të lirë (null nëse biznes me një person)
-  const staffId = pickStaffFor(dateStr, svc.duration_min, hoursRow, appts, blocks, staff, time);
+  const staffId = pickStaffFor(dateStr, svc.duration_min, hoursRow, appts, blocks, staff, time, ctx.now);
   const st = staffId ? (staff || []).find((x: any) => x.id === staffId) : null;
   const row: any = {
     business_id: businessId, service_id: svc.id,
@@ -290,7 +306,7 @@ async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: 
 async function doCancel(ctx: any, lang?: string) {
   const { businessId, biz, chat_id } = ctx;
   if (!chat_id) return { cancelled: false, reply: null };
-  const today = fmtDate(new Date());
+  const today = ctx.todayStr || fmtDate(new Date());
   const { data: up } = await supabase.from("appointments").select("*")
     .eq("business_id", businessId).eq("chat_id", chat_id).neq("status", "cancelled")
     .gte("appt_date", today).order("appt_date").order("appt_time").limit(1).maybeSingle();
@@ -335,10 +351,10 @@ async function tryRules(ctx: any): Promise<any | null> {
   const lastBot = [...hist].reverse().find((m: any) => m.role === "bot");
   if (lastBot && /(shkruaj "po"|reply "yes")/i.test(lastBot.text || "") &&
       /^(po|yes|dakord|okay|ok|sure|patjet[eë]r|e dua|me intereson|yes please|po ju lutem)\b/.test(tx) && ctx.chat_id) {
-    let wDay = parseDay(tx), wPeriod = periodLabel(tx), wSvc = parseService(tx, services);
+    let wDay = parseDay(tx, ctx.todayStr), wPeriod = periodLabel(tx), wSvc = parseService(tx, services);
     for (let i = hist.length - 1; i >= 0 && i >= hist.length - 8; i--) {
       const ht = norm(hist[i].text || "");
-      if (!wDay) wDay = parseDay(ht);
+      if (!wDay) wDay = parseDay(ht, ctx.todayStr);
       if (!wSvc) wSvc = parseService(ht, services);
       if (!wPeriod) wPeriod = periodLabel(ht);
     }
@@ -373,7 +389,7 @@ async function tryRules(ctx: any): Promise<any | null> {
 
   // Rezervim: nxjerr ditën/orën/shërbimin nga mesazhi + historiku i afërt
   const wantsBooking = /(orar|rezervo|prenot|takim|termin|te vij|a ke|a keni|dua|kur ke|\bbook\b|appointment|reserve|slot|availab|do you have|qeth|qethje)/.test(tx);
-  let day = parseDay(tx);
+  let day = parseDay(tx, ctx.todayStr);
   const period = parsePeriod(tx);
   const time = parseTime(tx);
   let svc = parseService(tx, services);
@@ -382,7 +398,7 @@ async function tryRules(ctx: any): Promise<any | null> {
   if (!day || !svc) {
     for (let i = hist.length - 1; i >= 0 && i >= hist.length - 6; i--) {
       const ht = norm(hist[i].text || "");
-      if (!day) day = parseDay(ht);
+      if (!day) day = parseDay(ht, ctx.todayStr);
       if (!svc) svc = parseService(ht, services);
     }
   }
@@ -407,11 +423,11 @@ async function tryRules(ctx: any): Promise<any | null> {
     await saveState({ ...st, business_id: businessId, channel: ctx.channel, chat_id: ctx.chat_id, intent: "booking", service_id: svc.id, appt_date: day, step: "awaiting_time" });
     // Kemi shërbim + ditë
     const { appts, blocks } = await busyFor(businessId, day, svcDur);
-    let slots = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff);
+    let slots = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff, false, ctx.now);
     if (period) slots = slots.filter((x) => toMin(x) >= period[0] && toMin(x) < period[1]);
     if (time) {
       // ka orë konkrete → rezervo nëse e lirë
-      const all = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff);
+      const all = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff, false, ctx.now);
       if (all.includes(time)) {
         const r = await doBook(ctx, svc, day, time);
         if (r.booked) { await clearState(businessId, ctx.channel, ctx.chat_id); return { reply: r.reply, booked: true, via: "rule" }; }
@@ -426,7 +442,7 @@ async function tryRules(ctx: any): Promise<any | null> {
       return null;
     }
     // s'ka orë konkrete → ofro 2-3 (fallback te gjithë dita nëse periudha s'ka)
-    if (!slots.length && period) slots = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff);
+    if (!slots.length && period) slots = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff, false, ctx.now);
     if (slots.length) {
       const offer = slots.slice(0, 3).join(", ");
       return { reply: sq ? `Po, për ${humanDay(day, true)} kam të lira: ${offer}. Cila të rri më mirë? 😊` : `Yes, for ${humanDay(day, false)} I have: ${offer}. Which suits you? 😊`, via: "rule" };
@@ -517,14 +533,15 @@ async function askAI(system: string, contents: any[]) {
   return useOpenAI ? askOpenAI(system, contents) : askGemini(system, contents);
 }
 
-async function buildAvailability(businessId: string, services: any[], hMap: any, svcDur: Record<string, number>, staff: any[]) {
+async function buildAvailability(businessId: string, services: any[], hMap: any, svcDur: Record<string, number>, staff: any[], now?: any) {
   const minDur = Math.min(...services.map((s: any) => s.duration_min), SLOT_STEP);
+  const base = now?.todayStr ? parseDate(now.todayStr) : new Date();
   const lines: string[] = [];
   for (let i = 0; i < DAYS_AHEAD; i++) {
-    const d = new Date(Date.now() + i * 864e5);
+    const d = new Date(base); d.setDate(d.getDate() + i);
     const ds = fmtDate(d);
     const { appts, blocks } = await busyFor(businessId, ds, svcDur);
-    const slots = freeSlotsUnion(ds, minDur, hMap[d.getDay()], appts, blocks, staff);
+    const slots = freeSlotsUnion(ds, minDur, hMap[d.getDay()], appts, blocks, staff, false, now);
     if (slots.length) lines.push(`${DOW[d.getDay()]} ${ds} (${d.getDate()} ${MON[d.getMonth()]}): ${slots.join(", ")}`);
   }
   return lines.join("\n") || "(no free slots in the next 10 days)";
@@ -532,14 +549,14 @@ async function buildAvailability(businessId: string, services: any[], hMap: any,
 
 async function runAI(ctx: any) {
   const { biz, services, hMap, svcDur, businessId, text, client_name, history, staff } = ctx;
-  const availability = await buildAvailability(businessId, services, hMap, svcDur, staff);
-  const todayStr = fmtDate(new Date());
+  const availability = await buildAvailability(businessId, services, hMap, svcDur, staff, ctx.now);
+  const todayStr = ctx.todayStr || fmtDate(new Date());
   const bizLang = biz.lang === "en" ? "English" : "Albanian";
   const firstName = (client_name || "").trim().split(" ")[0];
   const system = [
     `You are the warm, friendly booking receptionist for "${biz.name}".${firstName ? ` The customer's name is ${firstName}.` : ""}`,
     biz.address ? `Address: ${biz.address}.` : "",
-    `Today is ${DOW[new Date().getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
+    `Today is ${DOW[parseDate(todayStr).getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
     `STYLE: warm, human, 1–2 short sentences, offer only 2–3 times, occasional tasteful emoji, never robotic.`,
     `LANGUAGE: ALWAYS reply in ${bizLang} unless the customer writes a full sentence clearly in another language (then mirror it). Set "lang" to the ISO code of your reply language (sq, en, it, ...).`,
     `SERVICES (name — minutes — price):`,
@@ -594,7 +611,8 @@ Deno.serve(async (req) => {
     const hMap = hoursByDow(hours);
     const svcDur: Record<string, number> = {};
     for (const s of services) svcDur[s.id] = s.duration_min;
-    const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history };
+    const now = nowInTz(biz.timezone || "Europe/Tirane");   // P0-2: data/ora në timezone-in e biznesit
+    const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history, now, todayStr: now.todayStr };
     ctx.state = await loadState(business_id, channel, chat_id); // kujtesa e strukturuar
 
     // Shtresa 1: rregullat falas
