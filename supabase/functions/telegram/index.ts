@@ -37,6 +37,20 @@ Deno.serve(async (req) => {
     const chatId = String(msg.chat.id);
     const name = msg.from?.first_name || "Telegram";
 
+    // P0-4: Idempotency — mos përpuno dy herë të njëjtin update (Telegram ridërgon)
+    const updateId = update.update_id != null ? "tg_" + update.update_id : null;
+    if (updateId) {
+      const { error: dupErr } = await supabase.from("processed_updates").insert({ id: updateId });
+      if (dupErr && dupErr.code === "23505") return new Response("ok"); // tashmë i përpunuar
+      // gabime të tjera (p.sh. tabela s'ekziston ende) → vazhdo normalisht (prapa-përputhshëm)
+    }
+
+    // P0-3: Rate limit i thjeshtë — mbrojtje nga spam/kosto (maks ~12 mesazhe/min)
+    const since60 = new Date(Date.now() - 60000).toISOString();
+    const { count: recentCount } = await supabase.from("messages").select("id", { count: "exact", head: true })
+      .eq("business_id", businessId).eq("channel", "telegram").eq("chat_id", chatId).eq("role", "user").gte("created_at", since60);
+    if ((recentCount || 0) > 12) return new Response("ok");
+
     // Kujtesa e bisedës (10 mesazhet e fundit)
     const { data: hist } = await supabase.from("messages").select("role,content")
       .eq("business_id", businessId).eq("channel", "telegram").eq("chat_id", chatId)

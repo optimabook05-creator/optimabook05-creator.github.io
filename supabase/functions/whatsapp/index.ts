@@ -55,6 +55,13 @@ Deno.serve(async (req) => {
     const name = value?.contacts?.[0]?.profile?.name || "WhatsApp";
     if (!text || !phoneNumberId) return new Response("ok");
 
+    // P0-4: Idempotency — mos përpuno dy herë të njëjtin mesazh (Meta ridërgon)
+    const waId = msg.id ? "wa_" + msg.id : null;
+    if (waId) {
+      const { error: dupErr } = await supabase.from("processed_updates").insert({ id: waId });
+      if (dupErr && dupErr.code === "23505") return new Response("ok"); // tashmë i përpunuar
+    }
+
     // Kujtesa e bisedës (10 të fundit)
     const { data: hist } = await supabase.from("messages").select("role,content")
       .eq("business_id", businessId).eq("channel", "whatsapp").eq("chat_id", from)
