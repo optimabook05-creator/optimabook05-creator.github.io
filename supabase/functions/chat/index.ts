@@ -187,9 +187,10 @@ function pickStaffFor(dateStr: string, durMin: number, hoursRow: any, appts: any
 
 /* ---------------- Parsuesi (shqip + anglisht) ---------------- */
 function parseDay(tx: string): string | null {
-  if (tx.includes("pasneser") || tx.includes("day after tomorrow")) return fmtDate(new Date(Date.now() + 2 * 864e5));
-  if (tx.includes("neser") || tx.includes("tomorrow")) return fmtDate(new Date(Date.now() + 864e5));
-  if (/\bsot\b/.test(tx) || /\btoday\b/.test(tx) || /\btonight\b/.test(tx)) return fmtDate(new Date());
+  if (tx.includes("pasneser") || tx.includes("pasneser") || tx.includes("day after tomorrow")) return fmtDate(new Date(Date.now() + 2 * 864e5));
+  if (tx.includes("neser") || tx.includes("nesr") || tx.includes("tomorrow")) return fmtDate(new Date(Date.now() + 864e5));
+  // "sot/sonte" + gabime të shpeshta drejtshkrimore (sont, somte, sonet)
+  if (/\bsot\b|\bsonte\b|\bsont\b|\bsomte\b|\bsonet\b|\btoday\b|\btonight\b/.test(tx)) return fmtDate(new Date());
   const days: [string, number][] = [
     ["e diel", 0], ["sunday", 0], ["e hene", 1], ["te henen", 1], ["monday", 1],
     ["e marte", 2], ["te marten", 2], ["tuesday", 2], ["e merkure", 3], ["te merkuren", 3], ["wednesday", 3],
@@ -233,6 +234,17 @@ function parseTime(tx: string): string | null {
   else if ((m = tx.match(/\b(?:ora|oren|ne|tek?|at)\s+(\d{1,2})\b/))) { h = +m[1]; } // ora 11
   else if ((m = tx.match(/\b([01]?\d|2[0-3])([0-5]\d)\b/))) { h = +m[1]; min = +m[2]; } // 1100 / 930
   else if ((m = tx.match(/^(\d{1,2})$/))) { h = +m[1]; }            // vetëm "11"
+  if (h === null) {
+    // Numra me shkronja: "ora pesë"=17:00, "ora kater"=16:00 (shqip + anglisht)
+    const NW: any = {
+      nje: 1, njesh: 1, dy: 2, tre: 3, tri: 3, kater: 4, kat: 4, pese: 5, pes: 5, gjashte: 6, gjasht: 6,
+      shtate: 7, shtat: 7, tete: 8, tet: 8, nente: 9, nent: 9, dhjete: 10, dhjet: 10, njembedhjete: 11, dymbedhjete: 12,
+      one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, noon: 12, mesdite: 12,
+    };
+    const tm = tx.match(/\b(?:ora|oren|ne|at|rreth|nga)\s+([a-z]+)\b/);
+    const w = tm ? tm[1] : (tx.trim().match(/^([a-z]+)$/)?.[1] || "");
+    if (w && NW[w] !== undefined) h = NW[w];
+  }
   if (h === null || h > 23 || min > 59) return null;
   if (mer === "pm" && h < 12) h += 12;
   else if (mer === "am" && h === 12) h = 0;
@@ -383,7 +395,13 @@ async function tryRules(ctx: any): Promise<any | null> {
     if (!svc && st.service_id) svc = services.find((s: any) => s.id === st.service_id) || svc;
   }
 
-  if (wantsBooking || (time && (day || svc))) {
+  // Nëse jemi NË MES të një rezervimi, përgjigjet e shkurtra (ditë/orë/shërbim/"po")
+  // i trajton state machine-i deterministik — JO AI-ja (që gabon).
+  const affirm = /^(po|yes|dakord|okay|ok|rezervoje|rezervo|konfirmo|sure|patjeter)\b/.test(tx);
+  const inBooking = !!(st && st.intent === "booking");
+  const parsedSomething = !!(day || time || svc || period || affirm);
+
+  if (wantsBooking || (inBooking && parsedSomething) || (time && (day || svc))) {
     if (!svc || !day) return null; // mungon info → AI e trajton më mirë
     // Ruaj gjendjen: dimë shërbimin + datën → më vonë mjafton vetëm ora ("në 11")
     await saveState({ ...st, business_id: businessId, channel: ctx.channel, chat_id: ctx.chat_id, intent: "booking", service_id: svc.id, appt_date: day, step: "awaiting_time" });
@@ -530,6 +548,9 @@ async function runAI(ctx: any) {
     availability,
     `CRITICAL AVAILABILITY: a time is FREE only if it appears in the list above. If the customer asks about a time that is NOT in the list (it is full / all staff busy), clearly tell them it is taken and offer the nearest listed times or the waiting list. NEVER say a time is free if it is not listed above.`,
     `CONTEXT: read the ENTIRE conversation and keep it. The day/service are often in earlier messages ("nesër"=tomorrow). NEVER re-ask the day or the service if already said. NEVER reset to a greeting in the middle of a conversation — continue from where it is. If one service exists, assume it.`,
+    (ctx.state && (ctx.state.service_id || ctx.state.appt_date || ctx.state.appt_time))
+      ? `ALREADY KNOWN (use these, do NOT ask again): ${ctx.state.service_id ? "service=" + (services.find((s: any) => s.id === ctx.state.service_id)?.name || "?") + " " : ""}${ctx.state.appt_date ? "date=" + ctx.state.appt_date + " " : ""}${ctx.state.appt_time ? "time=" + hm(ctx.state.appt_time) : ""}. If the customer now gives only the missing piece (e.g. just a time, or "po"/"yes"), set wants_to_book=true and BOOK — do not re-ask.`
+      : "",
     `TIMES: "ora 2 pasdite"/"2pm"=14:00, "ora 3" afternoon=15:00.`,
     `BOOKING: when service+date+available time are known, set wants_to_book=true (exact service, date YYYY-MM-DD, time HH:MM) and write a complete warm confirmation in the customer's language.`,
     `CANCELLING: if they want to cancel / can't come, set wants_to_cancel=true.`,
