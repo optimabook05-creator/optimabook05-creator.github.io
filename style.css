@@ -933,3 +933,51 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /* Aurora pak më e gjallë + shtresë e katërt drite */
 body::before { filter: blur(72px) saturate(1.35); }
+
+/* ============================================================
+   ✨✨ SMOOTHNESS + UX PERFECTION — shtresa finale
+   ============================================================ */
+
+/* Lëvizje e lëmuar e gjithë faqes */
+html { scroll-behavior: smooth; }
+.panel-col, .timeline, .appt-list, .block-list, .modal { scroll-behavior: smooth; }
+
+/* Hyrje e butë e gjithë pamjes (login → panel, etj.) */
+#appView:not([hidden]), #onboardView:not([hidden]), #authView:not([hidden]) {
+  animation: opx-fade-up .45s cubic-bezier(.22, .61, .36, 1);
+}
+
+/* Modal-i: sfondi hyn butë (fade + blur in) */
+.modal-backdrop:not([hidden]) { animation: opx-backdrop .26s ease; }
+@keyframes opx-backdrop { from { opacity: 0; } }
+
+/* Fushat — tranzicione të njëtrajtshme + hover delikate */
+input, select, textarea {
+  transition: border-color .2s ease, box-shadow .22s ease, background .2s ease;
+}
+input:not(:focus):hover, select:not(:focus):hover, textarea:not(:focus):hover {
+  border-color: var(--accent-glow);
+}
+
+/* Tab-et — prekshmëri elastike */
+.tab { transition: color .2s ease, background .22s cubic-bezier(.22,.61,.36,1), transform .14s ease, box-shadow .22s ease; }
+.tab.active { transform: translateY(-1px); }
+.tab:active { transform: scale(.95); }
+
+/* Butona të çaktivizuar gjatë ruajtjes — pa kërcim */
+.btn:disabled { opacity: .55; cursor: default; transform: none !important; filter: grayscale(.15); box-shadow: none; }
+
+/* Toast-i pak më elegant (hije + lëvizje e butë) */
+.toast { transition: opacity .3s ease, transform .35s cubic-bezier(.18, 1, .35, 1); }
+
+/* Slot-et e kalendarit — hover edhe më i butë */
+.slot { transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .24s ease, background .24s ease; }
+
+/* Linket dhe ikonat — tranzicion universal i lehtë */
+a, .langSwitch button, .topbar-actions .btn { transition: all .2s cubic-bezier(.22,.61,.36,1); }
+
+/* Reduktim lëvizjeje (aksesueshmëri) — mbingre gjithçka */
+@media (prefers-reduced-motion: reduce) {
+  #appView, #onboardView, #authView, .tab-pane.active, .modal, .modal-backdrop,
+  .stat-card, .bi-chip, .settings-block { animation: none !important; }
+}
