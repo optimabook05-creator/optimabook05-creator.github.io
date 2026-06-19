@@ -380,6 +380,7 @@ function applyModeUI() {
     else if (tab === "leads") t.hidden = !inquiry;
   });
   const shb = $("#setHoursBlock"); if (shb) shb.hidden = inquiry; // orari s'duhet për porosi
+  const ssv = $("#setServices"); if (ssv) ssv.classList.toggle("hide-min", inquiry); // pa minuta për porosi
   const active = document.querySelector(".tab.active");
   if (active && active.hidden) {
     const fb = document.querySelector('.tab[data-tab="stats"]') || document.querySelector(".tab:not([hidden])");
@@ -551,7 +552,8 @@ function openOnboard() {
   const applyMode = () => {
     const inquiry = $("#obMode") && $("#obMode").value === "inquiry";
     const hf = $("#obHours") && $("#obHours").closest(".field");
-    if (hf) hf.hidden = inquiry;
+    if (hf) hf.hidden = inquiry;                                  // pa orar për porosi
+    if ($("#obServices")) $("#obServices").classList.toggle("hide-min", inquiry); // pa minuta për porosi
   };
   if ($("#obMode")) $("#obMode").onchange = applyMode;
   applyMode();

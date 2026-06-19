@@ -697,6 +697,8 @@ body::after {
 .service-row input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .service-row .s-name { flex: 1; }
 .service-row .s-dur, .service-row .s-price { width: 86px; }
+/* Mënyra "porosi": fsheh minutat (s'kanë kuptim për produkte/projekte) */
+.hide-min .s-dur { display: none !important; }
 .service-row .s-del {
   border: none; background: var(--red-soft); color: var(--red);
   border-radius: var(--r-sm); width: 38px; cursor: pointer; font-size: 15px;
