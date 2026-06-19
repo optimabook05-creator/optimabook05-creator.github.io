@@ -870,3 +870,66 @@ body::after {
   .topbar-actions .btn { padding: 6px 9px; font-size: 12px; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ============================================================
+   ✨ PREMIUM POLISH — mikro-ndërveprime, thellësi, hyrje me animacion
+   ============================================================ */
+
+/* Hyrje e butë e panelit kur ndërron skedën */
+.tab-pane.active { animation: opx-fade-up .40s cubic-bezier(.22, .61, .36, 1); }
+@keyframes opx-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* Hyrje e shkallëzuar e kartave kryesore */
+.stats-grid-top .stat-card, .bi-chip, .settings-block { animation: opx-fade-up .5s cubic-bezier(.22, .61, .36, 1) both; }
+.stats-grid-top .stat-card:nth-child(2) { animation-delay: .05s; }
+.stats-grid-top .stat-card:nth-child(3) { animation-delay: .10s; }
+.stats-grid-top .stat-card:nth-child(4) { animation-delay: .15s; }
+.settings-block:nth-child(3) { animation-delay: .06s; }
+.settings-block:nth-child(4) { animation-delay: .12s; }
+
+/* Butonat — ndjesi premium: ngritje + shtypje elastike */
+.btn { transition: transform .14s cubic-bezier(.22, .61, .36, 1), box-shadow .24s ease, background .24s ease, filter .2s ease; }
+.btn:hover { transform: translateY(-1.5px); }
+.btn:active { transform: translateY(0) scale(.97); }
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent-bright), var(--accent));
+  color: #fff; border-color: transparent;
+  box-shadow: 0 6px 18px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+.btn.primary:hover { box-shadow: 0 11px 28px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .5); filter: saturate(1.08); }
+
+/* Logoja — shkëlqim i gjallë + lëvizje e butë */
+.brand-logo {
+  background: linear-gradient(140deg, var(--accent-bright), var(--accent-deep)) !important;
+  box-shadow: 0 6px 18px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .45);
+  transition: transform .3s cubic-bezier(.22, .61, .36, 1), box-shadow .3s ease;
+}
+.brand:hover .brand-logo { transform: rotate(-6deg) scale(1.07); box-shadow: 0 10px 26px var(--accent-glow); }
+.brand-name { background: linear-gradient(90deg, var(--ink), var(--accent-deep)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* Tab-et — tranzicion i lëmuar */
+.tab { transition: color .2s ease, background .22s ease, transform .14s ease, box-shadow .22s ease; }
+.tab:hover { transform: translateY(-1px); }
+
+/* Karta që ngrihen butë me hije të thellë */
+.stat-card, .bi-box, .bi-chip, .block-item, .appt-card {
+  transition: transform .18s cubic-bezier(.22, .61, .36, 1), box-shadow .26s ease;
+}
+.block-item:hover, .appt-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); }
+
+/* Scrollbar premium */
+* { scrollbar-width: thin; scrollbar-color: rgba(12, 166, 120, .4) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--accent-bright), var(--accent)); border-radius: 99px;
+  border: 3px solid transparent; background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--accent-deep); background-clip: content-box; }
+
+/* Fokus premium te fushat */
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px var(--accent-glow); border-color: var(--accent) !important;
+}
+
+/* Aurora pak më e gjallë + shtresë e katërt drite */
+body::before { filter: blur(72px) saturate(1.35); }
