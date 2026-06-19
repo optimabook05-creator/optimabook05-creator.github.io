@@ -374,9 +374,10 @@ async function tryRules(ctx: any): Promise<any | null> {
   }
   // Çmimet
   if (/(sa kushton|cmim|qmim|sa eshte|cmimet|sa ben|\bprice|\bcost|how much|pricing)/.test(tx)) {
+    const notes = biz.ai_notes ? `\n\n${biz.ai_notes}` : "";
     const r = sq
-      ? `Ja shërbimet tona:\n${svcListText(services)}\n\nTë rezervoj një orar? Më thuaj ditën. 📅`
-      : `Here are our services:\n${svcListText(services)}\n\nShall I book you a slot? Tell me the day. 📅`;
+      ? `Ja shërbimet tona:\n${svcListText(services)}${notes}\n\nTë rezervoj një orar? Më thuaj ditën. 📅`
+      : `Here are our services:\n${svcListText(services)}${notes}\n\nShall I book you a slot? Tell me the day. 📅`;
     return { reply: r, via: "rule" };
   }
   // Orari / adresa
@@ -561,6 +562,7 @@ async function runAI(ctx: any) {
     `LANGUAGE: ALWAYS reply in ${bizLang} unless the customer writes a full sentence clearly in another language (then mirror it). Set "lang" to the ISO code of your reply language (sq, en, it, ...).`,
     `SERVICES (name — minutes — price):`,
     services.map((s: any) => `- ${s.name} — ${s.duration_min} min — ${s.price}`).join("\n"),
+    biz.ai_notes ? `BUSINESS INFO / FAQ (use to answer about packages, prices, delivery times, policies — do NOT book these as calendar slots; instead offer a consultation/meeting):\n${biz.ai_notes}` : "",
     `AVAILABLE START TIMES (the ONLY source of truth — use ONLY these, never invent):`,
     availability,
     `CRITICAL AVAILABILITY: a time is FREE only if it appears in the list above. If the customer asks about a time that is NOT in the list (it is full / all staff busy), clearly tell them it is taken and offer the nearest listed times or the waiting list. NEVER say a time is free if it is not listed above.`,

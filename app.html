@@ -145,6 +145,13 @@
 
     <div class="tab-pane" id="pane-stats">
       <div class="settings-row">
+        <label for="aiNotes" data-t="aiNotesLbl">🧠 Info për AI-në (paketa, çmime, kohë dorëzimi, politika — AI ua thotë klientëve)</label>
+        <div class="settings-input">
+          <textarea id="aiNotes" rows="3" data-t-ph="aiNotesPh" placeholder="P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë. Web 4-7 faqe = 200€, ~30 ditë."></textarea>
+          <button class="btn small primary" id="saveAiNotes" data-t="save">Ruaj</button>
+        </div>
+      </div>
+      <div class="settings-row">
         <label for="reviewUrl" data-t="reviewUrlLbl">⭐ Linku i vlerësimeve Google (për kërkesa automatike pas takimit)</label>
         <div class="settings-input">
           <input type="url" id="reviewUrl" placeholder="https://g.page/r/...">

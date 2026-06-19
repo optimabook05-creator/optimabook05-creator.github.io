@@ -50,6 +50,8 @@ const T = {
     emptyWait: "Asnjë në listën e pritjes.", waitWaiting: "në pritje", waitNotified: "u lajmërua",
     periodAny: "çdo orë", periodMorning: "paradite", periodAfternoon: "pasdite", periodEvening: "mbrëmje",
     reviewUrlLbl: "⭐ Linku i vlerësimeve Google (për kërkesa automatike pas takimit)",
+    aiNotesLbl: "🧠 Info për AI-në (paketa, çmime, kohë dorëzimi, politika — AI ua thotë klientëve)",
+    aiNotesPh: "P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë. Web 4-7 faqe = 200€, ~30 ditë.",
     tabStaff: "👥 Stafi", staffDesc: "Shto staf dhe lokacione. Çdo person pret klientë paralelisht në të njëjtën orë.",
     locNamePh: "Emri i lokacionit", locAddrPh: "Adresa (opsionale)", addLoc: "+ Lokacion",
     staffNamePh: "Emri i personit", staffRolePh: "Roli (p.sh. berber)", addStaff: "+ Staf",
@@ -105,6 +107,8 @@ const T = {
     emptyWait: "No one waiting.", waitWaiting: "waiting", waitNotified: "notified",
     periodAny: "any time", periodMorning: "morning", periodAfternoon: "afternoon", periodEvening: "evening",
     reviewUrlLbl: "⭐ Google review link (for automatic requests after the appointment)",
+    aiNotesLbl: "🧠 Info for the AI (packages, prices, delivery times, policies — AI tells customers)",
+    aiNotesPh: "E.g. Website 1-3 pages = 100€, delivered in ~13 days. 4-7 pages = 200€, ~30 days.",
     tabStaff: "👥 Staff", staffDesc: "Add staff and locations. Each person serves customers in parallel at the same time.",
     locNamePh: "Location name", locAddrPh: "Address (optional)", addLoc: "+ Location",
     staffNamePh: "Person's name", staffRolePh: "Role (e.g. barber)", addStaff: "+ Staff",
@@ -327,6 +331,7 @@ async function loadAll() {
   await Promise.all([loadServices(), loadHours(), loadStaff(), loadLocations()]);
   $("#bizName").textContent = tr("panelPrefix") + biz.name;
   const ru = $("#reviewUrl"); if (ru) ru.value = biz.review_url || "";
+  const an = $("#aiNotes"); if (an) an.value = biz.ai_notes || "";
   setupStaffUI();
   await renderAll();
 }
@@ -870,6 +875,15 @@ function wire() {
     try {
       await sb.from("businesses").update({ review_url: url || null }).eq("id", biz.id);
       biz.review_url = url || null;
+      toast(tr("toastSaved"));
+    } catch (ex) { alert(ex.message || String(ex)); }
+  };
+  const anBtn = $("#saveAiNotes");
+  if (anBtn) anBtn.onclick = async () => {
+    const v = $("#aiNotes").value.trim();
+    try {
+      await sb.from("businesses").update({ ai_notes: v || null }).eq("id", biz.id);
+      biz.ai_notes = v || null;
       toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
