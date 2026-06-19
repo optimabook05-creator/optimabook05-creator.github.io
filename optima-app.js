@@ -57,6 +57,9 @@ const T = {
     staffNamePh: "Emri i personit", staffRolePh: "Roli (p.sh. berber)", addStaff: "+ Staf",
     manStaff: "Stafi", emptyStaff: "Asnjë staf — biznes me një person.", emptyLoc: "Asnjë lokacion.",
     allStaff: "Të gjithë stafin", noLoc: "Pa lokacion",
+    obModeLbl: "Si punon biznesi?", obModeAppt: "📅 Bëj takime (me kalendar)", obModeInquiry: "🛒 Marr porosi/kërkesa (pa kalendar)",
+    tabLeads: "📥 Kërkesa", leadsDesc: "Kërkesat/porositë e klientëve (për biznese pa takime). AI i merr vetë 24/7.",
+    emptyLeads: "Asnjë kërkesë ende.", leadNew: "e re", leadContacted: "u kontaktua", markContacted: "Shëno si kontaktuar",
     statActive: "Takime aktive", statRevenue: "Të ardhura të rezervuara",
     statAi: "Rezervuar nga AI", statConfirmed: "Të konfirmuara",
     statThisMonth: "Të ardhura këtë muaj", statVsLast: "vs muaji i kaluar",
@@ -114,6 +117,9 @@ const T = {
     staffNamePh: "Person's name", staffRolePh: "Role (e.g. barber)", addStaff: "+ Staff",
     manStaff: "Staff", emptyStaff: "No staff — single-person business.", emptyLoc: "No locations.",
     allStaff: "All staff", noLoc: "No location",
+    obModeLbl: "How does your business work?", obModeAppt: "📅 I take appointments (calendar)", obModeInquiry: "🛒 I take orders/requests (no calendar)",
+    tabLeads: "📥 Requests", leadsDesc: "Customer requests/orders (for businesses without appointments). The AI captures them 24/7.",
+    emptyLeads: "No requests yet.", leadNew: "new", leadContacted: "contacted", markContacted: "Mark contacted",
     statActive: "Active appointments", statRevenue: "Booked revenue",
     statAi: "Booked by AI", statConfirmed: "Confirmed",
     statThisMonth: "Revenue this month", statVsLast: "vs last month",
@@ -422,6 +428,14 @@ function openOnboard() {
   };
   sel.onchange = applyPreset;
   applyPreset();
+  // Mënyra: nëse "porosi/kërkesa" (inquiry) → fsheh orarin (s'ka kalendar)
+  const applyMode = () => {
+    const inquiry = $("#obMode") && $("#obMode").value === "inquiry";
+    const hf = $("#obHours") && $("#obHours").closest(".field");
+    if (hf) hf.hidden = inquiry;
+  };
+  if ($("#obMode")) $("#obMode").onchange = applyMode;
+  applyMode();
   // orari
   const hb = $("#obHours"); hb.innerHTML = "";
   for (let i = 1; i <= 7; i++) {
@@ -461,10 +475,12 @@ async function finishOnboard() {
     if (biz) { await loadAll(); showView("app"); return; }
 
     const { data: { user } } = await sb.auth.getUser();
-    const { data: b, error } = await sb.from("businesses").insert({
+    const row = {
       owner_id: user.id, name, type: $("#obType").value,
       address: $("#obAddress").value.trim(), lang,
-    }).select().single();
+    };
+    if ($("#obMode")) row.mode = $("#obMode").value;   // takime ose porosi/kërkesa
+    const { data: b, error } = await sb.from("businesses").insert(row).select().single();
     if (error) throw error;
     biz = b;
 
@@ -494,7 +510,32 @@ async function finishOnboard() {
    ===================================================================== */
 async function renderAll() {
   renderStaffPane();
-  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist()]);
+  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads()]);
+}
+
+async function renderLeads() {
+  const list = $("#leadsList"); if (!list) return;
+  const { data } = await sb.from("leads").select("*").eq("business_id", biz.id)
+    .order("created_at", { ascending: false }).limit(50);
+  const rows = data || [];
+  if (!rows.length) { list.innerHTML = `<div class="empty">${tr("emptyLeads")}</div>`; return; }
+  list.innerHTML = "";
+  for (const l of rows) {
+    const d = new Date(l.created_at);
+    const st = l.status === "contacted" ? tr("leadContacted") : tr("leadNew");
+    const item = document.createElement("div");
+    item.className = "block-item";
+    item.innerHTML = `<span class="grow">🛒 <strong>${esc(l.client_name || "Klient")}</strong> — ${esc(l.summary)}
+      <small style="color:var(--ink-faint)"> · ${d.getDate()} ${T[lang].months[d.getMonth()]}</small>
+      <span class="tag ${l.status === "contacted" ? "confirmed" : "pending"}">${st}</span></span>`;
+    if (l.status !== "contacted") {
+      const b = document.createElement("button");
+      b.className = "btn small ghost"; b.textContent = tr("markContacted");
+      b.onclick = async () => { await sb.from("leads").update({ status: "contacted" }).eq("id", l.id); await renderLeads(); };
+      item.appendChild(b);
+    }
+    list.appendChild(item);
+  }
 }
 
 function staffName(id) { const s = staff.find((x) => x.id === id); return s ? s.name : null; }

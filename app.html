@@ -87,6 +87,12 @@
       <p data-t="obSub">Gati për klientë në nën 5 minuta.</p>
     </div>
     <label class="field"><span data-t="obType">Lloji i biznesit</span><select id="obType"></select></label>
+    <label class="field"><span data-t="obModeLbl">Si punon biznesi?</span>
+      <select id="obMode">
+        <option value="appointments" data-t="obModeAppt">📅 Bëj takime (me kalendar)</option>
+        <option value="inquiry" data-t="obModeInquiry">🛒 Marr porosi/kërkesa (pa kalendar)</option>
+      </select>
+    </label>
     <label class="field"><span data-t="obName">Emri i biznesit</span><input type="text" id="obName" maxlength="40"></label>
     <label class="field"><span data-t="obAddress">Adresa</span><input type="text" id="obAddress" maxlength="60"></label>
     <div class="field">
@@ -113,6 +119,7 @@
       <button class="tab" data-tab="stats" data-t="tabStat">📊 Statistika</button>
       <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
       <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
+      <button class="tab" data-tab="leads" data-t="tabLeads">📥 Kërkesa</button>
     </nav>
 
     <div class="tab-pane active" id="pane-calendar">
@@ -164,6 +171,11 @@
     <div class="tab-pane" id="pane-waitlist">
       <p class="pane-desc" data-t="waitDesc">Klientët që presin një orar. AI i lajmëron vetë kur lirohet.</p>
       <div class="block-list" id="waitList"></div>
+    </div>
+
+    <div class="tab-pane" id="pane-leads">
+      <p class="pane-desc" data-t="leadsDesc">Kërkesat/porositë e klientëve (për biznese pa takime). AI i merr vetë 24/7.</p>
+      <div class="block-list" id="leadsList"></div>
     </div>
 
     <div class="tab-pane" id="pane-staff">

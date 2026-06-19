@@ -599,6 +599,54 @@ async function runAI(ctx: any) {
   return { reply, booked, cancelled, via: "ai" };
 }
 
+/* ---------------- Mënyra INQUIRY (biznese pa takime: porosi/kërkesa) ---------------- */
+async function saveLead(ctx: any, summary: string) {
+  const { businessId, channel, chat_id, client_name } = ctx;
+  try {
+    await supabase.from("leads").insert({
+      business_id: businessId, channel: channel || null, chat_id: chat_id || null,
+      client_name: client_name || "Klient", summary: String(summary).slice(0, 500),
+    });
+    await supabase.from("notifications").insert({
+      business_id: businessId, text: `🛒 Kërkesë e re nga ${client_name || "një klient"}: ${String(summary).slice(0, 120)}`,
+    });
+  } catch (_e) { /* tabela leads mund të mungojë para modes.sql → injoro */ }
+}
+
+async function runInquiry(ctx: any) {
+  const { biz, services, client_name, history, text } = ctx;
+  const sq = isSqLang(biz);
+  const lang = isEnLang(biz) ? "English" : (sq ? "Albanian" : "the customer's language");
+  const catalog = services.map((s: any) => `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}`).join("\n");
+  const system = [
+    `You are the warm, friendly assistant for "${biz.name}".${biz.address ? ` (${biz.address})` : ""}`,
+    `WHAT WE OFFER:`,
+    catalog || "(see details below)",
+    biz.ai_notes ? `DETAILS / packages / prices / delivery times / policies:\n${biz.ai_notes}` : "",
+    `Answer customer questions accurately using ONLY the info above (prices, delivery times, what's included). If something isn't listed, say you'll check with the owner — never invent prices.`,
+    `IMPORTANT: this business does NOT take calendar appointments. NEVER offer time slots or bookings.`,
+    `When the customer wants to order / proceed / start, warmly confirm and tell them the owner will contact them shortly to finalize.`,
+    `Reply in ${lang}. Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
+  ].filter(Boolean).join("\n");
+
+  const contents: any[] = [];
+  for (const m of (history || []).slice(-10)) contents.push({ role: m.role === "bot" ? "model" : "user", parts: [{ text: String(m.text || "") }] });
+  contents.push({ role: "user", parts: [{ text: String(text) }] });
+
+  let reply = "";
+  try { const out = await askAI(system, contents); reply = out.reply || ""; }
+  catch (_e) {
+    reply = sq ? "Më fal, pata një vështirësi të vogël. Më shkruaj edhe një herë çfarë të duhet? 🙏"
+               : "Sorry, a small hiccup. Could you tell me again what you need? 🙏";
+  }
+  // Kapja e kërkesës (lead) me intent të qartë
+  const tx = norm(text);
+  if (/\b(dua|e dua|e marr|po e marr|porosi|porosit|porosis|interesoj|interesohem|le ta bejme|dakord|me ndihmoni|me beni|order|i want|interested|let s do)\b/.test(tx)) {
+    await saveLead(ctx, text);
+  }
+  return { reply, via: "inquiry" };
+}
+
 /* ---------------- Handler ---------------- */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -615,6 +663,10 @@ Deno.serve(async (req) => {
     for (const s of services) svcDur[s.id] = s.duration_min;
     const now = nowInTz(biz.timezone || "Europe/Tirane");   // P0-2: data/ora në timezone-in e biznesit
     const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history, now, todayStr: now.todayStr };
+
+    // Mënyra INQUIRY (biznese pa takime): AI informon + merr kërkesën, pa kalendar
+    if (biz.mode === "inquiry") return json(await runInquiry(ctx));
+
     ctx.state = await loadState(business_id, channel, chat_id); // kujtesa e strukturuar
 
     // Shtresa 1: rregullat falas
