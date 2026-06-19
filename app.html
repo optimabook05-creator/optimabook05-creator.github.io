@@ -120,6 +120,7 @@
       <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
       <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
       <button class="tab" data-tab="leads" data-t="tabLeads">📥 Kërkesa</button>
+      <button class="tab" data-tab="settings" data-t="tabSettings">⚙️ Cilësime</button>
     </nav>
 
     <div class="tab-pane active" id="pane-calendar">
@@ -151,30 +152,6 @@
     </div>
 
     <div class="tab-pane" id="pane-stats">
-      <div class="settings-row">
-        <label for="bizMode" data-t="modeLbl">⚙️ Mënyra e biznesit (ndize/fike kurdo)</label>
-        <div class="settings-input">
-          <select id="bizMode">
-            <option value="appointments" data-t="obModeAppt">📅 Bëj takime (me kalendar)</option>
-            <option value="inquiry" data-t="obModeInquiry">🛒 Marr porosi/kërkesa (pa kalendar)</option>
-          </select>
-          <button class="btn small primary" id="saveMode" data-t="save">Ruaj</button>
-        </div>
-      </div>
-      <div class="settings-row">
-        <label for="aiNotes" data-t="aiNotesLbl">🧠 Info për AI-në (paketa, çmime, kohë dorëzimi, politika — AI ua thotë klientëve)</label>
-        <div class="settings-input">
-          <textarea id="aiNotes" rows="3" data-t-ph="aiNotesPh" placeholder="P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë. Web 4-7 faqe = 200€, ~30 ditë."></textarea>
-          <button class="btn small primary" id="saveAiNotes" data-t="save">Ruaj</button>
-        </div>
-      </div>
-      <div class="settings-row">
-        <label for="reviewUrl" data-t="reviewUrlLbl">⭐ Linku i vlerësimeve Google (për kërkesa automatike pas takimit)</label>
-        <div class="settings-input">
-          <input type="url" id="reviewUrl" placeholder="https://g.page/r/...">
-          <button class="btn small primary" id="saveReviewUrl" data-t="save">Ruaj</button>
-        </div>
-      </div>
       <div class="stats-grid" id="statsGrid"></div>
     </div>
 
@@ -203,6 +180,65 @@
         <button class="btn primary small" type="submit" data-t="addStaff">+ Staf</button>
       </form>
       <div class="block-list" id="staffList"></div>
+    </div>
+
+    <div class="tab-pane" id="pane-settings">
+      <p class="pane-desc" data-t="settingsDesc">Ndrysho gjithçka kurdo — pa rifilluar.</p>
+
+      <div class="settings-block">
+        <h3 class="set-h" data-t="setBizH">Biznesi</h3>
+        <div class="settings-row">
+          <label for="bizMode" data-t="modeLbl">⚙️ Mënyra e biznesit (ndize/fike kurdo)</label>
+          <div class="settings-input">
+            <select id="bizMode">
+              <option value="appointments" data-t="obModeAppt">📅 Bëj takime (me kalendar)</option>
+              <option value="inquiry" data-t="obModeInquiry">🛒 Marr porosi/kërkesa (pa kalendar)</option>
+            </select>
+            <button class="btn small primary" id="saveMode" data-t="save">Ruaj</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <label for="setName" data-t="setNameLbl">Emri & adresa</label>
+          <div class="settings-input">
+            <input type="text" id="setName" maxlength="40">
+            <input type="text" id="setAddress" maxlength="60" placeholder="Adresa / Online">
+            <button class="btn small primary" id="saveBizInfo" data-t="save">Ruaj</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-block">
+        <h3 class="set-h" data-t="setSvcH">Shërbimet / Produktet</h3>
+        <div id="setServices"></div>
+        <div class="settings-input" style="margin-top:8px">
+          <button class="btn ghost small" id="setAddService" type="button" data-t="addService">+ Shto shërbim</button>
+          <button class="btn primary small" id="saveServices" data-t="saveServicesBtn">Ruaj shërbimet</button>
+        </div>
+      </div>
+
+      <div class="settings-block" id="setHoursBlock">
+        <h3 class="set-h" data-t="setHoursH">Orari i punës</h3>
+        <div class="hours-grid" id="setHours"></div>
+        <button class="btn primary small" id="saveHours" data-t="saveHoursBtn" style="margin-top:10px">Ruaj orarin</button>
+      </div>
+
+      <div class="settings-block">
+        <h3 class="set-h" data-t="setAiH">AI & Vlerësime</h3>
+        <div class="settings-row">
+          <label for="aiNotes" data-t="aiNotesLbl">🧠 Info për AI-në</label>
+          <div class="settings-input">
+            <textarea id="aiNotes" rows="3" data-t-ph="aiNotesPh" placeholder="P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë."></textarea>
+            <button class="btn small primary" id="saveAiNotes" data-t="save">Ruaj</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <label for="reviewUrl" data-t="reviewUrlLbl">⭐ Linku i vlerësimeve Google</label>
+          <div class="settings-input">
+            <input type="url" id="reviewUrl" placeholder="https://g.page/r/...">
+            <button class="btn small primary" id="saveReviewUrl" data-t="save">Ruaj</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>

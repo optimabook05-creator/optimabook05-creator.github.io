@@ -53,6 +53,10 @@ const T = {
     aiNotesLbl: "🧠 Info për AI-në (paketa, çmime, kohë dorëzimi, politika — AI ua thotë klientëve)",
     aiNotesPh: "P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë. Web 4-7 faqe = 200€, ~30 ditë.",
     modeLbl: "⚙️ Mënyra e biznesit (ndize/fike kurdo)",
+    tabSettings: "⚙️ Cilësime", settingsDesc: "Ndrysho gjithçka kurdo — pa rifilluar.",
+    setBizH: "Biznesi", setNameLbl: "Emri & adresa", setSvcH: "Shërbimet / Produktet",
+    setHoursH: "Orari i punës", setAiH: "AI & Vlerësime",
+    saveServicesBtn: "Ruaj shërbimet", saveHoursBtn: "Ruaj orarin",
     tabStaff: "👥 Stafi", staffDesc: "Shto staf dhe lokacione. Çdo person pret klientë paralelisht në të njëjtën orë.",
     locNamePh: "Emri i lokacionit", locAddrPh: "Adresa (opsionale)", addLoc: "+ Lokacion",
     staffNamePh: "Emri i personit", staffRolePh: "Roli (p.sh. berber)", addStaff: "+ Staf",
@@ -114,6 +118,10 @@ const T = {
     aiNotesLbl: "🧠 Info for the AI (packages, prices, delivery times, policies — AI tells customers)",
     aiNotesPh: "E.g. Website 1-3 pages = 100€, delivered in ~13 days. 4-7 pages = 200€, ~30 days.",
     modeLbl: "⚙️ Business mode (turn on/off anytime)",
+    tabSettings: "⚙️ Settings", settingsDesc: "Change anything anytime — no need to restart.",
+    setBizH: "Business", setNameLbl: "Name & address", setSvcH: "Services / Products",
+    setHoursH: "Working hours", setAiH: "AI & Reviews",
+    saveServicesBtn: "Save services", saveHoursBtn: "Save hours",
     tabStaff: "👥 Staff", staffDesc: "Add staff and locations. Each person serves customers in parallel at the same time.",
     locNamePh: "Location name", locAddrPh: "Address (optional)", addLoc: "+ Location",
     staffNamePh: "Person's name", staffRolePh: "Role (e.g. barber)", addStaff: "+ Staff",
@@ -343,6 +351,7 @@ async function loadAll() {
   const bm = $("#bizMode"); if (bm) bm.value = biz.mode || "appointments";
   setupStaffUI();
   applyModeUI();
+  renderSettings();
   await renderAll();
 }
 
@@ -370,11 +379,101 @@ function applyModeUI() {
     if (apptTabs.includes(tab)) t.hidden = inquiry;
     else if (tab === "leads") t.hidden = !inquiry;
   });
+  const shb = $("#setHoursBlock"); if (shb) shb.hidden = inquiry; // orari s'duhet për porosi
   const active = document.querySelector(".tab.active");
   if (active && active.hidden) {
     const fb = document.querySelector('.tab[data-tab="stats"]') || document.querySelector(".tab:not([hidden])");
     if (fb) fb.click();
   }
+}
+
+/* ---------------- Cilësimet (edito gjithçka pas regjistrimit) ---------------- */
+function setServiceRow(s) {
+  const row = document.createElement("div");
+  row.className = "service-row";
+  if (s && s.id) row.dataset.id = s.id;
+  const nameI = document.createElement("input");
+  nameI.className = "s-name"; nameI.type = "text"; nameI.maxLength = 40; nameI.placeholder = tr("svcNamePh"); nameI.value = s ? s.name : "";
+  const durI = document.createElement("input");
+  durI.className = "s-dur"; durI.type = "number"; durI.min = 5; durI.max = 600; durI.step = 5; durI.value = s ? s.duration_min : 30;
+  const priceI = document.createElement("input");
+  priceI.className = "s-price"; priceI.type = "number"; priceI.min = 0; priceI.step = 0.5; priceI.value = s ? s.price : 0;
+  const del = document.createElement("button");
+  del.className = "s-del"; del.type = "button"; del.textContent = "✕"; del.onclick = () => row.remove();
+  row.append(nameI, durI, priceI, del);
+  $("#setServices").appendChild(row);
+}
+
+function renderSettingsHours() {
+  const hb = $("#setHours"); if (!hb) return;
+  hb.innerHTML = "";
+  for (let i = 1; i <= 7; i++) {
+    const dow = i % 7;
+    const h = hours[dow];
+    const closed = !h;
+    const row = document.createElement("div");
+    row.className = "hours-row"; row.dataset.dow = dow;
+    row.innerHTML = `
+      <span class="day">${T[lang].dayNames[dow]}</span>
+      <input type="time" class="h-open" value="${h ? h.open : "09:00"}" ${closed ? "disabled" : ""}>
+      <span>–</span>
+      <input type="time" class="h-close" value="${h ? h.close : "19:00"}" ${closed ? "disabled" : ""}>
+      <label class="closed-toggle"><input type="checkbox" class="h-closed" ${closed ? "checked" : ""}> ${tr("closed")}</label>`;
+    row.querySelector(".h-closed").addEventListener("change", (e) => {
+      row.querySelector(".h-open").disabled = e.target.checked;
+      row.querySelector(".h-close").disabled = e.target.checked;
+    });
+    hb.appendChild(row);
+  }
+}
+
+function renderSettings() {
+  if (!biz) return;
+  const sn = $("#setName"); if (sn) sn.value = biz.name || "";
+  const sa = $("#setAddress"); if (sa) sa.value = biz.address || "";
+  const sc = $("#setServices"); if (sc) { sc.innerHTML = ""; services.forEach(setServiceRow); }
+  renderSettingsHours();
+}
+
+async function saveServicesEdit() {
+  const rows = [...document.querySelectorAll("#setServices .service-row")];
+  const seen = new Set();
+  let i = 0;
+  for (const r of rows) {
+    const name = r.querySelector(".s-name").value.trim();
+    if (!name) continue;
+    const duration_min = Math.max(5, +r.querySelector(".s-dur").value || 30);
+    const price = +r.querySelector(".s-price").value || 0;
+    if (r.dataset.id) {
+      await sb.from("services").update({ name, duration_min, price, sort_order: i, active: true }).eq("id", r.dataset.id);
+      seen.add(r.dataset.id);
+    } else {
+      await sb.from("services").insert({ business_id: biz.id, name, duration_min, price, sort_order: i, active: true });
+    }
+    i++;
+  }
+  for (const s of services) if (!seen.has(s.id)) await sb.from("services").update({ active: false }).eq("id", s.id);
+  await loadServices();
+  renderSettings();
+  await renderAll();
+  toast(tr("toastSaved"));
+}
+
+async function saveHoursEdit() {
+  const rows = [...document.querySelectorAll("#setHours .hours-row")];
+  for (const r of rows) {
+    const dow = +r.dataset.dow;
+    const closed = r.querySelector(".h-closed").checked;
+    await sb.from("working_hours").upsert({
+      business_id: biz.id, weekday: dow, is_closed: closed,
+      open_time: closed ? null : r.querySelector(".h-open").value,
+      close_time: closed ? null : r.querySelector(".h-close").value,
+    }, { onConflict: "business_id,weekday" });
+  }
+  await loadHours();
+  renderSettingsHours();
+  await renderAll();
+  toast(tr("toastSaved"));
 }
 
 async function apptsForDate(ds) {
@@ -958,6 +1057,20 @@ function wire() {
       toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
+  const biBtn = $("#saveBizInfo");
+  if (biBtn) biBtn.onclick = async () => {
+    const name = $("#setName").value.trim() || biz.name;
+    const address = $("#setAddress").value.trim();
+    try {
+      await sb.from("businesses").update({ name, address }).eq("id", biz.id);
+      biz.name = name; biz.address = address;
+      $("#bizName").textContent = tr("panelPrefix") + biz.name;
+      toast(tr("toastSaved"));
+    } catch (ex) { alert(ex.message || String(ex)); }
+  };
+  if ($("#setAddService")) $("#setAddService").onclick = () => setServiceRow(null);
+  if ($("#saveServices")) $("#saveServices").onclick = saveServicesEdit;
+  if ($("#saveHours")) $("#saveHours").onclick = saveHoursEdit;
   $("#calPrev").onclick = () => { const d = parseDate(calDate); d.setDate(d.getDate() - 1); calDate = fmtDate(d); renderCalendar(); };
   $("#calNext").onclick = () => { const d = parseDate(calDate); d.setDate(d.getDate() + 1); calDate = fmtDate(d); renderCalendar(); };
   $("#calToday").onclick = () => { calDate = fmtDate(new Date()); renderCalendar(); };
