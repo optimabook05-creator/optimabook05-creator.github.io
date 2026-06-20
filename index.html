@@ -187,6 +187,28 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
   .stat b{font-size:20px}
 }
 
+@media (prefers-reduced-motion: reduce){
+  body::before{animation:none}
+  .chat{animation:none}
+  .msg{opacity:1;animation:none}
+  *{transition-duration:.01ms !important;animation-duration:.01ms !important}
+}
+
+/* ---------- Tabela e krahasimit ---------- */
+.cmp-scroll{overflow-x:auto;max-width:920px;margin:0 auto;-webkit-overflow-scrolling:touch}
+.cmp{width:100%;min-width:600px;border-collapse:separate;border-spacing:0;background:var(--glass);
+  backdrop-filter:blur(24px) saturate(1.5);-webkit-backdrop-filter:blur(24px) saturate(1.5);
+  border:1px solid var(--glass-edge);border-radius:var(--r-lg);box-shadow:var(--sh-glass);overflow:hidden}
+.cmp th,.cmp td{padding:14px 14px;text-align:center;font-size:14px;font-weight:700;border-bottom:1px solid var(--glass-edge)}
+.cmp thead th{font-family:var(--fd);font-weight:800;color:var(--ink)}
+.cmp thead th:first-child,.cmp tbody td:first-child{text-align:left;color:var(--ink);min-width:200px}
+.cmp tbody tr:last-child td{border-bottom:none}
+.cmp .cmp-us{background:var(--accent-soft)}
+.cmp thead th.cmp-us{color:var(--accent-deep);background:linear-gradient(160deg,var(--accent-soft),rgba(32,201,151,.2))}
+.cmp .y{color:var(--accent);font-size:18px;font-weight:800}
+.cmp .n{color:var(--ink-faint);font-size:17px}
+.cmp .m{color:#c98a1e;font-size:17px;font-weight:800}
+
 /* ---------- Toggle i temës ---------- */
 .theme-toggle{display:grid;place-items:center;width:40px;height:40px;border-radius:999px;
   border:1px solid var(--glass-edge);background:var(--glass-strong);color:var(--ink);cursor:pointer;
@@ -213,6 +235,7 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
 :root[data-theme="dark"] .bchip{box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 1px 3px rgba(0,0,0,.3)}
 :root[data-theme="dark"] .plan.featured{background:linear-gradient(170deg,rgba(38,52,47,.8),rgba(32,201,151,.16));border-color:rgba(32,201,151,.4)}
 :root[data-theme="dark"] footer{border-top-color:rgba(255,255,255,.08)}
+:root[data-theme="dark"] .cmp .m{color:#f0a847}
 </style>
 </head>
 <body>
@@ -295,6 +318,35 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
     <p data-t="bizP">Nëse klientët të zënë kohë, OptimaBook të zë klientë.</p>
   </div>
   <div class="biz-chips" id="bizChips"></div>
+</section>
+
+<section class="wrap" id="compare">
+  <div class="sec-head">
+    <h2 data-t="cmpH">Pse OptimaBook, e jo alternativat</h2>
+    <p data-t="cmpP">Krahasim i ndershëm me mënyrat e tjera për t'iu përgjigjur klientëve.</p>
+  </div>
+  <div class="cmp-scroll">
+    <table class="cmp">
+      <thead>
+        <tr>
+          <th></th>
+          <th class="cmp-us">OptimaBook</th>
+          <th data-t="cmpStaff">Recepsionist / staf</th>
+          <th data-t="cmpBot">Chatbot i thjeshtë</th>
+          <th data-t="cmpApp">App rezervimi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td data-t="cmpR1">Përgjigje në çast, 24/7</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="n">✗</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td></tr>
+        <tr><td data-t="cmpR2">Rezervon në kalendar, pa dyfishim</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="m">~</span></td><td><span class="n">✗</span></td><td><span class="y">✓</span></td></tr>
+        <tr><td data-t="cmpR3">Kupton tekstin e lirë & çdo gjuhë</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="m">~</span></td><td><span class="n">✗</span></td><td><span class="n">✗</span></td></tr>
+        <tr><td data-t="cmpR4">Kujtesa + mbush oraret e anuluara</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="m">~</span></td><td><span class="n">✗</span></td><td><span class="m">~</span></td></tr>
+        <tr><td data-t="cmpR5">Punon edhe për porosi/kërkesa</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="m">~</span></td><td><span class="n">✗</span></td></tr>
+        <tr><td data-t="cmpR6">Pa app për klientin (vetëm WhatsApp)</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="m">~</span></td></tr>
+        <tr><td data-t="cmpR7">Kosto fikse mujore, jo rrogë</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="n">✗</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td></tr>
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <section class="wrap" id="pricing">
@@ -426,6 +478,9 @@ const T = {
     q5: "A punon në gjuhën time?", a5: "Po — çdo gjuhë e botës. Klienti shkruan si i vjen, AI i përgjigjet në gjuhën e tij.",
     q6: "Për çfarë biznesesh është?", a6: "Për çdo biznes me takime (berber, klinikë, sallon, dentist, fizio…) OSE me porosi/kërkesa (web designer, dyqan, shërbime). Veçoritë ndizen/fiken sipas nevojës.",
     q7: "A mund të anuloj kurdo?", a7: "Po, kurdo. Fillon me 14 ditë provë falas, pa kartë krediti. Pa kontrata, pa befasi.",
+    cmpH: "Pse OptimaBook, e jo alternativat", cmpP: "Krahasim i ndershëm me mënyrat e tjera për t'iu përgjigjur klientëve.",
+    cmpStaff: "Recepsionist / staf", cmpBot: "Chatbot i thjeshtë", cmpApp: "App rezervimi",
+    cmpR1: "Përgjigje në çast, 24/7", cmpR2: "Rezervon në kalendar, pa dyfishim", cmpR3: "Kupton tekstin e lirë & çdo gjuhë", cmpR4: "Kujtesa + mbush oraret e anuluara", cmpR5: "Punon edhe për porosi/kërkesa", cmpR6: "Pa app për klientin (vetëm WhatsApp)", cmpR7: "Kosto fikse mujore, jo rrogë",
   },
   en: {
     navDemo: "▶ Try the demo", navLogin: "Sign in",
@@ -471,6 +526,9 @@ const T = {
     q5: "Does it work in my language?", a5: "Yes — every language in the world. The customer writes however they like, the AI replies in their language.",
     q6: "What businesses is it for?", a6: "Any business with appointments (barber, clinic, salon, dentist, physio…) OR with orders/requests (web designer, shop, services). Features turn on/off as needed.",
     q7: "Can I cancel anytime?", a7: "Yes, anytime. Start with a 14-day free trial, no credit card. No contracts, no surprises.",
+    cmpH: "Why OptimaBook, not the alternatives", cmpP: "An honest comparison with the other ways to answer your customers.",
+    cmpStaff: "Receptionist / staff", cmpBot: "Basic chatbot", cmpApp: "Booking app",
+    cmpR1: "Instant reply, 24/7", cmpR2: "Books into calendar, no double-booking", cmpR3: "Understands free text & any language", cmpR4: "Reminders + fills cancelled slots", cmpR5: "Works for orders/requests too", cmpR6: "No app for the customer (just WhatsApp)", cmpR7: "Fixed monthly cost, not a salary",
   },
 };
 
