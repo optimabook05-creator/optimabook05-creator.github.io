@@ -125,6 +125,7 @@
       <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
       <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
       <button class="tab" data-tab="leads" data-t="tabLeads">📥 Kërkesa</button>
+      <button class="tab" data-tab="customers" data-t="tabCustomers">👤 Klientët</button>
       <button class="tab" data-tab="activity" data-t="tabActivity">🔔 Aktiviteti</button>
       <button class="tab" data-tab="settings" data-t="tabSettings">⚙️ Cilësime</button>
     </nav>
@@ -186,6 +187,14 @@
         <button class="btn primary small" type="submit" data-t="addStaff">+ Staf</button>
       </form>
       <div class="block-list" id="staffList"></div>
+    </div>
+
+    <div class="tab-pane" id="pane-customers">
+      <p class="pane-desc" data-t="customersDesc">Klientët e tu, vizitat dhe të ardhurat — të mbledhura vetë nga AI.</p>
+      <div class="settings-input" style="margin-bottom:14px">
+        <input type="text" id="custSearch" data-t-ph="searchPh" placeholder="Kërko klient…">
+      </div>
+      <div class="block-list" id="customerList"></div>
     </div>
 
     <div class="tab-pane" id="pane-activity">

@@ -60,6 +60,7 @@ const T = {
     saveServicesBtn: "Ruaj shërbimet", saveHoursBtn: "Ruaj orarin", deliveryPh: "p.sh. 13 ditë",
     aiActive: "AI aktiv · 24/7",
     tabActivity: "🔔 Aktiviteti", activityDesc: "Çdo gjë që bën AI: rezervime, anulime, kujtesa, kërkesa — live.", emptyActivity: "Ende pa aktivitet.",
+    tabCustomers: "👤 Klientët", customersDesc: "Klientët e tu, vizitat dhe të ardhurat — të mbledhura vetë nga AI.", searchPh: "Kërko klient…", emptyCustomers: "Ende pa klientë.",
     tabStaff: "👥 Stafi", staffDesc: "Shto staf dhe lokacione. Çdo person pret klientë paralelisht në të njëjtën orë.",
     locNamePh: "Emri i lokacionit", locAddrPh: "Adresa (opsionale)", addLoc: "+ Lokacion",
     staffNamePh: "Emri i personit", staffRolePh: "Roli (p.sh. berber)", addStaff: "+ Staf",
@@ -128,6 +129,7 @@ const T = {
     saveServicesBtn: "Save services", saveHoursBtn: "Save hours", deliveryPh: "e.g. 13 days",
     aiActive: "AI active · 24/7",
     tabActivity: "🔔 Activity", activityDesc: "Everything the AI does: bookings, cancellations, reminders, requests — live.", emptyActivity: "No activity yet.",
+    tabCustomers: "👤 Customers", customersDesc: "Your customers, visits and revenue — gathered automatically by the AI.", searchPh: "Search customer…", emptyCustomers: "No customers yet.",
     tabStaff: "👥 Staff", staffDesc: "Add staff and locations. Each person serves customers in parallel at the same time.",
     locNamePh: "Location name", locAddrPh: "Address (optional)", addLoc: "+ Location",
     staffNamePh: "Person's name", staffRolePh: "Role (e.g. barber)", addStaff: "+ Staff",
@@ -379,7 +381,7 @@ function setupStaffUI() {
 // Mënyra e biznesit: fsheh/shfaq skedat sipas takime vs porosi (inquiry)
 function applyModeUI() {
   const inquiry = !!(biz && biz.mode === "inquiry");
-  const apptTabs = ["calendar", "appointments", "blocks", "waitlist", "staff"];
+  const apptTabs = ["calendar", "appointments", "blocks", "waitlist", "staff", "customers"];
   document.querySelectorAll(".tabs .tab").forEach((t) => {
     const tab = t.dataset.tab;
     if (apptTabs.includes(tab)) t.hidden = inquiry;
@@ -662,7 +664,36 @@ async function finishOnboard() {
    ===================================================================== */
 async function renderAll() {
   renderStaffPane();
-  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads(), renderActivity()]);
+  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads(), renderActivity(), renderCustomers()]);
+}
+
+async function renderCustomers() {
+  const list = $("#customerList"); if (!list) return;
+  const { data } = await sb.from("appointments")
+    .select("client_name, chat_id, channel, appt_date, status, services(price)").eq("business_id", biz.id);
+  const map = {};
+  for (const a of (data || [])) {
+    const key = (a.chat_id || a.client_name || "?") + "|" + (a.channel || "");
+    const c = map[key] || { name: a.client_name || "Klient", channel: a.channel || "manual", visits: 0, last: "", spent: 0 };
+    if (a.client_name) c.name = a.client_name;
+    if (a.status !== "cancelled") {
+      c.visits++; c.spent += a.services ? Number(a.services.price) || 0 : 0;
+      if (a.appt_date > c.last) c.last = a.appt_date;
+    }
+    map[key] = c;
+  }
+  let rows = Object.values(map).filter((c) => c.visits > 0).sort((a, b) => (b.last || "").localeCompare(a.last || ""));
+  const q = ($("#custSearch") && $("#custSearch").value.trim().toLowerCase()) || "";
+  if (q) rows = rows.filter((c) => (c.name || "").toLowerCase().includes(q));
+  if (!rows.length) { list.innerHTML = `<div class="empty">${tr("emptyCustomers")}</div>`; return; }
+  list.innerHTML = "";
+  for (const c of rows) {
+    const item = document.createElement("div");
+    item.className = "block-item";
+    item.innerHTML = `<span class="grow">👤 <strong>${esc(c.name)}</strong> <small style="color:var(--ink-faint)">· ${esc(c.channel)}</small></span>
+      <span style="font-size:12.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap">${c.visits} ${tr("visitsW")} · ${c.spent}€${c.last ? " · " + humanDate(c.last) : ""}</span>`;
+    list.appendChild(item);
+  }
 }
 
 async function renderActivity() {
@@ -1117,6 +1148,7 @@ function wire() {
       toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
+  if ($("#custSearch")) $("#custSearch").oninput = renderCustomers;
   if ($("#setAddService")) $("#setAddService").onclick = () => setServiceRow(null);
   if ($("#saveServices")) $("#saveServices").onclick = saveServicesEdit;
   if ($("#saveHours")) $("#saveHours").onclick = saveHoursEdit;
