@@ -617,7 +617,7 @@ async function runInquiry(ctx: any) {
   const { biz, services, client_name, history, text } = ctx;
   const sq = isSqLang(biz);
   const lang = isEnLang(biz) ? "English" : (sq ? "Albanian" : "the customer's language");
-  const catalog = services.map((s: any) => `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}`).join("\n");
+  const catalog = services.map((s: any) => `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}${s.delivery ? " — gati ~" + s.delivery : ""}`).join("\n");
   const system = [
     `You are the warm, friendly assistant for "${biz.name}".${biz.address ? ` (${biz.address})` : ""}`,
     `WHAT WE OFFER:`,

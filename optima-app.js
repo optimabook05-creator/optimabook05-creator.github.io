@@ -56,7 +56,7 @@ const T = {
     tabSettings: "⚙️ Cilësime", settingsDesc: "Ndrysho gjithçka kurdo — pa rifilluar.",
     setBizH: "Biznesi", setNameLbl: "Emri & adresa", setSvcH: "Shërbimet / Produktet",
     setHoursH: "Orari i punës", setAiH: "AI & Vlerësime",
-    saveServicesBtn: "Ruaj shërbimet", saveHoursBtn: "Ruaj orarin",
+    saveServicesBtn: "Ruaj shërbimet", saveHoursBtn: "Ruaj orarin", deliveryPh: "p.sh. 13 ditë",
     tabStaff: "👥 Stafi", staffDesc: "Shto staf dhe lokacione. Çdo person pret klientë paralelisht në të njëjtën orë.",
     locNamePh: "Emri i lokacionit", locAddrPh: "Adresa (opsionale)", addLoc: "+ Lokacion",
     staffNamePh: "Emri i personit", staffRolePh: "Roli (p.sh. berber)", addStaff: "+ Staf",
@@ -121,7 +121,7 @@ const T = {
     tabSettings: "⚙️ Settings", settingsDesc: "Change anything anytime — no need to restart.",
     setBizH: "Business", setNameLbl: "Name & address", setSvcH: "Services / Products",
     setHoursH: "Working hours", setAiH: "AI & Reviews",
-    saveServicesBtn: "Save services", saveHoursBtn: "Save hours",
+    saveServicesBtn: "Save services", saveHoursBtn: "Save hours", deliveryPh: "e.g. 13 days",
     tabStaff: "👥 Staff", staffDesc: "Add staff and locations. Each person serves customers in parallel at the same time.",
     locNamePh: "Location name", locAddrPh: "Address (optional)", addLoc: "+ Location",
     staffNamePh: "Person's name", staffRolePh: "Role (e.g. barber)", addStaff: "+ Staff",
@@ -397,11 +397,13 @@ function setServiceRow(s) {
   nameI.className = "s-name"; nameI.type = "text"; nameI.maxLength = 40; nameI.placeholder = tr("svcNamePh"); nameI.value = s ? s.name : "";
   const durI = document.createElement("input");
   durI.className = "s-dur"; durI.type = "number"; durI.min = 5; durI.max = 600; durI.step = 5; durI.value = s ? s.duration_min : 30;
+  const delivI = document.createElement("input");
+  delivI.className = "s-delivery"; delivI.type = "text"; delivI.maxLength = 30; delivI.placeholder = tr("deliveryPh"); delivI.value = s && s.delivery ? s.delivery : "";
   const priceI = document.createElement("input");
   priceI.className = "s-price"; priceI.type = "number"; priceI.min = 0; priceI.step = 0.5; priceI.value = s ? s.price : 0;
   const del = document.createElement("button");
   del.className = "s-del"; del.type = "button"; del.textContent = "✕"; del.onclick = () => row.remove();
-  row.append(nameI, durI, priceI, del);
+  row.append(nameI, durI, delivI, priceI, del);
   $("#setServices").appendChild(row);
 }
 
@@ -445,11 +447,12 @@ async function saveServicesEdit() {
     if (!name) continue;
     const duration_min = Math.max(5, +r.querySelector(".s-dur").value || 30);
     const price = +r.querySelector(".s-price").value || 0;
+    const delivery = (r.querySelector(".s-delivery") && r.querySelector(".s-delivery").value.trim()) || null;
     if (r.dataset.id) {
-      await sb.from("services").update({ name, duration_min, price, sort_order: i, active: true }).eq("id", r.dataset.id);
+      await sb.from("services").update({ name, duration_min, delivery, price, sort_order: i, active: true }).eq("id", r.dataset.id);
       seen.add(r.dataset.id);
     } else {
-      await sb.from("services").insert({ business_id: biz.id, name, duration_min, price, sort_order: i, active: true });
+      await sb.from("services").insert({ business_id: biz.id, name, duration_min, delivery, price, sort_order: i, active: true });
     }
     i++;
   }
@@ -532,6 +535,7 @@ function addServiceRow(s) {
   row.innerHTML = `
     <input class="s-name" type="text" placeholder="${tr("svcNamePh")}" value="${s ? s[0] : ""}" maxlength="40">
     <input class="s-dur" type="number" min="10" max="240" step="5" value="${s ? s[1] : 30}">
+    <input class="s-delivery" type="text" placeholder="${tr("deliveryPh")}" value="" maxlength="30">
     <input class="s-price" type="number" min="0" step="0.5" value="${s ? s[2] : 0}">
     <button class="s-del" type="button">✕</button>`;
   row.querySelector(".s-del").onclick = () => row.remove();
@@ -585,6 +589,7 @@ async function finishOnboard() {
     .map((r) => ({
       name: r.querySelector(".s-name").value.trim(),
       duration_min: Math.max(10, +r.querySelector(".s-dur").value || 30),
+      delivery: (r.querySelector(".s-delivery") && r.querySelector(".s-delivery").value.trim()) || null,
       price: +r.querySelector(".s-price").value || 0,
     })).filter((s) => s.name);
   if (!svcRows.length) { addServiceRow(null); return; }
