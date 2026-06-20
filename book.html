@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<title>OptimaBook — Rezervo / Porosit</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .pub-wrap { max-width: 560px; margin: 30px auto 80px; padding: 0 16px; }
+  .pub-card { background: var(--glass); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6);
+    border: 1px solid var(--glass-edge); border-radius: var(--r-xl); box-shadow: var(--shadow-float); padding: 28px 24px; }
+  .pub-biz { font-family: var(--font-display); font-size: 24px; font-weight: 800; letter-spacing: -.03em; }
+  .pub-addr { color: var(--ink-soft); font-weight: 600; font-size: 13.5px; margin-top: 3px; }
+  .pub-sec { font-family: var(--font-display); font-weight: 800; font-size: 14px; margin: 22px 0 10px; }
+  .pub-card label.f { display: block; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin: 14px 0 6px; }
+  .pub-card input, .pub-card select, .pub-card textarea { width: 100%; font-family: var(--font-body); border: 1px solid var(--glass-edge);
+    background: var(--glass-soft); border-radius: var(--r-sm); padding: 12px 13px; font-size: 14.5px; font-weight: 600; color: var(--ink); outline: none; }
+  .pub-card input:focus, .pub-card select:focus, .pub-card textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+  .slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; margin-top: 6px; }
+  .slot-btn { border: 1px solid var(--glass-edge); background: var(--glass-soft); color: var(--ink); border-radius: var(--r-sm);
+    padding: 9px 6px; font-weight: 700; font-size: 13.5px; cursor: pointer; transition: all .14s; }
+  .slot-btn:hover { transform: translateY(-1px); }
+  .slot-btn.sel { background: linear-gradient(160deg, var(--accent-bright), var(--accent)); color: #fff; border-color: transparent; }
+  .pub-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--glass-line); }
+  .pub-item:last-child { border-bottom: none; }
+  .pi-grow { flex: 1; min-width: 0; }
+  .pi-name { font-weight: 800; font-size: 14.5px; }
+  .pi-desc { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; margin-top: 2px; }
+  .pi-price { font-weight: 800; color: var(--accent-deep); font-size: 13.5px; margin-top: 2px; }
+  .qty { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .qty button { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--glass-edge); background: var(--glass-strong);
+    color: var(--ink); font-size: 17px; font-weight: 800; cursor: pointer; line-height: 1; }
+  .qty span { min-width: 22px; text-align: center; font-weight: 800; }
+  .cart-total { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 4px; font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+  .cart-total b { color: var(--accent-deep); }
+  .pub-msg { text-align: center; padding: 30px 16px; }
+  .pub-msg .big { font-size: 46px; }
+  .pub-msg h2 { font-family: var(--font-display); margin: 10px 0 6px; }
+  .pub-msg p { color: var(--ink-soft); font-weight: 600; }
+  .pub-foot { text-align: center; margin-top: 18px; font-size: 12px; color: var(--ink-faint); font-weight: 600; }
+  .pub-foot a { color: var(--accent-deep); text-decoration: none; font-weight: 800; }
+  .pub-err { color: var(--red); font-weight: 700; font-size: 13.5px; margin-top: 10px; min-height: 18px; }
+</style>
+</head>
+<body>
+<div class="pub-wrap">
+  <div class="pub-card" id="card">
+    <div class="pub-msg"><div class="big">⏳</div><p id="loadingTxt">Po ngarkohet…</p></div>
+  </div>
+  <div class="pub-foot">⚡ <span id="poweredTxt">Mundësuar nga</span> <a href="index.html">OptimaBook</a></div>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const CUR = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
+let DATA = null, SQ = true;
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const pad = (n) => String(n).padStart(2, "0");
+function sym() { return CUR[(DATA && DATA.currency) || "EUR"] || (DATA && DATA.currency) || "€"; }
+function money(n) { const v = Math.round((Number(n) || 0) * 100) / 100; const s = sym(); return s.length === 1 ? v + s : v + " " + s; }
+const T = {
+  sq: { loading:"Po ngarkohet…", notfound:"Biznesi nuk u gjet.", powered:"Mundësuar nga", book:"Rezervo takim", order:"Bëj porosinë",
+    service:"Shërbimi", date:"Data", pickSlot:"Zgjedh orarin", noSlots:"S'ka orare të lira këtë ditë.", closed:"Mbyllur këtë ditë.",
+    name:"Emri yt", phone:"Telefoni", contact:"Telefon / email", notes:"Shënime (opsionale)", total:"Totali", send:"Dërgo",
+    okBook:"U rezervua! 🎉", okBookP:"Pronari do ta konfirmojë së shpejti.", okOrder:"Porosia u dërgua! 🎉", okOrderP:"Pronari do të kontaktojë së shpejti.",
+    needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", another:"Bëj një tjetër" },
+  en: { loading:"Loading…", notfound:"Business not found.", powered:"Powered by", book:"Book an appointment", order:"Place your order",
+    service:"Service", date:"Date", pickSlot:"Pick a time", noSlots:"No free times this day.", closed:"Closed this day.",
+    name:"Your name", phone:"Phone", contact:"Phone / email", notes:"Notes (optional)", total:"Total", send:"Send",
+    okBook:"Booked! 🎉", okBookP:"The owner will confirm shortly.", okOrder:"Order sent! 🎉", okOrderP:"The owner will contact you shortly.",
+    needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", another:"Make another" },
+};
+const tr = (k) => (SQ ? T.sq : T.en)[k];
+
+const cart = {}; // service_id -> qty
+let selDate = "", selTime = "";
+
+function unitPrice(item, qty) {
+  let best = Number(item.price) || 0, bq = -1;
+  for (const t of (DATA.tiers || [])) {
+    if (t.service_id === item.id && Number(t.min_qty) <= qty && Number(t.min_qty) > bq) { best = Number(t.unit_price) || 0; bq = Number(t.min_qty); }
+  }
+  return best;
+}
+
+async function init() {
+  const bid = new URLSearchParams(location.search).get("b");
+  $("#loadingTxt").textContent = tr("loading");
+  $("#poweredTxt").textContent = tr("powered");
+  if (!bid) { fail(); return; }
+  try {
+    const { data, error } = await sb.rpc("public_business", { bid });
+    if (error || !data) { fail(); return; }
+    DATA = data;
+    SQ = (DATA.lang || "sq") !== "en";
+    document.documentElement.lang = SQ ? "sq" : "en";
+    document.title = DATA.name + " — OptimaBook";
+    $("#poweredTxt").textContent = tr("powered");
+    render();
+  } catch (e) { fail(); }
+}
+function fail() { $("#card").innerHTML = `<div class="pub-msg"><div class="big">🔍</div><p>${tr("notfound")}</p></div>`; }
+
+function header() {
+  return `<div class="pub-biz">${esc(DATA.name)}</div>${DATA.address ? `<div class="pub-addr">📍 ${esc(DATA.address)}</div>` : ""}`;
+}
+
+function render() {
+  const commerce = DATA.commerce_enabled && DATA.mode !== "appointments";
+  $("#card").innerHTML = header() + (commerce || DATA.mode === "inquiry" ? orderUI() : bookUI());
+  if (commerce || DATA.mode === "inquiry") wireOrder(); else wireBook();
+}
+
+/* ---------- Appointments ---------- */
+function bookUI() {
+  const svc = DATA.services.filter((s) => s.kind !== "product");
+  const today = new Date().toISOString().slice(0, 10);
+  return `
+    <div class="pub-sec">${tr("book")}</div>
+    <label class="f">${tr("service")}</label>
+    <select id="bSvc">${svc.map((s) => `<option value="${s.id}">${esc(s.name)}${Number(s.price) ? " — " + money(s.price) : ""}</option>`).join("")}</select>
+    <label class="f">${tr("date")}</label>
+    <input type="date" id="bDate" min="${today}" value="${today}">
+    <label class="f">${tr("pickSlot")}</label>
+    <div class="slots" id="bSlots"></div>
+    <label class="f">${tr("name")}</label>
+    <input type="text" id="bName" maxlength="60">
+    <label class="f">${tr("phone")}</label>
+    <input type="text" id="bPhone" maxlength="40">
+    <div class="pub-err" id="bErr"></div>
+    <button class="btn primary big" id="bGo" style="width:100%;margin-top:14px">${tr("book")}</button>`;
+}
+function svcById(id) { return DATA.services.find((s) => s.id === id); }
+function renderSlots() {
+  const box = $("#bSlots"); selTime = "";
+  selDate = $("#bDate").value;
+  const d = new Date(selDate + "T00:00:00");
+  const dow = d.getDay();
+  const h = (DATA.hours || []).find((x) => x.weekday === dow);
+  if (!h || h.is_closed || !h.open_time) { box.innerHTML = `<div style="color:var(--ink-soft);font-weight:600;font-size:13px">${tr("closed")}</div>`; return; }
+  const svc = svcById($("#bSvc").value);
+  const step = Math.min(120, Math.max(15, (svc && svc.duration_min) || 30));
+  const toMin = (t) => { const [a, b] = t.split(":"); return +a * 60 + +b; };
+  const open = toMin(h.open_time), close = toMin(h.close_time);
+  const busy = new Set((DATA.busy || []).filter((x) => x.d === selDate).map((x) => (x.t || "").slice(0, 5)));
+  const now = new Date(); const isToday = selDate === now.toISOString().slice(0, 10);
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  let html = "";
+  for (let m = open; m + step <= close; m += step) {
+    const hm = pad(Math.floor(m / 60)) + ":" + pad(m % 60);
+    if (busy.has(hm)) continue;
+    if (isToday && m <= nowMin) continue;
+    html += `<button type="button" class="slot-btn" data-t="${hm}">${hm}</button>`;
+  }
+  box.innerHTML = html || `<div style="color:var(--ink-soft);font-weight:600;font-size:13px">${tr("noSlots")}</div>`;
+  box.querySelectorAll(".slot-btn").forEach((b) => b.onclick = () => {
+    box.querySelectorAll(".slot-btn").forEach((x) => x.classList.remove("sel"));
+    b.classList.add("sel"); selTime = b.dataset.t;
+  });
+}
+function wireBook() {
+  $("#bSvc").onchange = renderSlots;
+  $("#bDate").onchange = renderSlots;
+  renderSlots();
+  $("#bGo").onclick = async () => {
+    const name = $("#bName").value.trim();
+    if (!name) { $("#bErr").textContent = tr("needName"); return; }
+    if (!selTime) { $("#bErr").textContent = tr("needSlot"); return; }
+    $("#bErr").textContent = ""; $("#bGo").disabled = true;
+    try {
+      const { data, error } = await sb.rpc("public_book", { bid: DATA.id, p_service: $("#bSvc").value, p_name: name, p_phone: $("#bPhone").value.trim(), p_date: selDate, p_time: selTime });
+      if (error || !data || !data.ok) {
+        $("#bGo").disabled = false;
+        $("#bErr").textContent = data && data.error === "slot_taken" ? tr("slotTaken") : tr("failed");
+        if (data && data.error === "slot_taken") { DATA.busy.push({ d: selDate, t: selTime }); renderSlots(); }
+        return;
+      }
+      done(tr("okBook"), tr("okBookP"));
+    } catch (e) { $("#bGo").disabled = false; $("#bErr").textContent = tr("failed"); }
+  };
+}
+
+/* ---------- Orders / commerce ---------- */
+function orderUI() {
+  const items = DATA.services;
+  return `
+    <div class="pub-sec">${tr("order")}</div>
+    <div id="oItems">${items.map(itemRow).join("")}</div>
+    <div class="cart-total"><span>${tr("total")}</span><b id="oTotal">${money(0)}</b></div>
+    <label class="f">${tr("name")}</label>
+    <input type="text" id="oName" maxlength="60">
+    <label class="f">${tr("contact")}</label>
+    <input type="text" id="oContact" maxlength="60">
+    <label class="f">${tr("notes")}</label>
+    <textarea id="oNotes" rows="2" maxlength="300"></textarea>
+    <div class="pub-err" id="oErr"></div>
+    <button class="btn primary big" id="oGo" style="width:100%;margin-top:14px">${tr("send")}</button>`;
+}
+function itemRow(s) {
+  const showDesc = !(DATA.config && DATA.config.catDesc === false);
+  return `<div class="pub-item">
+    <div class="pi-grow">
+      <div class="pi-name">${esc(s.name)}</div>
+      ${showDesc && s.description ? `<div class="pi-desc">${esc(s.description)}</div>` : ""}
+      <div class="pi-price">${money(s.price)}${s.unit_label ? " / " + esc(s.unit_label) : ""}</div>
+    </div>
+    <div class="qty">
+      <button type="button" data-m="${s.id}">−</button>
+      <span id="q-${s.id}">0</span>
+      <button type="button" data-p="${s.id}">+</button>
+    </div>
+  </div>`;
+}
+function recompute() {
+  let total = 0;
+  for (const id in cart) { const it = svcById(id); if (it) total += unitPrice(it, cart[id]) * cart[id]; }
+  $("#oTotal").textContent = money(total);
+}
+function wireOrder() {
+  $("#oItems").querySelectorAll("button[data-p]").forEach((b) => b.onclick = () => { const id = b.dataset.p; cart[id] = (cart[id] || 0) + 1; $("#q-" + id).textContent = cart[id]; recompute(); });
+  $("#oItems").querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => { const id = b.dataset.m; cart[id] = Math.max(0, (cart[id] || 0) - 1); $("#q-" + id).textContent = cart[id]; if (!cart[id]) delete cart[id]; recompute(); });
+  $("#oGo").onclick = async () => {
+    const items = Object.keys(cart).map((id) => ({ service_id: id, qty: cart[id] }));
+    if (!items.length) { $("#oErr").textContent = tr("needItems"); return; }
+    const name = $("#oName").value.trim();
+    if (!name) { $("#oErr").textContent = tr("needName"); return; }
+    $("#oErr").textContent = ""; $("#oGo").disabled = true;
+    try {
+      const { data, error } = await sb.rpc("public_order", { bid: DATA.id, p_name: name, p_contact: $("#oContact").value.trim(), p_items: items, p_notes: $("#oNotes").value.trim() });
+      if (error || !data || !data.ok) { $("#oGo").disabled = false; $("#oErr").textContent = tr("failed"); return; }
+      done(tr("okOrder"), tr("okOrderP"));
+    } catch (e) { $("#oGo").disabled = false; $("#oErr").textContent = tr("failed"); }
+  };
+}
+
+function done(title, p) {
+  $("#card").innerHTML = `<div class="pub-msg"><div class="big">✅</div><h2>${title}</h2><p>${p}</p>
+    <button class="btn" style="margin-top:16px" onclick="location.reload()">${tr("another")}</button></div>`;
+}
+
+init();
+</script>
+</body>
+</html>

@@ -130,6 +130,8 @@ const T = {
     addBiz: "+ Biznes", obBack: "← Kthehu",
     setFieldsH: "🧩 Fushat e katalogut (fik ato që s'të duhen)", fieldsDesc: "Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.",
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
+    setPubH: "🌐 Faqja publike (link për klientët)", pubDesc: "Ndaje këtë link kudo (bio, WhatsApp, Instagram) — klientët rezervojnë/porosisin vetë, pa bisedë, pa app.",
+    copyLink: "Kopjo", openLink: "Hap ↗", copied: "✅ U kopjua",
     printDoc: "🧾 Faturë / Ofertë", invInvoice: "FATURË", invQuote: "OFERTË", invNo: "Nr.", invDate: "Data",
     invFrom: "Nga", invTo: "Për", invItem: "Artikulli", invQty: "Sasia", invPrice: "Çmimi", invLineTotal: "Totali",
     invSubtotal: "Nëntotali", invDiscount: "Zbritje", invTotal: "TOTALI", invPaid: "Paguar", invDue: "Mbetet",
@@ -248,6 +250,8 @@ const T = {
     addBiz: "+ Business", obBack: "← Back",
     setFieldsH: "🧩 Catalog fields (turn off what you don't need)", fieldsDesc: "Everything is on by default. Turn off what you don't need — the panel becomes truly yours.",
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
+    setPubH: "🌐 Public page (link for customers)", pubDesc: "Share this link anywhere (bio, WhatsApp, Instagram) — customers book/order themselves, no chat, no app.",
+    copyLink: "Copy", openLink: "Open ↗", copied: "✅ Copied",
     printDoc: "🧾 Invoice / Quote", invInvoice: "INVOICE", invQuote: "QUOTE", invNo: "No.", invDate: "Date",
     invFrom: "From", invTo: "To", invItem: "Item", invQty: "Qty", invPrice: "Price", invLineTotal: "Total",
     invSubtotal: "Subtotal", invDiscount: "Discount", invTotal: "TOTAL", invPaid: "Paid", invDue: "Outstanding",
@@ -1128,6 +1132,9 @@ function renderSettings() {
   const sc = $("#setServices"); if (sc) { sc.innerHTML = ""; services.forEach(setServiceRow); }
   const tg = $("#tgToken"); if (tg) tg.value = biz.telegram_token || "";
   const bid = $("#bizIdVal"); if (bid) bid.textContent = biz.id;
+  const pubBase = location.href.split("?")[0].replace(/[^/]*$/, "") + "book.html?b=" + biz.id;
+  const pl = $("#pubLink"); if (pl) pl.value = pubBase;
+  const op = $("#openPubLink"); if (op) op.href = pubBase;
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
   const cc = $("#bizCurrency"); if (cc) cc.value = biz.currency || "EUR";
   // Toggle-t e fushave të katalogut
@@ -1885,6 +1892,11 @@ function wire() {
     } catch (ex) { alert(ex.message || String(ex)); }
   };
   if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
+  if ($("#copyPubLink")) $("#copyPubLink").onclick = async () => {
+    const v = $("#pubLink").value;
+    try { await navigator.clipboard.writeText(v); toast(tr("copied")); }
+    catch (e) { $("#pubLink").select(); document.execCommand && document.execCommand("copy"); toast(tr("copied")); }
+  };
   // Tregti: monedha + ndezja
   const scBtn = $("#saveCommerce");
   if (scBtn) scBtn.onclick = async () => {
