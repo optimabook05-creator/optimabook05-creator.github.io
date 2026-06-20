@@ -9,9 +9,45 @@
 <meta property="og:title" content="OptimaBook — The AI receptionist that never sleeps">
 <meta property="og:description" content="Bookings, reminders and customer chat on WhatsApp — fully automatic, 24/7, in any language.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://optimabook05-creator.github.io/">
+<meta property="og:site_name" content="OptimaBook">
+<meta property="og:locale" content="sq_AL">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OptimaBook — The AI receptionist that never sleeps">
+<meta name="twitter:description" content="Bookings, reminders and customer chat on WhatsApp — fully automatic, 24/7, in any language.">
+<link rel="canonical" href="https://optimabook05-creator.github.io/">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0ca678">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "OptimaBook",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "Recepsionisti AI që i përgjigjet klientëve në WhatsApp, rezervon takime dhe dërgon kujtesa — 24/7, në çdo gjuhë, për çdo biznes.",
+      "url": "https://optimabook05-creator.github.io/",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "description": "14 ditë provë falas" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "A duhet të instaloj diçka?", "acceptedAnswer": { "@type": "Answer", "text": "Jo. Klientët të shkruajnë në WhatsApp/Telegram si gjithmonë, dhe ti menaxhon nga një panel në shfletues. Pa aplikacione, pa IT." } },
+        { "@type": "Question", "name": "Në cilat kanale punon?", "acceptedAnswer": { "@type": "Answer", "text": "WhatsApp, Telegram, Instagram dhe Messenger — me një tru të vetëm. Telefonatat me zë (Voice AI) vijnë së shpejti." } },
+        { "@type": "Question", "name": "Çfarë nëse AI gabon te një orar?", "acceptedAnswer": { "@type": "Answer", "text": "S'mund të gabojë te rezervimi: AI vetëm kupton, ndërsa motori ynë validon çdo orar nga kalendari real — kurrë s'mbivendos dy klientë dhe kurrë s'shpik orar." } },
+        { "@type": "Question", "name": "A janë të dhënat e mia të sigurta?", "acceptedAnswer": { "@type": "Answer", "text": "Po. Çdo biznes është i izoluar plotësisht — sheh vetëm të dhënat e veta." } },
+        { "@type": "Question", "name": "A punon në gjuhën time?", "acceptedAnswer": { "@type": "Answer", "text": "Po — çdo gjuhë e botës. Klienti shkruan si i vjen, AI i përgjigjet në gjuhën e tij." } },
+        { "@type": "Question", "name": "Për çfarë biznesesh është?", "acceptedAnswer": { "@type": "Answer", "text": "Për çdo biznes me takime (berber, klinikë, sallon, dentist, fizio…) OSE me porosi/kërkesa (web designer, dyqan, shërbime). Veçoritë ndizen/fiken sipas nevojës." } },
+        { "@type": "Question", "name": "A mund të anuloj kurdo?", "acceptedAnswer": { "@type": "Answer", "text": "Po, kurdo. Fillon me 14 ditë provë falas, pa kartë krediti. Pa kontrata, pa befasi." } }
+      ]
+    }
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -208,6 +244,12 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
 .cmp .y{color:var(--accent);font-size:18px;font-weight:800}
 .cmp .n{color:var(--ink-faint);font-size:17px}
 .cmp .m{color:#c98a1e;font-size:17px;font-weight:800}
+
+/* ---------- Scroll-reveal ---------- */
+.reveal{opacity:0;transform:translateY(24px);will-change:opacity,transform;
+  transition:opacity .7s cubic-bezier(.22,.61,.36,1),transform .7s cubic-bezier(.22,.61,.36,1)}
+.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){.reveal{opacity:1;transform:none;transition:none}}
 
 /* ---------- Toggle i temës ---------- */
 .theme-toggle{display:grid;place-items:center;width:40px;height:40px;border-radius:999px;
@@ -574,6 +616,27 @@ apply();
     try { localStorage.setItem("ob-theme", n); } catch (e) {}
     btn.textContent = lbl(n);
   };
+})();
+
+// Scroll-reveal — seksionet shfaqen butë kur skrollon (respekton reduced-motion)
+(function () {
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if (!("IntersectionObserver" in window)) return;
+  const els = document.querySelectorAll(".sec-head, .step, .feat, .cmp-scroll, .plan, .faq details, .final .glass-cta");
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+      if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); }
+    });
+  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+  const counter = new Map();
+  els.forEach((el) => {
+    el.classList.add("reveal");
+    const p = el.parentElement;
+    const n = counter.get(p) || 0;
+    counter.set(p, n + 1);
+    el.style.transitionDelay = Math.min(n, 5) * 70 + "ms";
+    io.observe(el);
+  });
 })();
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {
