@@ -126,6 +126,7 @@ const T = {
     repRevenue: "Të ardhura", repOrders: "Porosi", repUnits: "Njësi të shitura",
     repPaid: "Të arkëtuara", repOutstanding: "Për t'u arkëtuar", repRetail: "Pakicë", repWholesale: "Shumicë",
     repTopProducts: "Më të shiturat", repTopCustomers: "Klientët kryesorë",
+    addBiz: "+ Biznes",
   },
   en: {
     dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
@@ -236,6 +237,7 @@ const T = {
     repRevenue: "Revenue", repOrders: "Orders", repUnits: "Units sold",
     repPaid: "Collected", repOutstanding: "Outstanding", repRetail: "Retail", repWholesale: "Wholesale",
     repTopProducts: "Best sellers", repTopCustomers: "Top customers",
+    addBiz: "+ Business",
   },
 };
 const tr = (k) => T[lang][k];
@@ -307,7 +309,9 @@ function humanDate(ds) {
 }
 
 /* ---------------- Gjendja ---------------- */
-let biz = null;            // {id, name, type, address}
+let biz = null;            // {id, name, type, address} — biznesi aktiv
+let businesses = [];       // të gjitha bizneset e pronarit (multi-business)
+let addingBiz = false;     // onboarding po shton një biznes shtesë (jo i pari)
 let services = [];         // [{id, name, duration_min, price}]
 let hours = {};            // weekday -> {open, close} ose null
 let staff = [];            // [{id, name, role, location_id}] — bosh = biznes me një person
@@ -412,13 +416,13 @@ async function handleAuth(e) {
 
 async function afterLogin() {
   await loadBusiness();
-  if (biz) { showView("app"); await loadAll(); }   // shfaq panelin së pari → s'mbetet kurrë bosh
+  if (biz) { renderBizSwitch(); showView("app"); await loadAll(); }   // shfaq panelin së pari → s'mbetet kurrë bosh
   else { openOnboard(); showView("onboard"); }
 }
 
 async function logout() {
   await sb.auth.signOut();
-  biz = null; services = []; hours = {};
+  biz = null; businesses = []; services = []; hours = {}; addingBiz = false;
   showView("auth");
 }
 
@@ -426,10 +430,48 @@ async function logout() {
    DATA
    ===================================================================== */
 async function loadBusiness() {
-  // Gjithmonë biznesi i parë (më i vjetri) — i njëjti panel çdo herë
-  const { data } = await sb.from("businesses").select("*")
-    .order("created_at", { ascending: true }).limit(1).maybeSingle();
-  biz = data || null;
+  // Të gjitha bizneset e pronarit (multi-business); aktiv = i ruajtur ose i pari
+  const { data } = await sb.from("businesses").select("*").order("created_at", { ascending: true });
+  businesses = data || [];
+  let saved = null;
+  try { saved = localStorage.getItem("ob-active-biz"); } catch (e) {}
+  biz = businesses.find((b) => b.id === saved) || businesses[0] || null;
+}
+
+function setActiveBiz(id) {
+  try { localStorage.setItem("ob-active-biz", id); } catch (e) {}
+}
+
+// Ndërruesi i biznesit në panel (shfaqet kur ka >1 biznes)
+function renderBizSwitch() {
+  const sel = $("#bizSwitch");
+  if (!sel) return;
+  if (businesses.length > 1) {
+    sel.hidden = false;
+    sel.innerHTML = businesses.map((b) => `<option value="${b.id}">${esc(b.name)}</option>`).join("");
+    if (biz) sel.value = biz.id;
+  } else {
+    sel.hidden = true;
+  }
+}
+
+async function switchBusiness(id) {
+  if (!id || (biz && id === biz.id)) return;
+  const target = businesses.find((b) => b.id === id);
+  if (!target) return;
+  biz = target;
+  setActiveBiz(id);
+  // Rivendos gjendjen që s'duhet të kalojë mes bizneseve
+  calStaff = null; calDate = fmtDate(new Date());
+  $("#bizName").textContent = tr("panelPrefix") + biz.name;
+  await loadAll();
+}
+
+// Shto një biznes të ri (hap onboarding-un shtesë)
+function addNewBusiness() {
+  addingBiz = true;
+  openOnboard();
+  showView("onboard");
 }
 
 async function loadServices() {
@@ -1173,9 +1215,11 @@ async function finishOnboard() {
 
   btn.disabled = true; btn.textContent = tr("authWait");
   try {
-    // Mbrojtje nga dublikatat: nëse biznesi ekziston tashmë, hap panelin
-    await loadBusiness();
-    if (biz) { await loadAll(); showView("app"); return; }
+    if (!addingBiz) {
+      // Mbrojtje nga dublikatat (vetëm te regjistrimi i parë; jo kur shtohet biznes i ri)
+      await loadBusiness();
+      if (biz) { renderBizSwitch(); await loadAll(); showView("app"); return; }
+    }
 
     const { data: { user } } = await sb.auth.getUser();
     const row = {
@@ -1186,6 +1230,9 @@ async function finishOnboard() {
     const { data: b, error } = await sb.from("businesses").insert(row).select().single();
     if (error) throw error;
     biz = b;
+    businesses.push(b);
+    setActiveBiz(b.id);
+    addingBiz = false;
 
     await sb.from("services").insert(svcRows.map((s, i) => ({ ...s, business_id: b.id, sort_order: i })));
     const hrows = [...document.querySelectorAll("#obHours .hours-row")].map((r) => {
@@ -1198,6 +1245,7 @@ async function finishOnboard() {
     });
     await sb.from("working_hours").insert(hrows);
 
+    renderBizSwitch();
     await loadAll();
     showView("app");
     toast(tr("toastSaved"));
@@ -1240,7 +1288,7 @@ async function renderCustomers() {
     const item = document.createElement("div");
     item.className = "block-item";
     item.innerHTML = `<span class="grow">👤 <strong>${esc(c.name)}</strong> <small style="color:var(--ink-faint)">· ${esc(c.channel)}</small></span>
-      <span style="font-size:12.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap">${c.visits} ${tr("visitsW")} · ${c.spent}€${c.last ? " · " + humanDate(c.last) : ""}</span>`;
+      <span style="font-size:12.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap">${c.visits} ${tr("visitsW")} · ${money(c.spent)}${c.last ? " · " + humanDate(c.last) : ""}</span>`;
     list.appendChild(item);
   }
 }
@@ -1401,7 +1449,7 @@ async function renderAppointments() {
       <div class="appt-when">${hm(a.appt_time)}<small>${d.getDate()} ${T[lang].months[d.getMonth()]}</small></div>
       <div class="appt-info">
         <div class="who">${esc(a.client_name)}</div>
-        <div class="what">${s ? esc(s.name) + " • " + s.price + "€" : ""} • ${a.source === "ai" ? tr("bookedAi") : tr("manual")}${staffName(a.staff_id) ? " • 👤 " + esc(staffName(a.staff_id)) : ""}
+        <div class="what">${s ? esc(s.name) + " • " + money(s.price) : ""} • ${a.source === "ai" ? tr("bookedAi") : tr("manual")}${staffName(a.staff_id) ? " • 👤 " + esc(staffName(a.staff_id)) : ""}
           ${a.status === "confirmed" ? ` • <span style="color:var(--accent-deep)">${tr("confirmedW")}</span>` : ""}
           ${a.status === "cancelled" ? ` • <span style="color:var(--red)">${tr("cancelledW")}</span>` : ""}
         </div>
@@ -1529,9 +1577,9 @@ async function renderStats() {
   grid.innerHTML = `
     <div class="stats-grid-top">
       <div class="stat-card highlight">
-        <div class="num">${revThis}€</div>
+        <div class="num">${money(revThis)}</div>
         <div class="lbl">${tr("statThisMonth")}</div>
-        ${trendHtml || `<span class="trend muted">${tr("statVsLast")}: ${revLast}€</span>`}
+        ${trendHtml || `<span class="trend muted">${tr("statVsLast")}: ${money(revLast)}</span>`}
       </div>
       <div class="stat-card">
         <div class="num">${active.length}</div>
@@ -1740,6 +1788,9 @@ function wire() {
   if ($("#itemDelete")) $("#itemDelete").onclick = deleteItem;
   if ($("#itemCancel")) $("#itemCancel").onclick = () => { $("#itemModal").hidden = true; };
   if ($("#itemModal")) $("#itemModal").addEventListener("click", (e) => { if (e.target === $("#itemModal")) $("#itemModal").hidden = true; });
+  // Multi-business
+  if ($("#bizSwitch")) $("#bizSwitch").onchange = (e) => switchBusiness(e.target.value);
+  if ($("#btnAddBiz")) $("#btnAddBiz").onclick = addNewBusiness;
   // Porositë
   if ($("#btnAddOrder")) $("#btnAddOrder").onclick = () => openOrder(null);
   if ($("#orderFilter")) $("#orderFilter").onchange = renderOrders;

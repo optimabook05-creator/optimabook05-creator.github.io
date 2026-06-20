@@ -409,7 +409,11 @@ body::after {
 }
 @keyframes panelIn { from { opacity: 0; transform: translateY(12px); } }
 
-.panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.panel-head-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.biz-switch { font-family: var(--font-body); font-weight: 800; font-size: 13.5px; color: var(--ink);
+  border: 1px solid var(--glass-edge); background: var(--glass-strong); border-radius: var(--r-sm);
+  padding: 8px 12px; cursor: pointer; max-width: 200px; }
 .panel-head h2 {
   font-family: var(--font-display); font-size: 25px;
   letter-spacing: -.04em; font-weight: 800; line-height: 1.1;
