@@ -87,6 +87,12 @@ const T = {
     toastSaved: "✅ U ruajt", toastCancelled: "🗑 U anulua", toastConfirmed: "✓ U konfirmua",
     toastBlocked: "⛔ U bllokua", toastRemind: "🔔 Kujtesa u shënua",
     errFields: "Plotëso email-in dhe fjalëkalimin (min. 6 shkronja).",
+    qsTitle: "Fillimi i shpejtë", qsSub: "Pak hapa dhe AI yt është gati të presë klientë.",
+    qsDoneTitle: "Gati! 🎉", qsDoneSub: "AI yt po pret klientë 24/7. Mund ta mbyllësh këtë.",
+    qsSvc: "Shto shërbimet e tua", qsHrs: "Vendos orarin e punës",
+    qsChan: "Lidh kanalin (WhatsApp/Telegram)", qsMsg: "Merr mesazhin e parë të klientit",
+    qsDo: "Bëje", qsHow: "Si?",
+    qsMsgHelp: "Lidh kanalin te Cilësimet, pastaj dërgo një mesazh provë vetë — do ta shohësh këtu të kryer.",
   },
   en: {
     dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
@@ -158,6 +164,12 @@ const T = {
     toastSaved: "✅ Saved", toastCancelled: "🗑 Cancelled", toastConfirmed: "✓ Confirmed",
     toastBlocked: "⛔ Blocked", toastRemind: "🔔 Reminder noted",
     errFields: "Enter email and password (min. 6 characters).",
+    qsTitle: "Quick start", qsSub: "A few steps and your AI is ready to welcome customers.",
+    qsDoneTitle: "All set! 🎉", qsDoneSub: "Your AI is serving customers 24/7. You can close this.",
+    qsSvc: "Add your services", qsHrs: "Set your working hours",
+    qsChan: "Connect a channel (WhatsApp/Telegram)", qsMsg: "Get your first customer message",
+    qsDo: "Do it", qsHow: "How?",
+    qsMsgHelp: "Connect a channel in Settings, then send a test message yourself — you'll see this checked off.",
   },
 };
 const tr = (k) => T[lang][k];
@@ -365,6 +377,65 @@ async function loadAll() {
   applyModeUI();
   renderSettings();
   await renderAll();
+  renderQuickStart();
+}
+
+// Kartë "Fillimi i shpejtë" — udhëheq pronarin, zbulon vetë çfarë është bërë
+async function renderQuickStart() {
+  const box = $("#quickStart");
+  if (!box || !biz) return;
+  if (localStorage.getItem("ob-qs-dismissed-" + biz.id)) { box.hidden = true; return; }
+  const inquiry = biz.mode === "inquiry";
+
+  // A ka marrë mesazhin e parë? (sinjal real që kanali punon)
+  let gotMsg = false;
+  try {
+    const { count } = await sb.from("messages").select("id", { count: "exact", head: true }).eq("business_id", biz.id);
+    gotMsg = (count || 0) > 0;
+  } catch (e) {}
+
+  const items = [];
+  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: "settings" });
+  if (!inquiry) items.push({ key: "hrs", done: Object.values(hours).some((h) => h), label: tr("qsHrs"), tab: "settings" });
+  items.push({ key: "chan", done: !!biz.telegram_token, label: tr("qsChan"), tab: "settings" });
+  items.push({ key: "msg", done: gotMsg, label: tr("qsMsg"), tab: "settings" });
+
+  const doneN = items.filter((i) => i.done).length;
+  const allDone = doneN === items.length;
+  $("#qsFill").style.width = Math.round((doneN / items.length) * 100) + "%";
+  $("#qsTitleTxt").textContent = allDone ? tr("qsDoneTitle") : tr("qsTitle");
+  $("#qsSub").textContent = allDone ? tr("qsDoneSub") : tr("qsSub");
+
+  const list = $("#qsList");
+  list.innerHTML = "";
+  items.forEach((it) => {
+    const row = document.createElement("div");
+    row.className = "qs-item" + (it.done ? " done" : "");
+    const tick = document.createElement("span");
+    tick.className = "qs-tick"; tick.textContent = it.done ? "✓" : "";
+    const lab = document.createElement("span");
+    lab.className = "qs-lab"; lab.textContent = it.label;
+    row.appendChild(tick); row.appendChild(lab);
+    if (!it.done) {
+      const act = document.createElement("button");
+      act.className = "btn small primary qs-go"; act.type = "button";
+      act.textContent = it.key === "msg" ? tr("qsHow") : tr("qsDo");
+      act.onclick = () => {
+        const t = document.querySelector('.tab[data-tab="' + it.tab + '"]');
+        if (t) t.click();
+        if (it.key === "msg") toast(tr("qsMsgHelp"));
+        box.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+      row.appendChild(act);
+    }
+    list.appendChild(row);
+  });
+
+  $("#qsDismiss").onclick = () => {
+    try { localStorage.setItem("ob-qs-dismissed-" + biz.id, "1"); } catch (e) {}
+    box.hidden = true;
+  };
+  box.hidden = false;
 }
 
 // Përgatit selektorët e stafit (filtri i kalendarit + fusha te takimi manual)

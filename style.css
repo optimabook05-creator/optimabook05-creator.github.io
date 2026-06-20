@@ -679,6 +679,35 @@ body::after {
 }
 .set-h { font-family: var(--font-display); font-size: 15px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 12px; color: var(--ink); }
 .biz-id { background: var(--glass-soft); border: 1px solid var(--glass-edge); padding: 2px 8px; border-radius: 8px; font-size: 11px; font-family: monospace; user-select: all; word-break: break-all; }
+
+/* ---------- Fillimi i shpejtë (quick start) ---------- */
+.quickstart {
+  background: linear-gradient(160deg, var(--accent-soft), var(--glass));
+  border: 1px solid var(--glass-edge); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-glass); padding: 18px 20px; margin-bottom: 16px;
+  animation: panelIn .5s cubic-bezier(.22,.61,.36,1) both;
+}
+.qs-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.qs-head h3 { font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
+.qs-sub { color: var(--ink-soft); font-size: 13px; font-weight: 600; margin-top: 3px; }
+.qs-dismiss { border: none; background: transparent; color: var(--ink-faint); font-size: 16px;
+  cursor: pointer; line-height: 1; padding: 5px 7px; border-radius: 8px; transition: all .15s; }
+.qs-dismiss:hover { color: var(--ink); background: var(--glass-soft); }
+.qs-bar { height: 7px; border-radius: 999px; background: var(--glass-soft); overflow: hidden; margin: 14px 0; }
+.qs-fill { height: 100%; border-radius: 999px; width: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-bright));
+  transition: width .6s cubic-bezier(.22,.61,.36,1); }
+.qs-list { display: flex; flex-direction: column; gap: 8px; }
+.qs-item { display: flex; align-items: center; gap: 11px; padding: 9px 12px;
+  border-radius: var(--r-sm); background: var(--glass-soft); border: 1px solid var(--glass-line); }
+.qs-item.done { opacity: .64; }
+.qs-tick { width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center;
+  flex-shrink: 0; font-size: 13px; font-weight: 800; border: 2px solid var(--ink-faint);
+  color: var(--ink-faint); background: transparent; }
+.qs-item.done .qs-tick { background: var(--accent); border-color: var(--accent); color: #fff; }
+.qs-lab { flex: 1; font-weight: 700; font-size: 14px; }
+.qs-item.done .qs-lab { text-decoration: line-through; text-decoration-color: var(--ink-faint); }
+.qs-go { flex-shrink: 0; }
 .settings-block .settings-row { background: var(--glass-soft); }
 .settings-row {
   margin-bottom: 12px; padding: 14px 16px; border-radius: 16px;
