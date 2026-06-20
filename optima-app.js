@@ -126,7 +126,7 @@ const T = {
     repRevenue: "Të ardhura", repOrders: "Porosi", repUnits: "Njësi të shitura",
     repPaid: "Të arkëtuara", repOutstanding: "Për t'u arkëtuar", repRetail: "Pakicë", repWholesale: "Shumicë",
     repTopProducts: "Më të shiturat", repTopCustomers: "Klientët kryesorë",
-    addBiz: "+ Biznes",
+    addBiz: "+ Biznes", obBack: "← Kthehu",
   },
   en: {
     dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
@@ -237,7 +237,7 @@ const T = {
     repRevenue: "Revenue", repOrders: "Orders", repUnits: "Units sold",
     repPaid: "Collected", repOutstanding: "Outstanding", repRetail: "Retail", repWholesale: "Wholesale",
     repTopProducts: "Best sellers", repTopCustomers: "Top customers",
-    addBiz: "+ Business",
+    addBiz: "+ Business", obBack: "← Back",
   },
 };
 const tr = (k) => T[lang][k];
@@ -1175,6 +1175,7 @@ function openOnboard() {
   };
   if ($("#obMode")) $("#obMode").onchange = applyMode;
   applyMode();
+  const back = $("#obBack"); if (back) back.hidden = !addingBiz; // "Kthehu" vetëm kur shton biznes shtesë
   // orari
   const hb = $("#obHours"); hb.innerHTML = "";
   for (let i = 1; i <= 7; i++) {
@@ -1791,6 +1792,7 @@ function wire() {
   // Multi-business
   if ($("#bizSwitch")) $("#bizSwitch").onchange = (e) => switchBusiness(e.target.value);
   if ($("#btnAddBiz")) $("#btnAddBiz").onclick = addNewBusiness;
+  if ($("#obBack")) $("#obBack").onclick = () => { addingBiz = false; if (biz) { renderBizSwitch(); showView("app"); } };
   // Porositë
   if ($("#btnAddOrder")) $("#btnAddOrder").onclick = () => openOrder(null);
   if ($("#orderFilter")) $("#orderFilter").onchange = renderOrders;

@@ -46,6 +46,8 @@
     -webkit-backdrop-filter: blur(30px) saturate(1.6); border: 1px solid var(--glass-edge);
     border-radius: var(--r-xl); box-shadow: var(--shadow-float); padding: 30px; }
   .app-shell { max-width: 760px; margin: 24px auto; padding: 0 18px; }
+  .onboard-actions { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
+  .onboard-actions .btn.primary { flex: 1; }
 </style>
 </head>
 <body>
@@ -110,7 +112,10 @@
       <span data-t="obHours">Orari i punës</span>
       <div class="hours-grid" id="obHours"></div>
     </div>
-    <button class="btn primary big" id="obFinish" data-t="obFinish">Përfundo — jam gati ✓</button>
+    <div class="onboard-actions">
+      <button class="btn ghost" id="obBack" type="button" hidden data-t="obBack">← Kthehu</button>
+      <button class="btn primary big" id="obFinish" data-t="obFinish">Përfundo — jam gati ✓</button>
+    </div>
   </div>
 </section>
 
