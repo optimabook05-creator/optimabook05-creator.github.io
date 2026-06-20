@@ -134,6 +134,16 @@ h2{font-family:var(--fd);font-size:clamp(26px,4vw,38px);font-weight:800;letter-s
 .bchip{background:var(--glass-strong);border:1px solid var(--glass-edge);border-radius:999px;
   padding:9px 18px;font-size:14px;font-weight:800;color:var(--ink);box-shadow:inset 0 1px 0 #fff,0 1px 3px rgba(22,32,28,.05)}
 
+/* FAQ — akordeon i pastër (native details/summary) */
+.faq{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.faq details{background:var(--glass);backdrop-filter:blur(20px) saturate(1.4);border:1px solid var(--glass-edge);border-radius:var(--r-md);box-shadow:var(--sh-glass);overflow:hidden;transition:box-shadow .22s}
+.faq details[open]{box-shadow:var(--sh-float)}
+.faq summary{cursor:pointer;list-style:none;padding:18px 22px;font-family:var(--fd);font-weight:800;font-size:16px;letter-spacing:-.01em;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:24px;font-weight:700;color:var(--accent-deep);transition:transform .25s ease;line-height:1}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{padding:0 22px 20px;color:var(--ink-soft);font-weight:600;font-size:14.5px;line-height:1.65}
+
 .pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;max-width:1020px;margin:0 auto;align-items:stretch}
 .plan{background:var(--glass);backdrop-filter:blur(26px) saturate(1.5);border:1px solid var(--glass-edge);
   border-radius:var(--r-xl);padding:32px 28px;box-shadow:var(--sh-glass);display:flex;flex-direction:column;
@@ -307,6 +317,22 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
   <p class="trial-note" data-t="trial">✓ 14 ditë provë falas në çdo plan · pa kartë krediti · anulo kur të duash</p>
 </section>
 
+<section class="wrap" id="faq">
+  <div class="sec-head">
+    <h2 data-t="faqH">Pyetjet e shpeshta</h2>
+    <p data-t="faqP">Gjithçka që duhet të dish para se të fillosh.</p>
+  </div>
+  <div class="faq">
+    <details><summary data-t="q1">A duhet të instaloj diçka?</summary><p data-t="a1">Jo. Klientët të shkruajnë në WhatsApp/Telegram si gjithmonë, dhe ti menaxhon nga një panel në shfletues. Pa aplikacione, pa IT.</p></details>
+    <details><summary data-t="q2">Në cilat kanale punon?</summary><p data-t="a2">WhatsApp, Telegram, Instagram dhe Messenger — me një tru të vetëm. Telefonatat me zë (Voice AI) vijnë së shpejti.</p></details>
+    <details><summary data-t="q3">Çfarë nëse AI gabon te një orar?</summary><p data-t="a3">S'mund të gabojë te rezervimi: AI vetëm kupton, ndërsa motori ynë validon çdo orar nga kalendari real — kurrë s'mbivendos dy klientë dhe kurrë s'shpik orar. Kur s'është i sigurt, pyet ose të kalon ty.</p></details>
+    <details><summary data-t="q4">A janë të dhënat e mia të sigurta?</summary><p data-t="a4">Po. Çdo biznes është i izoluar plotësisht — sheh vetëm të dhënat e veta. Detajet te Politika e Privatësisë në fund të faqes.</p></details>
+    <details><summary data-t="q5">A punon në gjuhën time?</summary><p data-t="a5">Po — çdo gjuhë e botës. Klienti shkruan si i vjen, AI i përgjigjet në gjuhën e tij.</p></details>
+    <details><summary data-t="q6">Për çfarë biznesesh është?</summary><p data-t="a6">Për çdo biznes me takime (berber, klinikë, sallon, dentist, fizio…) OSE me porosi/kërkesa (web designer, dyqan, shërbime). Veçoritë ndizen/fiken sipas nevojës.</p></details>
+    <details><summary data-t="q7">A mund të anuloj kurdo?</summary><p data-t="a7">Po, kurdo. Fillon me 14 ditë provë falas, pa kartë krediti. Pa kontrata, pa befasi.</p></details>
+  </div>
+</section>
+
 <section class="final wrap">
   <div class="glass-cta">
     <h2 data-t="finH">Shiko vetë si punon — tani</h2>
@@ -363,6 +389,14 @@ const T = {
     finH: "Shiko vetë si punon — tani",
     finP: "Demoja live hapet në 5 sekonda, pa regjistrim. Luaj rolin e klientit dhe shiko si AI ta mbush kalendarin.",
     foot: "© 2026 OptimaBook · Recepsionisti AI që nuk fle kurrë", contact: "Kontakt", privacy: "Privatësia", terms: "Kushtet",
+    faqH: "Pyetjet e shpeshta", faqP: "Gjithçka që duhet të dish para se të fillosh.",
+    q1: "A duhet të instaloj diçka?", a1: "Jo. Klientët të shkruajnë në WhatsApp/Telegram si gjithmonë, dhe ti menaxhon nga një panel në shfletues. Pa aplikacione, pa IT.",
+    q2: "Në cilat kanale punon?", a2: "WhatsApp, Telegram, Instagram dhe Messenger — me një tru të vetëm. Telefonatat me zë (Voice AI) vijnë së shpejti.",
+    q3: "Çfarë nëse AI gabon te një orar?", a3: "S'mund të gabojë te rezervimi: AI vetëm kupton, ndërsa motori ynë validon çdo orar nga kalendari real — kurrë s'mbivendos dy klientë dhe kurrë s'shpik orar. Kur s'është i sigurt, pyet ose të kalon ty.",
+    q4: "A janë të dhënat e mia të sigurta?", a4: "Po. Çdo biznes është i izoluar plotësisht — sheh vetëm të dhënat e veta. Detajet te Politika e Privatësisë në fund të faqes.",
+    q5: "A punon në gjuhën time?", a5: "Po — çdo gjuhë e botës. Klienti shkruan si i vjen, AI i përgjigjet në gjuhën e tij.",
+    q6: "Për çfarë biznesesh është?", a6: "Për çdo biznes me takime (berber, klinikë, sallon, dentist, fizio…) OSE me porosi/kërkesa (web designer, dyqan, shërbime). Veçoritë ndizen/fiken sipas nevojës.",
+    q7: "A mund të anuloj kurdo?", a7: "Po, kurdo. Fillon me 14 ditë provë falas, pa kartë krediti. Pa kontrata, pa befasi.",
   },
   en: {
     navDemo: "▶ Try the demo", navLogin: "Sign in",
@@ -400,6 +434,14 @@ const T = {
     finH: "See it work for yourself — now",
     finP: "The live demo opens in 5 seconds, no sign-up. Play the customer and watch the AI fill your calendar.",
     foot: "© 2026 OptimaBook · The AI receptionist that never sleeps", contact: "Contact", privacy: "Privacy", terms: "Terms",
+    faqH: "Frequently asked questions", faqP: "Everything you need to know before you start.",
+    q1: "Do I need to install anything?", a1: "No. Customers message you on WhatsApp/Telegram as always, and you manage from a browser panel. No apps, no IT.",
+    q2: "Which channels does it work on?", a2: "WhatsApp, Telegram, Instagram and Messenger — with a single brain. Voice calls (Voice AI) coming soon.",
+    q3: "What if the AI makes a scheduling mistake?", a3: "It can't err on the booking: the AI only understands, while our engine validates every slot against the real calendar — it never double-books and never invents a slot. When unsure, it asks or hands off to you.",
+    q4: "Is my data safe?", a4: "Yes. Each business is fully isolated — it sees only its own data. Details in the Privacy Policy at the bottom of the page.",
+    q5: "Does it work in my language?", a5: "Yes — every language in the world. The customer writes however they like, the AI replies in their language.",
+    q6: "What businesses is it for?", a6: "Any business with appointments (barber, clinic, salon, dentist, physio…) OR with orders/requests (web designer, shop, services). Features turn on/off as needed.",
+    q7: "Can I cancel anytime?", a7: "Yes, anytime. Start with a 14-day free trial, no credit card. No contracts, no surprises.",
   },
 };
 
