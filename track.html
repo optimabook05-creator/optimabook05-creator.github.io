@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<title>OptimaBook — Gjurmo</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .pub-wrap { max-width: 520px; margin: 30px auto 80px; padding: 0 16px; }
+  .pub-card { background: var(--glass); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6);
+    border: 1px solid var(--glass-edge); border-radius: var(--r-xl); box-shadow: var(--shadow-float); padding: 28px 24px; }
+  .tk-h { font-family: var(--font-display); font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+  .tk-sub { color: var(--ink-soft); font-weight: 600; font-size: 13.5px; margin-top: 4px; }
+  .steps2 { display: flex; flex-direction: column; gap: 0; margin: 22px 0; }
+  .step2 { display: flex; align-items: center; gap: 13px; padding: 9px 0; position: relative; }
+  .step2 .dot { width: 26px; height: 26px; border-radius: 999px; display: grid; place-items: center; flex-shrink: 0;
+    border: 2px solid var(--ink-faint); color: var(--ink-faint); font-size: 13px; font-weight: 800; background: var(--glass-soft); z-index: 1; }
+  .step2.done .dot, .step2.cur .dot { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .step2.cur .dot { box-shadow: 0 0 0 4px var(--accent-soft); }
+  .step2 .lbl { font-weight: 700; font-size: 14px; color: var(--ink-faint); }
+  .step2.done .lbl, .step2.cur .lbl { color: var(--ink); }
+  .step2:not(:last-child)::after { content: ""; position: absolute; left: 12px; top: 30px; width: 2px; height: calc(100% - 8px); background: var(--glass-line); }
+  .step2.done::after { background: var(--accent); }
+  .tk-line { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--glass-line); font-weight: 600; font-size: 14px; }
+  .tk-line:last-child { border-bottom: none; }
+  .tk-line .k { color: var(--ink-soft); }
+  .tk-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-weight: 800; font-size: 13px; background: var(--accent-soft); color: var(--accent-deep); margin-top: 8px; }
+  .tk-badge.cancel { background: var(--red-soft); color: var(--red); }
+  .pub-msg { text-align: center; padding: 30px 16px; }
+  .pub-msg .big { font-size: 46px; }
+  .pub-foot { text-align: center; margin-top: 18px; font-size: 12px; color: var(--ink-faint); font-weight: 600; }
+  .pub-foot a { color: var(--accent-deep); text-decoration: none; font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="pub-wrap">
+  <div class="pub-card" id="card"><div class="pub-msg"><div class="big">⏳</div><p>…</p></div></div>
+  <div class="pub-foot">⚡ <a href="index.html">OptimaBook</a></div>
+</div>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+const CUR = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const params = new URLSearchParams(location.search);
+const SQ = (navigator.language || "sq").toLowerCase().startsWith("sq");
+const L = SQ ? {
+  notfound:"Nuk u gjet.", order:"Porosia jote", appt:"Takimi yt", customer:"Klienti", total:"Totali", paid:"Pagesa", due:"Afati", service:"Shërbimi", date:"Data", time:"Ora",
+  oNew:"E re", oConfirmed:"Konfirmuar", oInProgress:"Në punë", oShipped:"Nisur", oDelivered:"Dorëzuar", oCompleted:"Përfunduar", oCancelled:"Anuluar",
+  aPending:"Në pritje", aConfirmed:"Konfirmuar", aCancelled:"Anuluar", payU:"E papaguar", payP:"Pjesërisht", payD:"E paguar"
+} : {
+  notfound:"Not found.", order:"Your order", appt:"Your appointment", customer:"Customer", total:"Total", paid:"Payment", due:"Due", service:"Service", date:"Date", time:"Time",
+  oNew:"New", oConfirmed:"Confirmed", oInProgress:"In progress", oShipped:"Shipped", oDelivered:"Delivered", oCompleted:"Completed", oCancelled:"Cancelled",
+  aPending:"Pending", aConfirmed:"Confirmed", aCancelled:"Cancelled", payU:"Unpaid", payP:"Partial", payD:"Paid"
+};
+function money(v, cur) { const s = CUR[cur || "EUR"] || cur || "€"; const n = Math.round((Number(v) || 0) * 100) / 100; return s.length === 1 ? n + s : n + " " + s; }
+const ORDER_STEPS = ["new", "confirmed", "in_progress", "shipped", "delivered", "completed"];
+const ORDER_LBL = { new:L.oNew, confirmed:L.oConfirmed, in_progress:L.oInProgress, shipped:L.oShipped, delivered:L.oDelivered, completed:L.oCompleted };
+
+async function init() {
+  const oid = params.get("o"), aid = params.get("a");
+  const kind = oid ? "order" : "appt";
+  const id = oid || aid;
+  if (!id) { fail(); return; }
+  try {
+    const { data, error } = await sb.rpc("public_track", { p_kind: kind, p_id: id });
+    if (error || !data) { fail(); return; }
+    kind === "order" ? renderOrder(data) : renderAppt(data);
+  } catch (e) { fail(); }
+}
+function fail() { $("#card").innerHTML = `<div class="pub-msg"><div class="big">🔍</div><p>${L.notfound}</p></div>`; }
+
+function renderOrder(d) {
+  if (d.status === "cancelled") {
+    $("#card").innerHTML = `<div class="tk-h">${L.order}</div><div class="tk-badge cancel">${L.oCancelled}</div>` + lines(d);
+    return;
+  }
+  const curIdx = ORDER_STEPS.indexOf(d.status);
+  const steps = ORDER_STEPS.map((s, i) => {
+    const cls = i < curIdx ? "done" : i === curIdx ? "cur" : "";
+    const mark = i < curIdx ? "✓" : (i + 1);
+    return `<div class="step2 ${cls}"><span class="dot">${mark}</span><span class="lbl">${ORDER_LBL[s]}</span></div>`;
+  }).join("");
+  $("#card").innerHTML = `<div class="tk-h">${L.order}</div>${d.due ? `<div class="tk-sub">${L.due}: ${esc(d.due)}</div>` : ""}
+    <div class="steps2">${steps}</div>` + lines(d);
+}
+function lines(d) {
+  const items = (d.items || []).map((i) => `<div class="tk-line"><span class="k">${esc(i.name)} ×${i.qty}</span><span>${money(i.line_total, d.currency)}</span></div>`).join("");
+  const pay = { unpaid:L.payU, partial:L.payP, paid:L.payD }[d.paid] || "";
+  return `${items}<div class="tk-line"><span class="k">${L.total}</span><span><strong>${money(d.total, d.currency)}</strong></span></div>
+    <div class="tk-line"><span class="k">${L.paid}</span><span>${pay}</span></div>
+    ${d.customer ? `<div class="tk-line"><span class="k">${L.customer}</span><span>${esc(d.customer)}</span></div>` : ""}`;
+}
+function renderAppt(d) {
+  const lbl = { pending:L.aPending, confirmed:L.aConfirmed, cancelled:L.aCancelled }[d.status] || d.status;
+  const cls = d.status === "cancelled" ? "cancel" : "";
+  $("#card").innerHTML = `<div class="tk-h">${L.appt}</div><div class="tk-badge ${cls}">${lbl}</div>
+    ${d.service ? `<div class="tk-line"><span class="k">${L.service}</span><span>${esc(d.service)}</span></div>` : ""}
+    <div class="tk-line"><span class="k">${L.date}</span><span>${esc(d.date)}</span></div>
+    <div class="tk-line"><span class="k">${L.time}</span><span>${esc((d.time || "").slice(0,5))}</span></div>
+    ${d.customer ? `<div class="tk-line"><span class="k">${L.customer}</span><span>${esc(d.customer)}</span></div>` : ""}`;
+}
+init();
+</script>
+</body>
+</html>

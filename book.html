@@ -73,17 +73,18 @@ const T = {
     service:"Shërbimi", date:"Data", pickSlot:"Zgjedh orarin", noSlots:"S'ka orare të lira këtë ditë.", closed:"Mbyllur këtë ditë.",
     name:"Emri yt", phone:"Telefoni", contact:"Telefon / email", notes:"Shënime (opsionale)", total:"Totali", send:"Dërgo",
     okBook:"U rezervua! 🎉", okBookP:"Pronari do ta konfirmojë së shpejti.", okOrder:"Porosia u dërgua! 🎉", okOrderP:"Pronari do të kontaktojë së shpejti.",
-    needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", another:"Bëj një tjetër" },
+    needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", another:"Bëj një tjetër", track:"📦 Gjurmo statusin" },
   en: { loading:"Loading…", notfound:"Business not found.", powered:"Powered by", book:"Book an appointment", order:"Place your order",
     service:"Service", date:"Date", pickSlot:"Pick a time", noSlots:"No free times this day.", closed:"Closed this day.",
     name:"Your name", phone:"Phone", contact:"Phone / email", notes:"Notes (optional)", total:"Total", send:"Send",
     okBook:"Booked! 🎉", okBookP:"The owner will confirm shortly.", okOrder:"Order sent! 🎉", okOrderP:"The owner will contact you shortly.",
-    needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", another:"Make another" },
+    needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", another:"Make another", track:"📦 Track status" },
 };
 const tr = (k) => (SQ ? T.sq : T.en)[k];
 
 const cart = {}; // service_id -> qty
 let selDate = "", selTime = "";
+const BASE = location.href.split("?")[0].replace(/[^/]*$/, "");
 
 function unitPrice(item, qty) {
   let best = Number(item.price) || 0, bq = -1;
@@ -185,7 +186,7 @@ function wireBook() {
         if (data && data.error === "slot_taken") { DATA.busy.push({ d: selDate, t: selTime }); renderSlots(); }
         return;
       }
-      done(tr("okBook"), tr("okBookP"));
+      done(tr("okBook"), tr("okBookP"), BASE + "track.html?a=" + data.id);
     } catch (e) { $("#bGo").disabled = false; $("#bErr").textContent = tr("failed"); }
   };
 }
@@ -238,14 +239,15 @@ function wireOrder() {
     try {
       const { data, error } = await sb.rpc("public_order", { bid: DATA.id, p_name: name, p_contact: $("#oContact").value.trim(), p_items: items, p_notes: $("#oNotes").value.trim() });
       if (error || !data || !data.ok) { $("#oGo").disabled = false; $("#oErr").textContent = tr("failed"); return; }
-      done(tr("okOrder"), tr("okOrderP"));
+      done(tr("okOrder"), tr("okOrderP"), BASE + "track.html?o=" + data.id);
     } catch (e) { $("#oGo").disabled = false; $("#oErr").textContent = tr("failed"); }
   };
 }
 
-function done(title, p) {
+function done(title, p, trackUrl) {
   $("#card").innerHTML = `<div class="pub-msg"><div class="big">✅</div><h2>${title}</h2><p>${p}</p>
-    <button class="btn" style="margin-top:16px" onclick="location.reload()">${tr("another")}</button></div>`;
+    ${trackUrl ? `<a class="btn primary" style="margin-top:16px;text-decoration:none" href="${trackUrl}">${tr("track")}</a>` : ""}
+    <button class="btn" style="margin-top:10px" onclick="location.reload()">${tr("another")}</button></div>`;
 }
 
 init();

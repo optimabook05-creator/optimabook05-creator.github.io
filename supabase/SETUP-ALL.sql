@@ -265,9 +265,23 @@ begin
 exception when others then return jsonb_build_object('ok', false, 'error', 'failed');
 end; $$;
 
+create or replace function public.public_track(p_kind text, p_id uuid)
+returns jsonb language sql security definer stable set search_path = public as $$
+  select case
+    when p_kind = 'order' then (select jsonb_build_object('kind','order','status',o.status,'paid',o.paid_status,
+        'total',o.total,'currency',o.currency,'due',o.due_at,'placed',o.placed_at,'customer',o.customer_name,
+        'items',(select jsonb_agg(jsonb_build_object('name',i.name,'qty',i.qty,'line_total',i.line_total)) from order_items i where i.order_id=o.id))
+      from orders o where o.id = p_id)
+    when p_kind = 'appt' then (select jsonb_build_object('kind','appt','status',a.status,'date',a.appt_date,'time',a.appt_time,
+        'customer',a.client_name,'service',(select name from services where id=a.service_id),'currency',(select currency from businesses where id=a.business_id))
+      from appointments a where a.id = p_id)
+    else null end;
+$$;
+
 grant execute on function public.public_business(uuid) to anon, authenticated;
 grant execute on function public.public_book(uuid, uuid, text, text, date, time) to anon, authenticated;
 grant execute on function public.public_order(uuid, text, text, jsonb, text) to anon, authenticated;
+grant execute on function public.public_track(text, uuid) to anon, authenticated;
 
 -- =====================================================================
 -- Gati! Tabela, kolona, RLS, indeks, trigger, tregti + faqja publike.
