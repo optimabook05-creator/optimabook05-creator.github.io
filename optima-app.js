@@ -33,7 +33,8 @@ const T = {
     obTitle: "Krijo biznesin tënd",
     obSub: "Gati për klientë në nën 5 minuta.",
     obType: "Lloji i biznesit", obName: "Emri i biznesit", obAddress: "Adresa",
-    obServices: "Shërbimet (emri, minutat, çmimi)", addService: "+ Shto shërbim",
+    obServices: "Shërbimet (emër, kohëzgjatje, çmim)", addService: "+ Shto shërbim",
+    unitMin: "min", unitHour: "orë", unitDay: "ditë", unitWeek: "javë", unitMonth: "muaj", unitYear: "vit", unitNone: "— pa kohë",
     obHours: "Orari i punës", closed: "pushim",
     obFinish: "Përfundo — jam gati ✓", svcNamePh: "Emri i shërbimit",
     logout: "Dil", panelPrefix: "Paneli — ",
@@ -99,7 +100,8 @@ const T = {
     obTitle: "Create your business",
     obSub: "Ready for customers in under 5 minutes.",
     obType: "Business type", obName: "Business name", obAddress: "Address",
-    obServices: "Services (name, minutes, price)", addService: "+ Add service",
+    obServices: "Services (name, duration, price)", addService: "+ Add service",
+    unitMin: "min", unitHour: "hours", unitDay: "days", unitWeek: "weeks", unitMonth: "months", unitYear: "years", unitNone: "— none",
     obHours: "Working hours", closed: "closed",
     obFinish: "Finish — I'm ready ✓", svcNamePh: "Service name",
     logout: "Sign out", panelPrefix: "Panel — ",
@@ -381,8 +383,7 @@ function applyModeUI() {
     if (apptTabs.includes(tab)) t.hidden = inquiry;
     else if (tab === "leads") t.hidden = !inquiry;
   });
-  const shb = $("#setHoursBlock"); if (shb) shb.hidden = inquiry; // orari s'duhet për porosi
-  const ssv = $("#setServices"); if (ssv) ssv.classList.toggle("hide-min", inquiry); // pa minuta për porosi
+  const shb = $("#setHoursBlock"); if (shb) shb.hidden = inquiry; // orari pune s'duhet për porosi
   const active = document.querySelector(".tab.active");
   if (active && active.hidden) {
     const fb = document.querySelector('.tab[data-tab="stats"]') || document.querySelector(".tab:not([hidden])");
@@ -398,14 +399,15 @@ function setServiceRow(s) {
   const nameI = document.createElement("input");
   nameI.className = "s-name"; nameI.type = "text"; nameI.maxLength = 40; nameI.placeholder = tr("svcNamePh"); nameI.value = s ? s.name : "";
   const durI = document.createElement("input");
-  durI.className = "s-dur"; durI.type = "number"; durI.min = 5; durI.max = 600; durI.step = 5; durI.value = s ? s.duration_min : 30;
-  const delivI = document.createElement("input");
-  delivI.className = "s-delivery"; delivI.type = "text"; delivI.maxLength = 30; delivI.placeholder = tr("deliveryPh"); delivI.value = s && s.delivery ? s.delivery : "";
+  durI.className = "s-dur"; durI.type = "number"; durI.min = 0; durI.step = 1;
+  durI.value = s ? (s.duration_value != null ? s.duration_value : s.duration_min) : 30;
+  const unitS = document.createElement("select");
+  unitS.className = "s-unit"; unitS.innerHTML = unitOptions(s && s.duration_unit ? s.duration_unit : "min");
   const priceI = document.createElement("input");
   priceI.className = "s-price"; priceI.type = "number"; priceI.min = 0; priceI.step = 0.5; priceI.value = s ? s.price : 0;
   const del = document.createElement("button");
   del.className = "s-del"; del.type = "button"; del.textContent = "✕"; del.onclick = () => row.remove();
-  row.append(nameI, durI, delivI, priceI, del);
+  row.append(nameI, durI, unitS, priceI, del);
   $("#setServices").appendChild(row);
 }
 
@@ -447,14 +449,16 @@ async function saveServicesEdit() {
   for (const r of rows) {
     const name = r.querySelector(".s-name").value.trim();
     if (!name) continue;
-    const duration_min = Math.max(5, +r.querySelector(".s-dur").value || 30);
+    const unit = r.querySelector(".s-unit") ? r.querySelector(".s-unit").value : "min";
+    const value = Math.max(0, +r.querySelector(".s-dur").value || 0);
+    const duration_min = durToMin(value, unit);
     const price = +r.querySelector(".s-price").value || 0;
-    const delivery = (r.querySelector(".s-delivery") && r.querySelector(".s-delivery").value.trim()) || null;
+    const rowData = { name, duration_min, duration_value: value, duration_unit: unit, price, sort_order: i, active: true };
     if (r.dataset.id) {
-      await sb.from("services").update({ name, duration_min, delivery, price, sort_order: i, active: true }).eq("id", r.dataset.id);
+      await sb.from("services").update(rowData).eq("id", r.dataset.id);
       seen.add(r.dataset.id);
     } else {
-      await sb.from("services").insert({ business_id: biz.id, name, duration_min, delivery, price, sort_order: i, active: true });
+      await sb.from("services").insert({ business_id: biz.id, ...rowData });
     }
     i++;
   }
@@ -531,13 +535,27 @@ function fillTypeSelect(sel) {
   const p = PRESETS[lang];
   sel.innerHTML = Object.keys(p).map((k) => `<option value="${k}">${p[k].label}</option>`).join("");
 }
+// Njësitë e kohëzgjatjes (universale: nga min te vite, ose "—" pa kohë)
+const SVC_UNITS = ["min", "hour", "day", "week", "month", "year", "none"];
+const UNIT_KEY = { min: "unitMin", hour: "unitHour", day: "unitDay", week: "unitWeek", month: "unitMonth", year: "unitYear", none: "unitNone" };
+function unitOptions(sel) {
+  return SVC_UNITS.map((u) => `<option value="${u}"${u === sel ? " selected" : ""}>${tr(UNIT_KEY[u])}</option>`).join("");
+}
+// Kthen kohëzgjatjen në minuta për motorin e kalendarit (vetëm min/orë janë slote reale)
+function durToMin(value, unit) {
+  const v = Math.max(0, +value || 0);
+  if (unit === "min") return Math.max(5, v || 30);
+  if (unit === "hour") return Math.max(5, v * 60 || 30);
+  return 30; // ditë/javë/muaj/vit/none → s'janë slote; default për motorin
+}
+
 function addServiceRow(s) {
   const row = document.createElement("div");
   row.className = "service-row";
   row.innerHTML = `
     <input class="s-name" type="text" placeholder="${tr("svcNamePh")}" value="${s ? s[0] : ""}" maxlength="40">
-    <input class="s-dur" type="number" min="10" max="240" step="5" value="${s ? s[1] : 30}">
-    <input class="s-delivery" type="text" placeholder="${tr("deliveryPh")}" value="" maxlength="30">
+    <input class="s-dur" type="number" min="0" step="1" value="${s ? s[1] : 30}">
+    <select class="s-unit">${unitOptions("min")}</select>
     <input class="s-price" type="number" min="0" step="0.5" value="${s ? s[2] : 0}">
     <button class="s-del" type="button">✕</button>`;
   row.querySelector(".s-del").onclick = () => row.remove();
@@ -558,8 +576,7 @@ function openOnboard() {
   const applyMode = () => {
     const inquiry = $("#obMode") && $("#obMode").value === "inquiry";
     const hf = $("#obHours") && $("#obHours").closest(".field");
-    if (hf) hf.hidden = inquiry;                                  // pa orar për porosi
-    if ($("#obServices")) $("#obServices").classList.toggle("hide-min", inquiry); // pa minuta për porosi
+    if (hf) hf.hidden = inquiry;                                  // pa orar pune për porosi
   };
   if ($("#obMode")) $("#obMode").onchange = applyMode;
   applyMode();
@@ -588,12 +605,17 @@ async function finishOnboard() {
   const btn = $("#obFinish");
   const name = $("#obName").value.trim() || PRESETS[lang][$("#obType").value].name;
   const svcRows = [...document.querySelectorAll("#obServices .service-row")]
-    .map((r) => ({
-      name: r.querySelector(".s-name").value.trim(),
-      duration_min: Math.max(10, +r.querySelector(".s-dur").value || 30),
-      delivery: (r.querySelector(".s-delivery") && r.querySelector(".s-delivery").value.trim()) || null,
-      price: +r.querySelector(".s-price").value || 0,
-    })).filter((s) => s.name);
+    .map((r) => {
+      const unit = r.querySelector(".s-unit") ? r.querySelector(".s-unit").value : "min";
+      const value = Math.max(0, +r.querySelector(".s-dur").value || 0);
+      return {
+        name: r.querySelector(".s-name").value.trim(),
+        duration_min: durToMin(value, unit),
+        duration_value: value,
+        duration_unit: unit,
+        price: +r.querySelector(".s-price").value || 0,
+      };
+    }).filter((s) => s.name);
   if (!svcRows.length) { addServiceRow(null); return; }
 
   btn.disabled = true; btn.textContent = tr("authWait");

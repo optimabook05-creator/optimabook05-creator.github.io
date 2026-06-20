@@ -327,8 +327,19 @@ async function addWaitlist(ctx: any, svc: any, dateStr: string, period: string |
 }
 
 /* ---------------- Shtresa 1: RREGULLAT (falas) ---------------- */
-function svcListText(services: any[]) {
-  return services.map((s) => `• ${s.name} — ${s.duration_min} min — ${s.price}€`).join("\n");
+// Kohëzgjatja njerëzore sipas njësisë së zgjedhur (min/orë/ditë/javë/muaj/vit)
+function durHuman(s: any, sq: boolean): string {
+  if (s.duration_unit === "none") return "";
+  if (s.duration_value != null && s.duration_unit) {
+    const L: any = sq
+      ? { min: "min", hour: "orë", day: "ditë", week: "javë", month: "muaj", year: "vit" }
+      : { min: "min", hour: "h", day: "days", week: "weeks", month: "months", year: "years" };
+    if (L[s.duration_unit]) return `${s.duration_value} ${L[s.duration_unit]}`;
+  }
+  return s.duration_min ? `${s.duration_min} min` : "";
+}
+function svcListText(services: any[], sq = true) {
+  return services.map((s) => { const d = durHuman(s, sq); return `• ${s.name}${d ? " — " + d : ""} — ${s.price}€`; }).join("\n");
 }
 function hoursListText(hours: any[], sq: boolean) {
   const map = hoursByDow(hours);
@@ -376,8 +387,8 @@ async function tryRules(ctx: any): Promise<any | null> {
   if (/(sa kushton|cmim|qmim|sa eshte|cmimet|sa ben|\bprice|\bcost|how much|pricing)/.test(tx)) {
     const notes = biz.ai_notes ? `\n\n${biz.ai_notes}` : "";
     const r = sq
-      ? `Ja shërbimet tona:\n${svcListText(services)}${notes}\n\nTë rezervoj një orar? Më thuaj ditën. 📅`
-      : `Here are our services:\n${svcListText(services)}${notes}\n\nShall I book you a slot? Tell me the day. 📅`;
+      ? `Ja shërbimet tona:\n${svcListText(services, true)}${notes}\n\nTë rezervoj një orar? Më thuaj ditën. 📅`
+      : `Here are our services:\n${svcListText(services, false)}${notes}\n\nShall I book you a slot? Tell me the day. 📅`;
     return { reply: r, via: "rule" };
   }
   // Orari / adresa
@@ -617,7 +628,7 @@ async function runInquiry(ctx: any) {
   const { biz, services, client_name, history, text } = ctx;
   const sq = isSqLang(biz);
   const lang = isEnLang(biz) ? "English" : (sq ? "Albanian" : "the customer's language");
-  const catalog = services.map((s: any) => `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}${s.delivery ? " — gati ~" + s.delivery : ""}`).join("\n");
+  const catalog = services.map((s: any) => { const d = durHuman(s, sq); return `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}${d ? " — gati ~" + d : ""}`; }).join("\n");
   const system = [
     `You are the warm, friendly assistant for "${biz.name}".${biz.address ? ` (${biz.address})` : ""}`,
     `WHAT WE OFFER:`,

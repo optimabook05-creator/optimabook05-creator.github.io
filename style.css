@@ -709,12 +709,14 @@ body::after {
   transition: border .16s, box-shadow .16s;
 }
 .service-row input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.service-row .s-name { flex: 1; }
-.service-row .s-dur, .service-row .s-price { width: 86px; }
-/* Mënyra "porosi": fsheh minutat, shfaq kohën e dorëzimit (ditë/javë) */
-.s-delivery { display: none; width: 120px; }
-.hide-min .s-dur { display: none !important; }
-.hide-min .s-delivery { display: block; }
+.service-row .s-name { flex: 1; min-width: 90px; }
+.service-row .s-dur { width: 60px; }
+.service-row .s-unit {
+  width: 96px; font-family: var(--fb); font-weight: 600; font-size: 14px; color: var(--ink);
+  border: 1px solid rgba(255, 255, 255, .85); background: rgba(255, 255, 255, .75);
+  border-radius: var(--r-sm); padding: 0 8px;
+}
+.service-row .s-price { width: 76px; }
 .service-row .s-del {
   border: none; background: var(--red-soft); color: var(--red);
   border-radius: var(--r-sm); width: 38px; cursor: pointer; font-size: 15px;
