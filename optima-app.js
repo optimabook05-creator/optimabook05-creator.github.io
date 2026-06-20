@@ -61,6 +61,8 @@ const T = {
     aiActive: "AI aktiv · 24/7",
     tabActivity: "🔔 Aktiviteti", activityDesc: "Çdo gjë që bën AI: rezervime, anulime, kujtesa, kërkesa — live.", emptyActivity: "Ende pa aktivitet.",
     tabCustomers: "👤 Klientët", customersDesc: "Klientët e tu, vizitat dhe të ardhurat — të mbledhura vetë nga AI.", searchPh: "Kërko klient…", emptyCustomers: "Ende pa klientë.",
+    setChannelH: "🔗 Lidh kanalin (Telegram)", channelDesc: "2 minuta: krijo një bot te @BotFather → kopjo token-in → ngjite këtu → Ruaj → kliko \"Aktivizo\".",
+    tgTokenLbl: "Token-i i bot-it Telegram", tgActivate: "⚡ Aktivizo webhook-un ↗", bizIdLbl: "ID e biznesit (për WhatsApp/Meta):",
     tabStaff: "👥 Stafi", staffDesc: "Shto staf dhe lokacione. Çdo person pret klientë paralelisht në të njëjtën orë.",
     locNamePh: "Emri i lokacionit", locAddrPh: "Adresa (opsionale)", addLoc: "+ Lokacion",
     staffNamePh: "Emri i personit", staffRolePh: "Roli (p.sh. berber)", addStaff: "+ Staf",
@@ -130,6 +132,8 @@ const T = {
     aiActive: "AI active · 24/7",
     tabActivity: "🔔 Activity", activityDesc: "Everything the AI does: bookings, cancellations, reminders, requests — live.", emptyActivity: "No activity yet.",
     tabCustomers: "👤 Customers", customersDesc: "Your customers, visits and revenue — gathered automatically by the AI.", searchPh: "Search customer…", emptyCustomers: "No customers yet.",
+    setChannelH: "🔗 Connect channel (Telegram)", channelDesc: "2 minutes: create a bot at @BotFather → copy the token → paste here → Save → click \"Activate\".",
+    tgTokenLbl: "Telegram bot token", tgActivate: "⚡ Activate webhook ↗", bizIdLbl: "Business ID (for WhatsApp/Meta):",
     tabStaff: "👥 Staff", staffDesc: "Add staff and locations. Each person serves customers in parallel at the same time.",
     locNamePh: "Location name", locAddrPh: "Address (optional)", addLoc: "+ Location",
     staffNamePh: "Person's name", staffRolePh: "Role (e.g. barber)", addStaff: "+ Staff",
@@ -443,7 +447,20 @@ function renderSettings() {
   const sn = $("#setName"); if (sn) sn.value = biz.name || "";
   const sa = $("#setAddress"); if (sa) sa.value = biz.address || "";
   const sc = $("#setServices"); if (sc) { sc.innerHTML = ""; services.forEach(setServiceRow); }
+  const tg = $("#tgToken"); if (tg) tg.value = biz.telegram_token || "";
+  const bid = $("#bizIdVal"); if (bid) bid.textContent = biz.id;
+  updateTgWebhookLink();
   renderSettingsHours();
+}
+
+// Lidhja Telegram: ndërton linkun e setWebhook (e hap pronari në një tab të ri)
+function updateTgWebhookLink() {
+  const link = $("#tgWebhook"); if (!link || !biz) return;
+  const token = ($("#tgToken") && $("#tgToken").value.trim()) || "";
+  if (!token) { link.hidden = true; return; }
+  const webhook = `${SUPABASE_URL}/functions/v1/telegram?business_id=${biz.id}`;
+  link.href = `https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(webhook)}`;
+  link.hidden = false;
 }
 
 async function saveServicesEdit() {
@@ -1149,6 +1166,17 @@ function wire() {
     } catch (ex) { alert(ex.message || String(ex)); }
   };
   if ($("#custSearch")) $("#custSearch").oninput = renderCustomers;
+  const tgBtn = $("#saveTgToken");
+  if (tgBtn) tgBtn.onclick = async () => {
+    const t = $("#tgToken").value.trim();
+    try {
+      await sb.from("businesses").update({ telegram_token: t || null }).eq("id", biz.id);
+      biz.telegram_token = t || null;
+      updateTgWebhookLink();
+      toast(tr("toastSaved"));
+    } catch (ex) { alert(ex.message || String(ex)); }
+  };
+  if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
   if ($("#setAddService")) $("#setAddService").onclick = () => setServiceRow(null);
   if ($("#saveServices")) $("#saveServices").onclick = saveServicesEdit;
   if ($("#saveHours")) $("#saveHours").onclick = saveHoursEdit;

@@ -18,8 +18,8 @@ const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
 // Publishable key është publik (i njëjti si te frontend) — i sigurt këtu.
 const PUBLISHABLE = "sb_publishable_pwtiVjYqEYLYPZXfgponIg_YC3xSIgs";
 
-async function sendTelegram(chatId: string, text: string) {
-  await fetch(`https://api.telegram.org/bot${BOT}/sendMessage`, {
+async function sendTelegram(chatId: string, text: string, token: string) {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text }),
@@ -51,6 +51,10 @@ Deno.serve(async (req) => {
       .eq("business_id", businessId).eq("channel", "telegram").eq("chat_id", chatId).eq("role", "user").gte("created_at", since60);
     if ((recentCount || 0) > 12) return new Response("ok");
 
+    // Token-i i bot-it i KËTIJ biznesi (vetë-shërbim); fallback te token-i i përbashkët
+    const { data: bizRow } = await supabase.from("businesses").select("telegram_token").eq("id", businessId).maybeSingle();
+    const botToken = (bizRow && bizRow.telegram_token) || BOT;
+
     // Kujtesa e bisedës (10 mesazhet e fundit)
     const { data: hist } = await supabase.from("messages").select("role,content")
       .eq("business_id", businessId).eq("channel", "telegram").eq("chat_id", chatId)
@@ -75,7 +79,7 @@ Deno.serve(async (req) => {
     await supabase.from("messages").insert({
       business_id: businessId, channel: "telegram", chat_id: chatId, role: "bot", content: reply,
     });
-    await sendTelegram(chatId, reply);
+    await sendTelegram(chatId, reply, botToken);
 
     return new Response("ok");
   } catch (_e) {

@@ -206,6 +206,20 @@
       <p class="pane-desc" data-t="settingsDesc">Ndrysho gjithçka kurdo — pa rifilluar.</p>
 
       <div class="settings-block">
+        <h3 class="set-h" data-t="setChannelH">🔗 Lidh kanalin (Telegram)</h3>
+        <p class="pane-desc" data-t="channelDesc">2 minuta: krijo një bot te @BotFather → kopjo token-in → ngjite këtu → Ruaj → kliko "Aktivizo".</p>
+        <div class="settings-row">
+          <label for="tgToken" data-t="tgTokenLbl">Token-i i bot-it Telegram</label>
+          <div class="settings-input">
+            <input type="text" id="tgToken" placeholder="123456789:ABCdef...">
+            <button class="btn small primary" id="saveTgToken" data-t="save">Ruaj</button>
+          </div>
+        </div>
+        <a id="tgWebhook" class="btn small primary" target="_blank" rel="noopener" hidden style="text-decoration:none;margin-top:4px" data-t="tgActivate">⚡ Aktivizo webhook-un ↗</a>
+        <p style="font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-top:14px"><span data-t="bizIdLbl">ID e biznesit (për WhatsApp/Meta):</span> <code id="bizIdVal" class="biz-id"></code></p>
+      </div>
+
+      <div class="settings-block">
         <h3 class="set-h" data-t="setBizH">Biznesi</h3>
         <div class="settings-row">
           <label for="bizMode" data-t="modeLbl">⚙️ Mënyra e biznesit (ndize/fike kurdo)</label>
