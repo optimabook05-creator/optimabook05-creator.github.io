@@ -108,6 +108,18 @@ const T = {
     addTier: "+ Shkallë çmimi", tierQty: "Nga sasia", tierPrice: "Çmimi/njësi", stockLbl: "Stok", hasTiers: "💹 çmime shumice",
     commerceLbl: "🛒 Tregti (produkte, porosi, raporte) & monedha", commerceOnLbl: "Aktivizo katalogun, porositë & raportet",
     delete: "Fshi", confirmDelete: "Ta fshij këtë? S'kthehet mbrapsht.",
+    tabOrders: "🧾 Porositë", tabReports: "📈 Raporte",
+    ordersDesc: "Porositë/shitjet e tua — kush, çfarë, sa, çmimi, statusi dhe pagesa. Edhe porosi që zgjasin muaj (me ETA).",
+    addOrder: "+ Porosi e re", filterOpen: "Aktive", filterAll: "Të gjitha",
+    stNew: "E re", stConfirmed: "Konfirmuar", stInProgress: "Në punë", stShipped: "Nisur", stDelivered: "Dorëzuar", stCompleted: "Përfunduar", stCancelled: "Anuluar",
+    orderNew: "Porosi e re", orderEdit: "Ndrysho porosinë", orderCustomer: "Klienti", orderContact: "Kontakti (tel/email)",
+    orderType: "Lloji i shitjes", typeRetail: "Pakicë", typeWholesale: "Shumicë",
+    orderItems: "Artikujt", addLine: "+ Artikull", olPick: "Zgjedh artikull…",
+    subtotal: "Nëntotali", discount: "Zbritje", total: "Totali",
+    orderStatus: "Statusi", orderDue: "Afati/ETA (opsional)", orderPaid: "Pagesa", paidUnpaid: "E papaguar", paidPartial: "Pjesërisht", paidPaid: "E paguar",
+    orderAmountPaid: "Shuma e paguar", orderNotes: "Shënime",
+    emptyOrders: "Ende pa porosi.", emptyOrdersHint: "Krijo një porosi ose lëre AI-në ta marrë vetë — do shfaqet këtu me status e total.",
+    orderNeedItem: "Shto të paktën një artikull.", noItems: "(pa artikuj)", noName: "Pa emër", etaShort: "ETA",
   },
   en: {
     dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
@@ -200,6 +212,18 @@ const T = {
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price/unit", stockLbl: "Stock", hasTiers: "💹 wholesale pricing",
     commerceLbl: "🛒 Commerce (products, orders, reports) & currency", commerceOnLbl: "Enable catalog, orders & reports",
     delete: "Delete", confirmDelete: "Delete this? This cannot be undone.",
+    tabOrders: "🧾 Orders", tabReports: "📈 Reports",
+    ordersDesc: "Your orders/sales — who, what, how many, price, status and payment. Even orders that take months (with ETA).",
+    addOrder: "+ New order", filterOpen: "Active", filterAll: "All",
+    stNew: "New", stConfirmed: "Confirmed", stInProgress: "In progress", stShipped: "Shipped", stDelivered: "Delivered", stCompleted: "Completed", stCancelled: "Cancelled",
+    orderNew: "New order", orderEdit: "Edit order", orderCustomer: "Customer", orderContact: "Contact (phone/email)",
+    orderType: "Sale type", typeRetail: "Retail", typeWholesale: "Wholesale",
+    orderItems: "Items", addLine: "+ Item", olPick: "Pick item…",
+    subtotal: "Subtotal", discount: "Discount", total: "Total",
+    orderStatus: "Status", orderDue: "Due/ETA (optional)", orderPaid: "Payment", paidUnpaid: "Unpaid", paidPartial: "Partial", paidPaid: "Paid",
+    orderAmountPaid: "Amount paid", orderNotes: "Notes",
+    emptyOrders: "No orders yet.", emptyOrdersHint: "Create an order or let the AI capture it — it'll appear here with status and total.",
+    orderNeedItem: "Add at least one item.", noItems: "(no items)", noName: "No name", etaShort: "ETA",
   },
 };
 const tr = (k) => T[lang][k];
@@ -440,6 +464,7 @@ async function loadAll() {
   renderSettings();
   await renderAll();
   renderCatalog();
+  if (biz.commerce_enabled) renderOrders();
   renderQuickStart();
 }
 
@@ -605,6 +630,167 @@ async function deleteItem() {
     await loadServices(); await loadTiers();
     renderCatalog();
     toast(tr("toastSaved"));
+  } catch (ex) { alert(ex.message || String(ex)); }
+}
+
+/* ---------------- Porositë (shitje të strukturuara: kush/çfarë/sa/çmim/status) ---------------- */
+let editingOrderId = null;
+const ST_KEY = { new: "stNew", confirmed: "stConfirmed", in_progress: "stInProgress", shipped: "stShipped", delivered: "stDelivered", completed: "stCompleted", cancelled: "stCancelled" };
+const PAID_KEY = { unpaid: "paidUnpaid", partial: "paidPartial", paid: "paidPaid" };
+const statusLabel = (s) => tr(ST_KEY[s] || "stNew");
+const paidLabel = (s) => tr(PAID_KEY[s] || "paidUnpaid");
+const plainNum = (n) => { const v = Number(n) || 0; return String(v); };
+
+async function renderOrders() {
+  const list = $("#ordersList");
+  if (!list || !biz || !biz.commerce_enabled) return;
+  const filter = ($("#orderFilter") && $("#orderFilter").value) || "open";
+  let orders = [];
+  try {
+    const { data } = await sb.from("orders").select("*").eq("business_id", biz.id).order("placed_at", { ascending: false });
+    orders = data || [];
+  } catch (e) { return; }
+  if (filter === "open") orders = orders.filter((o) => o.status !== "completed" && o.status !== "cancelled");
+  else if (filter !== "all") orders = orders.filter((o) => o.status === filter);
+  if (!orders.length) { list.innerHTML = emptyHTML("🧾", tr("emptyOrders"), tr("emptyOrdersHint")); return; }
+  // Artikujt për përmbledhje
+  const itemsByOrder = {};
+  try {
+    const { data: its } = await sb.from("order_items").select("*").in("order_id", orders.map((o) => o.id));
+    (its || []).forEach((it) => { (itemsByOrder[it.order_id] = itemsByOrder[it.order_id] || []).push(it); });
+  } catch (e) {}
+  list.innerHTML = "";
+  orders.forEach((o) => {
+    const items = itemsByOrder[o.id] || [];
+    const sum = items.map((i) => `${esc(i.name)}×${plainNum(i.qty)}`).join(", ") || tr("noItems");
+    const due = o.due_at ? ` · ${tr("etaShort")}: ${o.due_at}` : "";
+    const card = document.createElement("div");
+    card.className = "order-card" + (o.status === "cancelled" ? " cancelled" : "");
+    card.innerHTML = `<span class="grow">
+        <div class="order-who">${esc(o.customer_name || tr("noName"))}</div>
+        <div class="order-sum">${sum}${due}</div>
+      </span>
+      <span class="order-right">
+        <span class="order-amt">${money(o.total)}</span>
+        <span class="status-badge ${o.status}">${statusLabel(o.status)}</span>
+        <span class="paid-pill ${o.paid_status}">${paidLabel(o.paid_status)}</span>
+      </span>`;
+    card.onclick = () => openOrder(o, items);
+    list.appendChild(card);
+  });
+}
+
+function openOrder(o, items) {
+  editingOrderId = o ? o.id : null;
+  $("#orderTitle").textContent = o ? tr("orderEdit") : tr("orderNew");
+  $("#orderCustomer").value = o ? (o.customer_name || "") : "";
+  $("#orderContact").value = o ? (o.customer_contact || "") : "";
+  $("#orderType").value = o && o.order_type === "wholesale" ? "wholesale" : "retail";
+  $("#orderStatus").value = o ? o.status : "new";
+  $("#orderPaid").value = o ? o.paid_status : "unpaid";
+  $("#orderAmountPaid").value = o ? (o.amount_paid || 0) : 0;
+  $("#orderDiscount").value = o ? (o.discount || 0) : 0;
+  $("#orderDue").value = o && o.due_at ? o.due_at : "";
+  $("#orderNotes").value = o ? (o.notes || "") : "";
+  $("#orderLines").innerHTML = "";
+  if (o && items && items.length) items.forEach((it) => addOrderLine(it.service_id, it.qty, it.unit_price));
+  else addOrderLine();
+  recomputeOrder();
+  $("#orderDelete").hidden = !o;
+  $("#orderModal").hidden = false;
+  setTimeout(() => $("#orderCustomer").focus(), 60);
+}
+
+function addOrderLine(serviceId, qty, unitPrice) {
+  const row = document.createElement("div");
+  row.className = "order-line";
+  const sel = document.createElement("select");
+  sel.className = "ol-item";
+  sel.innerHTML = `<option value="">${tr("olPick")}</option>` + services.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  if (serviceId) sel.value = serviceId;
+  const q = document.createElement("input");
+  q.type = "number"; q.min = 0; q.step = "any"; q.className = "ol-qty"; q.value = qty != null ? qty : 1;
+  const p = document.createElement("input");
+  p.type = "number"; p.min = 0; p.step = "0.01"; p.className = "ol-price"; p.value = unitPrice != null ? unitPrice : "";
+  const tot = document.createElement("span"); tot.className = "ol-total"; tot.textContent = "0";
+  const del = document.createElement("button"); del.type = "button"; del.className = "ol-del"; del.textContent = "✕";
+  del.onclick = () => { row.remove(); recomputeOrder(); };
+  const autofill = () => {
+    const it = svcById(sel.value);
+    if (it) p.value = unitPriceFor(it, Number(q.value) || 0);
+    recomputeOrder();
+  };
+  sel.onchange = autofill;
+  q.oninput = autofill;
+  p.oninput = recomputeOrder;
+  row.appendChild(sel); row.appendChild(q); row.appendChild(p); row.appendChild(tot); row.appendChild(del);
+  $("#orderLines").appendChild(row);
+}
+
+function recomputeOrder() {
+  let sub = 0;
+  document.querySelectorAll("#orderLines .order-line").forEach((r) => {
+    const qv = Number(r.querySelector(".ol-qty").value) || 0;
+    const pv = Number(r.querySelector(".ol-price").value) || 0;
+    const lt = qv * pv;
+    r.querySelector(".ol-total").textContent = money(lt);
+    sub += lt;
+  });
+  const disc = Number($("#orderDiscount").value) || 0;
+  $("#orderSubtotal").textContent = money(sub);
+  $("#orderTotal").textContent = money(Math.max(0, sub - disc));
+}
+
+async function saveOrder() {
+  const lines = [];
+  document.querySelectorAll("#orderLines .order-line").forEach((r) => {
+    const sid = r.querySelector(".ol-item").value;
+    const qv = Number(r.querySelector(".ol-qty").value) || 0;
+    const pv = Number(r.querySelector(".ol-price").value) || 0;
+    if (sid && qv > 0) lines.push({ service_id: sid, name: (svcById(sid) || {}).name || "", qty: qv, unit_price: pv, line_total: qv * pv });
+  });
+  if (!lines.length) { toast(tr("orderNeedItem")); return; }
+  const sub = lines.reduce((a, l) => a + l.line_total, 0);
+  const disc = Number($("#orderDiscount").value) || 0;
+  const order = {
+    business_id: biz.id,
+    customer_name: $("#orderCustomer").value.trim() || null,
+    customer_contact: $("#orderContact").value.trim() || null,
+    order_type: $("#orderType").value,
+    status: $("#orderStatus").value,
+    paid_status: $("#orderPaid").value,
+    amount_paid: Number($("#orderAmountPaid").value) || 0,
+    due_at: $("#orderDue").value || null,
+    currency: biz.currency || "EUR",
+    subtotal: sub, discount: disc, total: Math.max(0, sub - disc),
+    notes: $("#orderNotes").value.trim() || null,
+  };
+  try {
+    let oid = editingOrderId;
+    if (oid) {
+      await sb.from("orders").update(order).eq("id", oid);
+      await sb.from("order_items").delete().eq("order_id", oid);
+    } else {
+      order.created_by = "manual";
+      const { data, error } = await sb.from("orders").insert(order).select("id").single();
+      if (error) throw error; oid = data.id;
+    }
+    const items = lines.map((l) => ({ order_id: oid, business_id: biz.id, service_id: l.service_id, name: l.name, qty: l.qty, unit_price: l.unit_price, line_total: l.line_total }));
+    await sb.from("order_items").insert(items);
+    $("#orderModal").hidden = true;
+    toast(tr("toastSaved"));
+    await renderOrders();
+  } catch (ex) { alert(ex.message || String(ex)); }
+}
+
+async function deleteOrder() {
+  if (!editingOrderId) return;
+  if (!confirm(tr("confirmDelete"))) return;
+  try {
+    await sb.from("orders").delete().eq("id", editingOrderId);
+    $("#orderModal").hidden = true;
+    toast(tr("toastSaved"));
+    await renderOrders();
   } catch (ex) { alert(ex.message || String(ex)); }
 }
 
@@ -1443,7 +1629,7 @@ function wire() {
       const payload = { commerce_enabled: $("#commerceOn").checked, currency: $("#bizCurrency").value };
       await sb.from("businesses").update(payload).eq("id", biz.id);
       biz.commerce_enabled = payload.commerce_enabled; biz.currency = payload.currency;
-      applyModeUI(); renderCatalog(); await renderAll();
+      applyModeUI(); renderCatalog(); if (biz.commerce_enabled) renderOrders(); await renderAll();
       toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
@@ -1454,6 +1640,15 @@ function wire() {
   if ($("#itemDelete")) $("#itemDelete").onclick = deleteItem;
   if ($("#itemCancel")) $("#itemCancel").onclick = () => { $("#itemModal").hidden = true; };
   if ($("#itemModal")) $("#itemModal").addEventListener("click", (e) => { if (e.target === $("#itemModal")) $("#itemModal").hidden = true; });
+  // Porositë
+  if ($("#btnAddOrder")) $("#btnAddOrder").onclick = () => openOrder(null);
+  if ($("#orderFilter")) $("#orderFilter").onchange = renderOrders;
+  if ($("#addOrderLine")) $("#addOrderLine").onclick = () => addOrderLine();
+  if ($("#orderDiscount")) $("#orderDiscount").oninput = recomputeOrder;
+  if ($("#orderSave")) $("#orderSave").onclick = saveOrder;
+  if ($("#orderDelete")) $("#orderDelete").onclick = deleteOrder;
+  if ($("#orderCancel")) $("#orderCancel").onclick = () => { $("#orderModal").hidden = true; };
+  if ($("#orderModal")) $("#orderModal").addEventListener("click", (e) => { if (e.target === $("#orderModal")) $("#orderModal").hidden = true; });
   if ($("#setAddService")) $("#setAddService").onclick = () => setServiceRow(null);
   if ($("#saveServices")) $("#saveServices").onclick = saveServicesEdit;
   if ($("#saveHours")) $("#saveHours").onclick = saveHoursEdit;
@@ -1472,6 +1667,7 @@ function wire() {
     if (e.key !== "Escape") return;
     if (!$("#manModal").hidden) $("#manModal").hidden = true;
     if ($("#itemModal") && !$("#itemModal").hidden) $("#itemModal").hidden = true;
+    if ($("#orderModal") && !$("#orderModal").hidden) $("#orderModal").hidden = true;
   });
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.onclick = () => {

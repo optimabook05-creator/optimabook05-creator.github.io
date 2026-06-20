@@ -145,6 +145,8 @@
       <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
       <button class="tab" data-tab="leads" data-t="tabLeads">📥 Kërkesa</button>
       <button class="tab" data-tab="catalog" data-t="tabCatalog">📦 Katalogu</button>
+      <button class="tab" data-tab="orders" data-t="tabOrders">🧾 Porositë</button>
+      <button class="tab" data-tab="reports" data-t="tabReports">📈 Raporte</button>
       <button class="tab" data-tab="customers" data-t="tabCustomers">👤 Klientët</button>
       <button class="tab" data-tab="activity" data-t="tabActivity">🔔 Aktiviteti</button>
       <button class="tab" data-tab="settings" data-t="tabSettings">⚙️ Cilësime</button>
@@ -221,6 +223,30 @@
       <p class="pane-desc" data-t="catalogDesc">Produktet dhe shërbimet e tua — çmim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).</p>
       <div class="pane-toolbar"><button class="btn primary small" id="btnAddItem" data-t="addItem">+ Shto artikull</button></div>
       <div class="block-list" id="catalogList"></div>
+    </div>
+
+    <div class="tab-pane" id="pane-orders">
+      <p class="pane-desc" data-t="ordersDesc">Porositë/shitjet e tua — kush, çfarë, sa, çmimi, statusi dhe pagesa. Edhe porosi që zgjasin muaj (me ETA).</p>
+      <div class="pane-toolbar">
+        <button class="btn primary small" id="btnAddOrder" data-t="addOrder">+ Porosi e re</button>
+        <select id="orderFilter" class="cal-staff" style="display:inline-block">
+          <option value="open" data-t="filterOpen">Aktive</option>
+          <option value="all" data-t="filterAll">Të gjitha</option>
+          <option value="new" data-t="stNew">E re</option>
+          <option value="confirmed" data-t="stConfirmed">Konfirmuar</option>
+          <option value="in_progress" data-t="stInProgress">Në punë</option>
+          <option value="shipped" data-t="stShipped">Nisur</option>
+          <option value="delivered" data-t="stDelivered">Dorëzuar</option>
+          <option value="completed" data-t="stCompleted">Përfunduar</option>
+          <option value="cancelled" data-t="stCancelled">Anuluar</option>
+        </select>
+      </div>
+      <div class="block-list" id="ordersList"></div>
+    </div>
+
+    <div class="tab-pane" id="pane-reports">
+      <p class="pane-desc" data-t="reportsDesc">Raport shitjesh: sa u shit, çfarë, te kush — sipas periudhës që zgjedh.</p>
+      <div id="reportsBox"></div>
     </div>
 
     <div class="tab-pane" id="pane-activity">
@@ -377,6 +403,66 @@
       <button class="btn ghost danger" id="itemDelete" data-t="delete" hidden>Fshi</button>
       <button class="btn ghost" id="itemCancel" data-t="cancel">Anulo</button>
       <button class="btn primary" id="itemSave" data-t="save">Ruaj</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="orderModal" role="dialog" aria-modal="true" hidden>
+  <div class="modal">
+    <div class="modal-head"><h2 id="orderTitle" data-t="orderNew">Porosi e re</h2></div>
+    <div class="field-row">
+      <label class="field"><span data-t="orderCustomer">Klienti</span><input type="text" id="orderCustomer" maxlength="60"></label>
+      <label class="field"><span data-t="orderContact">Kontakti (tel/email)</span><input type="text" id="orderContact" maxlength="60"></label>
+    </div>
+    <label class="field"><span data-t="orderType">Lloji i shitjes</span>
+      <select id="orderType">
+        <option value="retail" data-t="typeRetail">Pakicë</option>
+        <option value="wholesale" data-t="typeWholesale">Shumicë</option>
+      </select>
+    </label>
+
+    <div class="field">
+      <span data-t="orderItems">Artikujt</span>
+      <div id="orderLines"></div>
+      <button class="btn ghost small" id="addOrderLine" type="button" data-t="addLine">+ Artikull</button>
+    </div>
+
+    <div class="order-totals">
+      <div class="ot-row"><span data-t="subtotal">Nëntotali</span><strong id="orderSubtotal">0</strong></div>
+      <div class="ot-row"><label for="orderDiscount" data-t="discount">Zbritje</label><input type="number" id="orderDiscount" min="0" step="0.01" value="0"></div>
+      <div class="ot-row total"><span data-t="total">Totali</span><strong id="orderTotal">0</strong></div>
+    </div>
+
+    <div class="field-row">
+      <label class="field"><span data-t="orderStatus">Statusi</span>
+        <select id="orderStatus">
+          <option value="new" data-t="stNew">E re</option>
+          <option value="confirmed" data-t="stConfirmed">Konfirmuar</option>
+          <option value="in_progress" data-t="stInProgress">Në punë</option>
+          <option value="shipped" data-t="stShipped">Nisur</option>
+          <option value="delivered" data-t="stDelivered">Dorëzuar</option>
+          <option value="completed" data-t="stCompleted">Përfunduar</option>
+          <option value="cancelled" data-t="stCancelled">Anuluar</option>
+        </select>
+      </label>
+      <label class="field"><span data-t="orderDue">Afati/ETA (opsional)</span><input type="date" id="orderDue"></label>
+    </div>
+    <div class="field-row">
+      <label class="field"><span data-t="orderPaid">Pagesa</span>
+        <select id="orderPaid">
+          <option value="unpaid" data-t="paidUnpaid">E papaguar</option>
+          <option value="partial" data-t="paidPartial">Pjesërisht</option>
+          <option value="paid" data-t="paidPaid">E paguar</option>
+        </select>
+      </label>
+      <label class="field"><span data-t="orderAmountPaid">Shuma e paguar</span><input type="number" id="orderAmountPaid" min="0" step="0.01" value="0"></label>
+    </div>
+    <label class="field"><span data-t="orderNotes">Shënime</span><input type="text" id="orderNotes" maxlength="200"></label>
+
+    <div class="modal-actions">
+      <button class="btn ghost danger" id="orderDelete" data-t="delete" hidden>Fshi</button>
+      <button class="btn ghost" id="orderCancel" data-t="cancel">Anulo</button>
+      <button class="btn primary" id="orderSave" data-t="save">Ruaj</button>
     </div>
   </div>
 </div>
