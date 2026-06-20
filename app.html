@@ -328,6 +328,19 @@
         </div>
       </div>
 
+      <div class="settings-block" id="catFieldsBlock" hidden>
+        <h3 class="set-h" data-t="setFieldsH">🧩 Fushat e katalogut (fik ato që s'të duhen)</h3>
+        <p class="pane-desc" data-t="fieldsDesc">Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.</p>
+        <div class="field-toggles">
+          <label class="commerce-toggle"><input type="checkbox" id="cfgDesc" checked> <span data-t="cfgDescLbl">Përshkrimi</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgUnit" checked> <span data-t="cfgUnitLbl">Njësia</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgStock" checked> <span data-t="cfgStockLbl">Stoku</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgSku" checked> <span data-t="cfgSkuLbl">Kodi (SKU)</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgTiers" checked> <span data-t="cfgTiersLbl">Çmime shumice</span></label>
+        </div>
+        <button class="btn small primary" id="saveFields" data-t="save" style="margin-top:12px">Ruaj</button>
+      </div>
+
       <div class="settings-block">
         <h3 class="set-h" data-t="setSvcH">Shërbimet / Produktet</h3>
         <div id="setServices"></div>
@@ -391,18 +404,18 @@
         <option value="product" data-t="kindProduct">Produkt / mall</option>
       </select>
     </label>
-    <label class="field"><span data-t="itemDesc">Përshkrimi (detaje për klientin & AI-në)</span><textarea id="itemDesc" rows="2" maxlength="400" data-t-ph="itemDescPh" placeholder="p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako"></textarea></label>
+    <label class="field" id="fldDesc"><span data-t="itemDesc">Përshkrimi (detaje për klientin & AI-në)</span><textarea id="itemDesc" rows="2" maxlength="400" data-t-ph="itemDescPh" placeholder="p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako"></textarea></label>
     <div class="field-row">
       <label class="field"><span data-t="itemPrice">Çmimi për 1 (bazë)</span><input type="number" id="itemPrice" min="0" step="0.01" value="0"></label>
-      <label class="field"><span data-t="itemUnit">Njësia</span><input type="text" id="itemUnit" maxlength="14" data-t-ph="itemUnitPh" placeholder="copë, shishe, kg, m…"></label>
+      <label class="field" id="fldUnit"><span data-t="itemUnit">Njësia</span><input type="text" id="itemUnit" maxlength="14" data-t-ph="itemUnitPh" placeholder="copë, shishe, kg, m…"></label>
     </div>
     <div class="field-row" id="stockRow">
       <label class="field commerce-toggle" style="align-self:end"><input type="checkbox" id="itemTrack"> <span data-t="itemTrack">Ndiq stokun</span></label>
       <label class="field"><span data-t="itemStock">Sasia në stok</span><input type="number" id="itemStock" min="0" step="1" placeholder="—"></label>
     </div>
-    <label class="field"><span data-t="itemSku">Kodi (SKU, opsional)</span><input type="text" id="itemSku" maxlength="40"></label>
+    <label class="field" id="fldSku"><span data-t="itemSku">Kodi (SKU, opsional)</span><input type="text" id="itemSku" maxlength="40"></label>
 
-    <div class="field">
+    <div class="field" id="fldTiers">
       <span data-t="itemTiers">Çmime sipas sasisë (shumicë) — opsionale</span>
       <p class="tier-hint" data-t="tiersHint">P.sh. nga 10 copë → 8€, nga 100 → 6€. Çmimi më i mirë zbatohet sipas sasisë.</p>
       <div id="itemTiers"></div>

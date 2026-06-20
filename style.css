@@ -719,6 +719,7 @@ body::after {
 /* ---------- Tregti: katalog, shkallë çmimi, toggle ---------- */
 .field-row { display: flex; gap: 10px; }
 .field-row .field { flex: 1; min-width: 0; }
+.field-toggles { display: flex; flex-wrap: wrap; gap: 10px 18px; }
 .commerce-toggle { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13.5px; color: var(--ink); cursor: pointer; }
 .commerce-toggle input { width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; }
 .tier-hint { color: var(--ink-soft); font-size: 12px; font-weight: 600; margin: 4px 0 9px; line-height: 1.5; }

@@ -128,6 +128,8 @@ const T = {
     repPaid: "Të arkëtuara", repOutstanding: "Për t'u arkëtuar", repRetail: "Pakicë", repWholesale: "Shumicë",
     repTopProducts: "Më të shiturat", repTopCustomers: "Klientët kryesorë",
     addBiz: "+ Biznes", obBack: "← Kthehu",
+    setFieldsH: "🧩 Fushat e katalogut (fik ato që s'të duhen)", fieldsDesc: "Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.",
+    cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
   },
   en: {
     dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
@@ -240,6 +242,8 @@ const T = {
     repPaid: "Collected", repOutstanding: "Outstanding", repRetail: "Retail", repWholesale: "Wholesale",
     repTopProducts: "Best sellers", repTopCustomers: "Top customers",
     addBiz: "+ Business", obBack: "← Back",
+    setFieldsH: "🧩 Catalog fields (turn off what you don't need)", fieldsDesc: "Everything is on by default. Turn off what you don't need — the panel becomes truly yours.",
+    cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
   },
 };
 const tr = (k) => T[lang][k];
@@ -327,6 +331,9 @@ let editingItemId = null;  // artikulli në editim (katalog)
 const CUR_SYM = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
 function curSym() { return CUR_SYM[(biz && biz.currency) || "EUR"] || ((biz && biz.currency) || "€"); }
 function money(n) { const v = Math.round((Number(n) || 0) * 100) / 100; const s = curSym(); return s.length === 1 ? `${v}${s}` : `${v} ${s}`; }
+// A shfaqet një fushë e katalogut? (pronari mund të fikë çdo fushë; default = shfaqet)
+function showField(key) { return !(biz && biz.config && biz.config[key] === false); }
+
 // Çmimi/njësi sipas sasisë: zgjedh shkallën më të mirë (min_qty më e madhe <= qty), përndryshe çmimi bazë
 function unitPriceFor(item, qty) {
   let best = Number(item.price) || 0;
@@ -592,13 +599,13 @@ function renderCatalog() {
     const kind = s.kind === "product" ? "product" : "service";
     const tiers = priceTiers.filter((t) => t.service_id === s.id);
     const meta = [`<span class="kind-badge ${kind}">${kind === "product" ? tr("kindProduct") : tr("kindService")}</span>`];
-    if (s.unit_label) meta.push(esc(s.unit_label));
-    if (s.track_stock) {
+    if (showField("catUnit") && s.unit_label) meta.push(esc(s.unit_label));
+    if (showField("catStock") && s.track_stock) {
       const low = Number(s.stock) <= 3;
       meta.push(`<span class="stock-badge ${low ? "low" : ""}">${tr("stockLbl")}: ${s.stock != null ? s.stock : 0}</span>`);
     }
-    if (tiers.length) meta.push(`💹 ${tiers.map((t) => `${plainNum(t.min_qty)}+ → ${money(t.unit_price)}`).join(", ")}`);
-    const desc = s.description ? `<div class="cat-desc">${esc(s.description)}</div>` : "";
+    if (showField("catTiers") && tiers.length) meta.push(`💹 ${tiers.map((t) => `${plainNum(t.min_qty)}+ → ${money(t.unit_price)}`).join(", ")}`);
+    const desc = (showField("catDesc") && s.description) ? `<div class="cat-desc">${esc(s.description)}</div>` : "";
     const item = document.createElement("div");
     item.className = "cat-item";
     item.innerHTML = `<span class="grow"><div class="cat-name">${esc(s.name)}</div>${desc}<div class="cat-meta">${meta.join(" ")}</div></span><span class="cat-price">${money(s.price)}</span>`;
@@ -620,6 +627,12 @@ function openItem(s) {
   $("#itemSku").value = s && s.sku ? s.sku : "";
   $("#itemTiers").innerHTML = "";
   (s ? priceTiers.filter((t) => t.service_id === s.id) : []).forEach((t) => addTierRow(t.min_qty, t.unit_price));
+  // Fsheh fushat që pronari ka fikur
+  if ($("#fldDesc")) $("#fldDesc").hidden = !showField("catDesc");
+  if ($("#fldUnit")) $("#fldUnit").hidden = !showField("catUnit");
+  if ($("#stockRow")) $("#stockRow").hidden = !showField("catStock");
+  if ($("#fldSku")) $("#fldSku").hidden = !showField("catSku");
+  if ($("#fldTiers")) $("#fldTiers").hidden = !showField("catTiers");
   $("#itemDelete").hidden = !s;
   $("#itemModal").hidden = false;
   setTimeout(() => $("#itemName").focus(), 60);
@@ -1028,6 +1041,13 @@ function renderSettings() {
   const bid = $("#bizIdVal"); if (bid) bid.textContent = biz.id;
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
   const cc = $("#bizCurrency"); if (cc) cc.value = biz.currency || "EUR";
+  // Toggle-t e fushave të katalogut
+  const cfb = $("#catFieldsBlock"); if (cfb) cfb.hidden = !biz.commerce_enabled;
+  if ($("#cfgDesc")) $("#cfgDesc").checked = showField("catDesc");
+  if ($("#cfgUnit")) $("#cfgUnit").checked = showField("catUnit");
+  if ($("#cfgStock")) $("#cfgStock").checked = showField("catStock");
+  if ($("#cfgSku")) $("#cfgSku").checked = showField("catSku");
+  if ($("#cfgTiers")) $("#cfgTiers").checked = showField("catTiers");
   updateTgWebhookLink();
   renderSettingsHours();
 }
@@ -1783,8 +1803,19 @@ function wire() {
       const payload = { commerce_enabled: $("#commerceOn").checked, currency: $("#bizCurrency").value };
       await sb.from("businesses").update(payload).eq("id", biz.id);
       biz.commerce_enabled = payload.commerce_enabled; biz.currency = payload.currency;
+      const cfb = $("#catFieldsBlock"); if (cfb) cfb.hidden = !biz.commerce_enabled;
       applyModeUI(); renderCatalog(); if (biz.commerce_enabled) renderOrders(); await renderAll();
       toast(tr("toastSaved"));
+    } catch (ex) { alert(ex.message || String(ex)); }
+  };
+  // Përshtatja: fik/ndiz fushat e katalogut
+  if ($("#saveFields")) $("#saveFields").onclick = async () => {
+    const cfg = Object.assign({}, biz.config || {});
+    cfg.catDesc = $("#cfgDesc").checked; cfg.catUnit = $("#cfgUnit").checked;
+    cfg.catStock = $("#cfgStock").checked; cfg.catSku = $("#cfgSku").checked; cfg.catTiers = $("#cfgTiers").checked;
+    try {
+      await sb.from("businesses").update({ config: cfg }).eq("id", biz.id);
+      biz.config = cfg; renderCatalog(); toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
   // Katalogu: editori i artikullit
