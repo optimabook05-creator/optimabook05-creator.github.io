@@ -130,6 +130,10 @@ const T = {
     addBiz: "+ Biznes", obBack: "← Kthehu",
     setFieldsH: "🧩 Fushat e katalogut (fik ato që s'të duhen)", fieldsDesc: "Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.",
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
+    printDoc: "🧾 Faturë / Ofertë", invInvoice: "FATURË", invQuote: "OFERTË", invNo: "Nr.", invDate: "Data",
+    invFrom: "Nga", invTo: "Për", invItem: "Artikulli", invQty: "Sasia", invPrice: "Çmimi", invLineTotal: "Totali",
+    invSubtotal: "Nëntotali", invDiscount: "Zbritje", invTotal: "TOTALI", invPaid: "Paguar", invDue: "Mbetet",
+    invETA: "Afati i dorëzimit", invNotes: "Shënime", invThanks: "Faleminderit!",
   },
   en: {
     dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
@@ -244,6 +248,10 @@ const T = {
     addBiz: "+ Business", obBack: "← Back",
     setFieldsH: "🧩 Catalog fields (turn off what you don't need)", fieldsDesc: "Everything is on by default. Turn off what you don't need — the panel becomes truly yours.",
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
+    printDoc: "🧾 Invoice / Quote", invInvoice: "INVOICE", invQuote: "QUOTE", invNo: "No.", invDate: "Date",
+    invFrom: "From", invTo: "To", invItem: "Item", invQty: "Qty", invPrice: "Price", invLineTotal: "Total",
+    invSubtotal: "Subtotal", invDiscount: "Discount", invTotal: "TOTAL", invPaid: "Paid", invDue: "Outstanding",
+    invETA: "Delivery by", invNotes: "Notes", invThanks: "Thank you!",
   },
 };
 const tr = (k) => T[lang][k];
@@ -864,6 +872,87 @@ async function deleteOrder() {
     toast(tr("toastSaved"));
     await renderOrders();
   } catch (ex) { alert(ex.message || String(ex)); }
+}
+
+// Faturë / Ofertë e printueshme (PDF nëpërmjet "Print → Save as PDF") nga porosia e hapur
+function printInvoice() {
+  const lines = [];
+  document.querySelectorAll("#orderLines .order-line").forEach((r) => {
+    const sid = r.querySelector(".ol-item").value;
+    if (!sid) return;
+    const qv = Number(r.querySelector(".ol-qty").value) || 0;
+    const pv = Number(r.querySelector(".ol-price").value) || 0;
+    if (qv > 0) lines.push({ name: (svcById(sid) || {}).name || "", qv, pv, lt: qv * pv });
+  });
+  if (!lines.length) { toast(tr("orderNeedItem")); return; }
+  const sub = lines.reduce((a, l) => a + l.lt, 0);
+  const disc = Number($("#orderDiscount").value) || 0;
+  const total = Math.max(0, sub - disc);
+  const paid = Number($("#orderAmountPaid").value) || 0;
+  const outstanding = Math.max(0, total - paid);
+  const isQuote = $("#orderStatus").value === "new";
+  const docTitle = isQuote ? tr("invQuote") : tr("invInvoice");
+  const customer = $("#orderCustomer").value.trim() || tr("noName");
+  const contact = $("#orderContact").value.trim();
+  const due = $("#orderDue").value;
+  const notes = $("#orderNotes").value.trim();
+  const today = new Date().toLocaleDateString();
+  const docNo = (editingOrderId ? editingOrderId.slice(0, 8) : String(Date.now()).slice(-6)).toUpperCase();
+  const rows = lines.map((l) => `<tr><td>${esc(l.name)}</td><td class="r">${plainNum(l.qv)}</td><td class="r">${money(l.pv)}</td><td class="r">${money(l.lt)}</td></tr>`).join("");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${docTitle} ${docNo}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+body{color:#16201c;padding:40px;max-width:720px;margin:0 auto;font-size:14px}
+.head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0ca678;padding-bottom:18px;margin-bottom:22px}
+.biz{font-size:22px;font-weight:800;color:#0ca678}
+.biz small{display:block;color:#5a6a64;font-size:12px;font-weight:600;margin-top:3px}
+.doc{text-align:right}
+.doc h1{font-size:26px;letter-spacing:1px;color:#16201c}
+.doc small{color:#5a6a64;font-weight:600}
+.parties{display:flex;justify-content:space-between;gap:24px;margin-bottom:22px}
+.parties .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#93a29c;font-weight:800;margin-bottom:4px}
+.parties .v{font-weight:700}
+table{width:100%;border-collapse:collapse;margin-bottom:18px}
+th{background:#f0f4f2;text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#5a6a64}
+th.r,td.r{text-align:right}
+td{padding:10px 12px;border-bottom:1px solid #eef1ef;font-weight:600}
+.totals{margin-left:auto;width:280px}
+.totals .row{display:flex;justify-content:space-between;padding:5px 0;font-weight:700}
+.totals .grand{border-top:2px solid #16201c;margin-top:6px;padding-top:9px;font-size:18px;font-weight:800}
+.totals .grand .a{color:#0ca678}
+.due{color:#e03131}
+.notes{margin-top:22px;padding:14px 16px;background:#f7f9f8;border-radius:10px;color:#5a6a64;font-weight:600;font-size:13px}
+.thanks{margin-top:26px;text-align:center;color:#0ca678;font-weight:800;font-size:16px}
+@media print{body{padding:0}}
+</style></head><body>
+<div class="head">
+  <div class="biz">${esc(biz.name)}${biz.address ? `<small>${esc(biz.address)}</small>` : ""}</div>
+  <div class="doc"><h1>${docTitle}</h1><small>${tr("invNo")} ${docNo} · ${tr("invDate")}: ${today}</small></div>
+</div>
+<div class="parties">
+  <div><div class="k">${tr("invTo")}</div><div class="v">${esc(customer)}${contact ? `<br>${esc(contact)}` : ""}</div></div>
+  ${due ? `<div style="text-align:right"><div class="k">${tr("invETA")}</div><div class="v">${esc(due)}</div></div>` : ""}
+</div>
+<table>
+  <thead><tr><th>${tr("invItem")}</th><th class="r">${tr("invQty")}</th><th class="r">${tr("invPrice")}</th><th class="r">${tr("invLineTotal")}</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="totals">
+  <div class="row"><span>${tr("invSubtotal")}</span><span>${money(sub)}</span></div>
+  ${disc > 0 ? `<div class="row"><span>${tr("invDiscount")}</span><span>-${money(disc)}</span></div>` : ""}
+  <div class="row grand"><span>${tr("invTotal")}</span><span class="a">${money(total)}</span></div>
+  ${paid > 0 ? `<div class="row"><span>${tr("invPaid")}</span><span>${money(paid)}</span></div>` : ""}
+  ${outstanding > 0 && paid > 0 ? `<div class="row due"><span>${tr("invDue")}</span><span>${money(outstanding)}</span></div>` : ""}
+</div>
+${notes ? `<div class="notes"><strong>${tr("invNotes")}:</strong> ${esc(notes)}</div>` : ""}
+<div class="thanks">${tr("invThanks")}</div>
+</body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { try { w.print(); } catch (e) {} }, 400);
 }
 
 /* ---------------- Raporte shitjesh (sa u shit, çfarë, te kush, kur) ---------------- */
@@ -1836,6 +1925,7 @@ function wire() {
   if ($("#orderDiscount")) $("#orderDiscount").oninput = recomputeOrder;
   if ($("#orderSave")) $("#orderSave").onclick = saveOrder;
   if ($("#orderDelete")) $("#orderDelete").onclick = deleteOrder;
+  if ($("#orderPrint")) $("#orderPrint").onclick = printInvoice;
   if ($("#orderCancel")) $("#orderCancel").onclick = () => { $("#orderModal").hidden = true; };
   if ($("#orderModal")) $("#orderModal").addEventListener("click", (e) => { if (e.target === $("#orderModal")) $("#orderModal").hidden = true; });
   if ($("#setAddService")) $("#setAddService").onclick = () => setServiceRow(null);
