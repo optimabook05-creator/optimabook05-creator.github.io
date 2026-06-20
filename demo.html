@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>OptimaBook — Demo Live</title>
 <meta name="description" content="Demo live e OptimaBook — shiko si AI rezervon takime në WhatsApp për biznesin tënd. | Live demo of OptimaBook — watch the AI book appointments on WhatsApp for your business.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -28,6 +29,7 @@
       <button data-lang="sq">SQ</button>
       <button data-lang="en">EN</button>
     </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ndrysho temën" title="Temë e errët / e çelët">🌙</button>
     <button class="btn ghost" id="btnSettings" data-i18n="ui.settings">⚙ Cilësimet</button>
     <button class="btn ghost danger" id="btnReset" data-i18n="ui.reset">↺ Rifillo demon</button>
   </div>
@@ -193,6 +195,21 @@
   </div>
 </div>
 
+<script>
+(function () {
+  var btn = document.getElementById("themeToggle");
+  if (!btn) return;
+  function cur() { return document.documentElement.getAttribute("data-theme") || "light"; }
+  function lbl(t) { return t === "dark" ? "☀️" : "🌙"; }
+  btn.textContent = lbl(cur());
+  btn.onclick = function () {
+    var n = cur() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", n);
+    try { localStorage.setItem("ob-theme", n); } catch (e) {}
+    btn.textContent = lbl(n);
+  };
+})();
+</script>
 <script src="app.js"></script>
 </body>
 </html>

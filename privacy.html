@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>OptimaBook — Politika e Privatësisë / Privacy Policy</title>
 <meta name="robots" content="index,follow">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -31,6 +32,11 @@ ul{padding-left:22px}
 a{color:var(--accent-deep)}
 .note{margin-top:30px;padding:16px 18px;background:rgba(245,159,26,.1);border:1px solid rgba(245,159,26,.3);border-radius:14px;font-size:13.5px;color:#8a5a00}
 .lang-note{font-size:13px;color:var(--ink-soft);font-style:italic;margin-bottom:20px}
+:root[data-theme="dark"]{--milk:#0c1311;--ink:#eaf0ed;--ink-soft:#9bafa8;--accent-deep:#2fe0a6;
+  --glass:rgba(38,52,47,.6);--glass-edge:rgba(255,255,255,.1)}
+:root[data-theme="dark"] body::before{opacity:.5}
+:root[data-theme="dark"] .card{box-shadow:0 8px 30px rgba(0,0,0,.45)}
+:root[data-theme="dark"] .note{background:rgba(245,159,26,.12);border-color:rgba(245,159,26,.3);color:#f0c070}
 </style>
 </head>
 <body>

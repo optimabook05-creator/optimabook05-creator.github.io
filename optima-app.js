@@ -1117,6 +1117,19 @@ function wire() {
       if (!$("#onboardView").hidden) openOnboard();
       if (!$("#appView").hidden && biz) loadAll(); };
   });
+  // Toggle i temës (errët/çelët) — ruhet, respekton sistemin si default
+  const themeBtn = $("#themeToggle");
+  if (themeBtn) {
+    const curTheme = () => document.documentElement.getAttribute("data-theme") || "light";
+    const themeLbl = (t) => (t === "dark" ? "☀️" : "🌙");
+    themeBtn.textContent = themeLbl(curTheme());
+    themeBtn.onclick = () => {
+      const n = curTheme() === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", n);
+      try { localStorage.setItem("ob-theme", n); } catch (e) {}
+      themeBtn.textContent = themeLbl(n);
+    };
+  }
   $("#authForm").addEventListener("submit", handleAuth);
   $("#authToggle").onclick = () => {
     authMode = authMode === "signup" ? "login" : "signup";

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <title>OptimaBook — Recepsionisti AI që nuk fle kurrë</title>
 <meta name="description" content="AI që i përgjigjet klientëve të tu në WhatsApp, rezervon takime dhe dërgon kujtesa — 24/7, në çdo gjuhë, për çdo biznes. | The AI receptionist that answers your customers on WhatsApp, books appointments and sends reminders — 24/7, in any language.">
 <meta property="og:title" content="OptimaBook — The AI receptionist that never sleeps">
@@ -185,6 +186,33 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
   .stat{min-width:130px;padding:13px 18px}
   .stat b{font-size:20px}
 }
+
+/* ---------- Toggle i temës ---------- */
+.theme-toggle{display:grid;place-items:center;width:40px;height:40px;border-radius:999px;
+  border:1px solid var(--glass-edge);background:var(--glass-strong);color:var(--ink);cursor:pointer;
+  font-size:17px;line-height:1;transition:transform .16s,background .16s;
+  box-shadow:0 1px 2px rgba(22,32,28,.05),inset 0 1px 0 #fff}
+.theme-toggle:hover{transform:translateY(-2px)}
+.theme-toggle:active{transform:scale(.94)}
+
+/* ---------- DARK MODE — "Milk Glass" netën ---------- */
+:root[data-theme="dark"]{
+  --milk:#0c1311;--ink:#eaf0ed;--ink-soft:#9bafa8;--ink-faint:#6a7d76;
+  --glass:rgba(30,42,38,.55);--glass-strong:rgba(38,52,47,.7);--glass-edge:rgba(255,255,255,.1);
+  --accent:#13b886;--accent-deep:#0ca678;--accent-bright:#2fe0a6;
+  --accent-soft:rgba(32,201,151,.16);--accent-glow:rgba(32,201,151,.28);
+  --sh-glass:0 1px 1px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.05);
+  --sh-float:0 2px 4px rgba(0,0,0,.35),0 18px 48px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
+}
+:root[data-theme="dark"] body::before{opacity:.45;filter:blur(80px) saturate(1.1)}
+:root[data-theme="dark"] body::after{opacity:.06}
+:root[data-theme="dark"] .lang{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1)}
+:root[data-theme="dark"] .lang button.active{background:rgba(255,255,255,.14);color:var(--accent-bright);box-shadow:none}
+:root[data-theme="dark"] .btn,:root[data-theme="dark"] .theme-toggle{box-shadow:0 1px 2px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.06)}
+:root[data-theme="dark"] .btn:hover{box-shadow:0 10px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.06)}
+:root[data-theme="dark"] .bchip{box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 1px 3px rgba(0,0,0,.3)}
+:root[data-theme="dark"] .plan.featured{background:linear-gradient(170deg,rgba(38,52,47,.8),rgba(32,201,151,.16));border-color:rgba(32,201,151,.4)}
+:root[data-theme="dark"] footer{border-top-color:rgba(255,255,255,.08)}
 </style>
 </head>
 <body>
@@ -196,6 +224,7 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
       <button data-l="sq">SQ</button>
       <button data-l="en">EN</button>
     </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ndrysho temën" title="Temë e errët / e çelët">🌙</button>
     <a class="btn" href="app.html" data-t="navLogin">Hyr</a>
     <a class="btn primary" href="demo.html" data-t="navDemo">▶ Provo demon</a>
   </div>
@@ -473,6 +502,21 @@ document.querySelectorAll("#lang button").forEach((b) => {
   b.onclick = () => { lang = b.dataset.l; localStorage.setItem(LK, lang); apply(); };
 });
 apply();
+
+// Toggle i temës (errët/çelët) — ruhet në localStorage, respekton sistemin si default
+(function () {
+  const btn = document.getElementById("themeToggle");
+  const cur = () => document.documentElement.getAttribute("data-theme") || "light";
+  const lbl = (t) => (t === "dark" ? "☀️" : "🌙");
+  if (!btn) return;
+  btn.textContent = lbl(cur());
+  btn.onclick = () => {
+    const n = cur() === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", n);
+    try { localStorage.setItem("ob-theme", n); } catch (e) {}
+    btn.textContent = lbl(n);
+  };
+})();
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   navigator.serviceWorker.register("sw.js").catch(() => {});

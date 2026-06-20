@@ -54,6 +54,59 @@
     0 40px 90px rgba(22, 32, 28, .22);
 }
 
+/* ---------- DARK MODE — "Milk Glass" netën ---------- */
+:root[data-theme="dark"] {
+  --milk: #0c1311;
+  --ink: #eaf0ed;
+  --ink-soft: #9bafa8;
+  --ink-faint: #6a7d76;
+
+  --glass: rgba(30, 42, 38, .55);
+  --glass-strong: rgba(38, 52, 47, .72);
+  --glass-soft: rgba(30, 42, 38, .34);
+  --glass-edge: rgba(255, 255, 255, .10);
+  --glass-line: rgba(255, 255, 255, .07);
+
+  --accent: #13b886;
+  --accent-deep: #0ca678;
+  --accent-bright: #2fe0a6;
+  --accent-soft: rgba(32, 201, 151, .16);
+  --accent-glow: rgba(32, 201, 151, .28);
+
+  --gold: #e6bb4a; --gold-soft: rgba(244, 196, 80, .14);
+  --red: #ff7a7a; --red-soft: rgba(224, 49, 49, .16);
+  --amber: #f0a847; --amber-soft: rgba(245, 159, 26, .16);
+
+  --shadow-glass:
+    0 1px 1px rgba(0, 0, 0, .30),
+    0 8px 24px rgba(0, 0, 0, .40),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
+  --shadow-float:
+    0 2px 4px rgba(0, 0, 0, .35),
+    0 18px 48px rgba(0, 0, 0, .50),
+    inset 0 1px 0 rgba(255, 255, 255, .05);
+  --shadow-deep:
+    0 6px 16px rgba(0, 0, 0, .45),
+    0 40px 90px rgba(0, 0, 0, .65);
+}
+:root[data-theme="dark"] body::before { opacity: .45; filter: blur(80px) saturate(1.1); }
+:root[data-theme="dark"] body::after { opacity: .06; }
+:root[data-theme="dark"] .lang-switch { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .10); }
+:root[data-theme="dark"] .lang-switch button.active { background: rgba(255, 255, 255, .14); color: var(--accent-bright); box-shadow: none; }
+:root[data-theme="dark"] .btn { box-shadow: 0 1px 2px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .06); }
+:root[data-theme="dark"] .btn:hover { box-shadow: 0 8px 20px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .06); background: rgba(255, 255, 255, .08); }
+
+/* ---------- Toggle i temës ---------- */
+.theme-toggle {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px;
+  border: 1px solid var(--glass-edge); background: var(--glass-strong); color: var(--ink);
+  cursor: pointer; font-size: 17px; line-height: 1;
+  transition: transform .16s ease, background .16s;
+  box-shadow: 0 1px 2px rgba(22, 32, 28, .05), inset 0 1px 0 #fff;
+}
+.theme-toggle:hover { transform: translateY(-2px); }
+.theme-toggle:active { transform: scale(.94); }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 ::selection { background: rgba(12, 166, 120, .22); color: var(--accent-deep); }
