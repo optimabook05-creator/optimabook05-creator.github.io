@@ -397,6 +397,17 @@
     <label class="field" id="manStaffField" hidden><span data-t="manStaff">Stafi</span><select id="manStaff"></select></label>
     <label class="field"><span data-t="manDate">Data</span><input type="date" id="manDate"></label>
     <label class="field"><span data-t="manTime">Ora</span><select id="manTime"></select></label>
+    <div class="field-row">
+      <label class="field"><span data-t="manRepeat">Përsërit</span>
+        <select id="manRepeat">
+          <option value="0" data-t="repNone">Pa përsëritje</option>
+          <option value="7" data-t="repWeekly">Çdo javë</option>
+          <option value="14" data-t="repBiweekly">Çdo 2 javë</option>
+          <option value="30" data-t="repMonthly">Çdo muaj</option>
+        </select>
+      </label>
+      <label class="field" id="manTimesField" hidden><span data-t="manTimes">Sa herë</span><input type="number" id="manTimes" min="2" max="52" value="4"></label>
+    </div>
     <div class="modal-actions">
       <button class="btn ghost" id="manCancel" data-t="cancel">Anulo</button>
       <button class="btn primary" id="manSave" data-t="save">Ruaj</button>

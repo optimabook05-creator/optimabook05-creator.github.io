@@ -130,6 +130,8 @@ const T = {
     addBiz: "+ Biznes", obBack: "← Kthehu",
     setFieldsH: "🧩 Fushat e katalogut (fik ato që s'të duhen)", fieldsDesc: "Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.",
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
+    manRepeat: "Përsërit", repNone: "Pa përsëritje", repWeekly: "Çdo javë", repBiweekly: "Çdo 2 javë", repMonthly: "Çdo muaj",
+    manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
     setPubH: "🌐 Faqja publike (link për klientët)", pubDesc: "Ndaje këtë link kudo (bio, WhatsApp, Instagram) — klientët rezervojnë/porosisin vetë, pa bisedë, pa app.",
     copyLink: "Kopjo", openLink: "Hap ↗", copied: "✅ U kopjua",
     printDoc: "🧾 Faturë / Ofertë", invInvoice: "FATURË", invQuote: "OFERTË", invNo: "Nr.", invDate: "Data",
@@ -250,6 +252,8 @@ const T = {
     addBiz: "+ Business", obBack: "← Back",
     setFieldsH: "🧩 Catalog fields (turn off what you don't need)", fieldsDesc: "Everything is on by default. Turn off what you don't need — the panel becomes truly yours.",
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
+    manRepeat: "Repeat", repNone: "No repeat", repWeekly: "Weekly", repBiweekly: "Every 2 weeks", repMonthly: "Monthly",
+    manTimes: "How many", recurDone: "✅ Created {n} appointments",
     setPubH: "🌐 Public page (link for customers)", pubDesc: "Share this link anywhere (bio, WhatsApp, Instagram) — customers book/order themselves, no chat, no app.",
     copyLink: "Copy", openLink: "Open ↗", copied: "✅ Copied",
     printDoc: "🧾 Invoice / Quote", invInvoice: "INVOICE", invQuote: "QUOTE", invNo: "No.", invDate: "Date",
@@ -1784,16 +1788,26 @@ async function saveManual() {
   if (!time) { toast(tr("pickTime")); return; }
   const sid = manStaffId();
   const st = sid ? staff.find((x) => x.id === sid) : null;
-  const row = {
+  const baseRow = {
     business_id: biz.id, service_id: $("#manService").value,
-    client_name: client, appt_date: $("#manDate").value, appt_time: time,
-    status: "pending", source: "manual",
+    client_name: client, appt_time: time, status: "pending", source: "manual",
   };
   // Vendos staf vetëm kur ka staf (enterprise.sql i ekzekutuar)
-  if (sid) { row.staff_id = sid; row.location_id = st ? st.location_id : null; }
-  await sb.from("appointments").insert(row);
+  if (sid) { baseRow.staff_id = sid; baseRow.location_id = st ? st.location_id : null; }
+
+  const step = parseInt($("#manRepeat") ? $("#manRepeat").value : "0", 10) || 0;
+  const times = step ? Math.max(2, Math.min(52, parseInt($("#manTimes").value, 10) || 1)) : 1;
+  let created = 0;
+  for (let i = 0; i < times; i++) {
+    const d = parseDate($("#manDate").value);
+    if (step === 30) d.setMonth(d.getMonth() + i); else d.setDate(d.getDate() + step * i);
+    const { error } = await sb.from("appointments").insert({ ...baseRow, appt_date: fmtDate(d) });
+    if (!error) created++;
+  }
   $("#manModal").hidden = true; $("#manClient").value = "";
-  toast(tr("toastSaved"));
+  if ($("#manRepeat")) $("#manRepeat").value = "0";
+  if ($("#manTimesField")) $("#manTimesField").hidden = true;
+  toast(step ? tr("recurDone").replace("{n}", created) : tr("toastSaved"));
   await renderAll();
 }
 
@@ -1951,6 +1965,7 @@ function wire() {
   $("#manDate").onchange = refreshManTimes;
   if ($("#manStaff")) $("#manStaff").onchange = refreshManTimes;
   if ($("#calStaff")) $("#calStaff").onchange = (e) => { calStaff = e.target.value || null; renderCalendar(); };
+  if ($("#manRepeat")) $("#manRepeat").onchange = (e) => { if ($("#manTimesField")) $("#manTimesField").hidden = e.target.value === "0"; };
   $("#manCancel").onclick = () => { $("#manModal").hidden = true; };
   $("#manSave").onclick = saveManual;
   $("#manModal").addEventListener("click", (e) => { if (e.target === $("#manModal")) $("#manModal").hidden = true; });
