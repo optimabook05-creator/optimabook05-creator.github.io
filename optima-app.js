@@ -93,6 +93,12 @@ const T = {
     qsChan: "Lidh kanalin (WhatsApp/Telegram)", qsMsg: "Merr mesazhin e parë të klientit",
     qsDo: "Bëje", qsHow: "Si?",
     qsMsgHelp: "Lidh kanalin te Cilësimet, pastaj dërgo një mesazh provë vetë — do ta shohësh këtu të kryer.",
+    emptyApptHint: "Sapo një klient të rezervojë (ose shto një manualisht), takimi shfaqet këtu.",
+    emptyWaitHint: "Kur një orar është plot, AI i shton klientët këtu dhe i lajmëron kur lirohet.",
+    emptyLeadsHint: "Çdo kërkesë/porosi që AI merr nga klientët do të mblidhet këtu.",
+    emptyCustomersHint: "AI i ndërton vetë profilet e klientëve nga bisedat — vizita, shpenzime, kanal.",
+    emptyActivityHint: "Çdo veprim i AI-së (rezervime, anulime, kujtesa) shfaqet këtu në kohë reale.",
+    emptyBlockHint: "Blloko orare kur s'punon (pushime, dreka) që AI të mos rezervojë atëherë.",
   },
   en: {
     dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
@@ -170,9 +176,21 @@ const T = {
     qsChan: "Connect a channel (WhatsApp/Telegram)", qsMsg: "Get your first customer message",
     qsDo: "Do it", qsHow: "How?",
     qsMsgHelp: "Connect a channel in Settings, then send a test message yourself — you'll see this checked off.",
+    emptyApptHint: "As soon as a customer books (or you add one manually), the appointment shows up here.",
+    emptyWaitHint: "When a slot is full, the AI adds customers here and notifies them when it frees up.",
+    emptyLeadsHint: "Every request/order the AI receives from customers will be collected here.",
+    emptyCustomersHint: "The AI builds customer profiles automatically from chats — visits, spend, channel.",
+    emptyActivityHint: "Every AI action (bookings, cancellations, reminders) appears here in real time.",
+    emptyBlockHint: "Block off times when you're closed (holidays, lunch) so the AI won't book then.",
   },
 };
 const tr = (k) => T[lang][k];
+
+// Gjendje bosh e pasur (ikonë + titull + ndihmë) — udhëzon pronarin e ri
+function emptyHTML(icon, title, hint) {
+  return `<div class="empty"><span class="e-ic">${icon}</span><div class="e-title">${esc(title)}</div>` +
+    (hint ? `<div class="e-hint">${esc(hint)}</div>` : "") + `</div>`;
+}
 
 const PRESETS = {
   sq: {
@@ -773,7 +791,7 @@ async function renderCustomers() {
   let rows = Object.values(map).filter((c) => c.visits > 0).sort((a, b) => (b.last || "").localeCompare(a.last || ""));
   const q = ($("#custSearch") && $("#custSearch").value.trim().toLowerCase()) || "";
   if (q) rows = rows.filter((c) => (c.name || "").toLowerCase().includes(q));
-  if (!rows.length) { list.innerHTML = `<div class="empty">${tr("emptyCustomers")}</div>`; return; }
+  if (!rows.length) { list.innerHTML = emptyHTML("👤", tr("emptyCustomers"), tr("emptyCustomersHint")); return; }
   list.innerHTML = "";
   for (const c of rows) {
     const item = document.createElement("div");
@@ -789,7 +807,7 @@ async function renderActivity() {
   const { data } = await sb.from("notifications").select("*").eq("business_id", biz.id)
     .order("created_at", { ascending: false }).limit(60);
   const rows = data || [];
-  if (!rows.length) { list.innerHTML = `<div class="empty">${tr("emptyActivity")}</div>`; return; }
+  if (!rows.length) { list.innerHTML = emptyHTML("🔔", tr("emptyActivity"), tr("emptyActivityHint")); return; }
   list.innerHTML = "";
   for (const n of rows) {
     const d = new Date(n.created_at);
@@ -805,7 +823,7 @@ async function renderLeads() {
   const { data } = await sb.from("leads").select("*").eq("business_id", biz.id)
     .order("created_at", { ascending: false }).limit(50);
   const rows = data || [];
-  if (!rows.length) { list.innerHTML = `<div class="empty">${tr("emptyLeads")}</div>`; return; }
+  if (!rows.length) { list.innerHTML = emptyHTML("📥", tr("emptyLeads"), tr("emptyLeadsHint")); return; }
   list.innerHTML = "";
   for (const l of rows) {
     const d = new Date(l.created_at);
@@ -834,7 +852,7 @@ function renderStaffPane() {
   const ll = $("#locList");
   if (ll) {
     ll.innerHTML = "";
-    if (!locations.length) ll.innerHTML = `<div class="empty">${tr("emptyLoc")}</div>`;
+    if (!locations.length) ll.innerHTML = emptyHTML("📍", tr("emptyLoc"));
     for (const l of locations) {
       const item = document.createElement("div"); item.className = "block-item";
       item.innerHTML = `<span class="grow">📍 <strong>${esc(l.name)}</strong>${l.address ? " — " + esc(l.address) : ""}</span>`;
@@ -847,7 +865,7 @@ function renderStaffPane() {
   const stl = $("#staffList");
   if (stl) {
     stl.innerHTML = "";
-    if (!staff.length) stl.innerHTML = `<div class="empty">${tr("emptyStaff")}</div>`;
+    if (!staff.length) stl.innerHTML = emptyHTML("👥", tr("emptyStaff"));
     for (const s of staff) {
       const loc = locations.find((l) => l.id === s.location_id);
       const item = document.createElement("div"); item.className = "block-item";
@@ -867,7 +885,7 @@ async function renderWaitlist() {
     .eq("business_id", biz.id).gte("desired_date", today)
     .in("status", ["waiting", "notified"]).order("desired_date").order("created_at");
   const rows = data || [];
-  if (!rows.length) { list.innerHTML = `<div class="empty">${tr("emptyWait")}</div>`; return; }
+  if (!rows.length) { list.innerHTML = emptyHTML("⏳", tr("emptyWait"), tr("emptyWaitHint")); return; }
   list.innerHTML = "";
   for (const w of rows) {
     const svc = w.services ? w.services.name : "—";
@@ -890,7 +908,7 @@ async function renderCalendar() {
   $("#calLabel").textContent = `${T[lang].dayNames[d.getDay()]}, ${d.getDate()} ${T[lang].months[d.getMonth()]} ${d.getFullYear()}`;
   const tl = $("#timeline"); tl.innerHTML = "";
   const h = hours[d.getDay()];
-  if (!h) { tl.innerHTML = `<div class="empty">${tr("dayOff")}</div>`; return; }
+  if (!h) { tl.innerHTML = emptyHTML("🌙", tr("dayOff")); return; }
   const open = toMin(h.open), close = toMin(h.close);
   let appts = await apptsForDate(calDate);
   let blocks = await blocksForDate(calDate);
@@ -931,7 +949,7 @@ async function renderAppointments() {
   const { data } = await sb.from("appointments").select("*").eq("business_id", biz.id)
     .gte("appt_date", today).order("appt_date").order("appt_time");
   const appts = data || [];
-  if (!appts.length) { list.innerHTML = `<div class="empty">${tr("emptyAppt")}</div>`; return; }
+  if (!appts.length) { list.innerHTML = emptyHTML("📅", tr("emptyAppt"), tr("emptyApptHint")); return; }
   for (const a of appts) {
     const s = svcById(a.service_id); const d = parseDate(a.appt_date);
     const card = document.createElement("div");
@@ -974,7 +992,7 @@ async function renderBlocks() {
   const { data } = await sb.from("time_blocks").select("*").eq("business_id", biz.id)
     .order("block_date").order("from_time");
   const blocks = data || [];
-  if (!blocks.length) { list.innerHTML = `<div class="empty">${tr("emptyBlock")}</div>`; return; }
+  if (!blocks.length) { list.innerHTML = emptyHTML("⛔", tr("emptyBlock"), tr("emptyBlockHint")); return; }
   for (const b of blocks) {
     const item = document.createElement("div");
     item.className = "block-item";

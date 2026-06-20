@@ -539,11 +539,14 @@ body::after {
 .appt-card.cancelled .appt-when { background: #a9b5b0; box-shadow: none; }
 
 .empty {
-  text-align: center; color: var(--ink-soft); padding: 44px 16px;
+  text-align: center; color: var(--ink-soft); padding: 44px 20px;
   font-size: 14px; font-weight: 600; line-height: 1.6;
-  border: 1.5px dashed rgba(22, 32, 28, .16); border-radius: var(--r-md);
-  background: rgba(255, 255, 255, .35);
+  border: 1.5px dashed var(--glass-line); border-radius: var(--r-md);
+  background: var(--glass-soft);
 }
+.empty .e-ic { font-size: 38px; line-height: 1; margin-bottom: 12px; display: block; opacity: .92; }
+.empty .e-title { font-family: var(--font-display); font-size: 15.5px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+.empty .e-hint { font-size: 13px; font-weight: 600; margin-top: 6px; line-height: 1.6; max-width: 360px; margin-left: auto; margin-right: auto; }
 
 /* Bllokime */
 .pane-desc { color: var(--ink-soft); font-size: 13.5px; margin-bottom: 15px; font-weight: 600; }
