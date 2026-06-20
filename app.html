@@ -384,16 +384,17 @@
 <div class="modal-backdrop" id="itemModal" role="dialog" aria-modal="true" hidden>
   <div class="modal">
     <div class="modal-head"><h2 id="itemTitle" data-t="itemTitle">Artikull</h2></div>
-    <label class="field"><span data-t="itemName">Emri</span><input type="text" id="itemName" maxlength="60"></label>
+    <label class="field"><span data-t="itemName">Emri</span><input type="text" id="itemName" maxlength="80" data-t-ph="itemNamePh" placeholder="p.sh. Parfum 'Tobako Mix'"></label>
     <label class="field"><span data-t="itemKind">Lloji</span>
       <select id="itemKind">
         <option value="service" data-t="kindService">Shërbim</option>
         <option value="product" data-t="kindProduct">Produkt / mall</option>
       </select>
     </label>
+    <label class="field"><span data-t="itemDesc">Përshkrimi (detaje për klientin & AI-në)</span><textarea id="itemDesc" rows="2" maxlength="400" data-t-ph="itemDescPh" placeholder="p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako"></textarea></label>
     <div class="field-row">
-      <label class="field"><span data-t="itemPrice">Çmimi bazë</span><input type="number" id="itemPrice" min="0" step="0.01" value="0"></label>
-      <label class="field"><span data-t="itemUnit">Njësia</span><input type="text" id="itemUnit" maxlength="12" placeholder="copë, kg, m…"></label>
+      <label class="field"><span data-t="itemPrice">Çmimi për 1 (bazë)</span><input type="number" id="itemPrice" min="0" step="0.01" value="0"></label>
+      <label class="field"><span data-t="itemUnit">Njësia</span><input type="text" id="itemUnit" maxlength="14" data-t-ph="itemUnitPh" placeholder="copë, shishe, kg, m…"></label>
     </div>
     <div class="field-row" id="stockRow">
       <label class="field commerce-toggle" style="align-self:end"><input type="checkbox" id="itemTrack"> <span data-t="itemTrack">Ndiq stokun</span></label>

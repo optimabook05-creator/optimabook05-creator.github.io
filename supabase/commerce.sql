@@ -13,6 +13,7 @@ alter table public.businesses add column if not exists commerce_enabled boolean 
 
 -- ---------- Katalogu universal: shërbim OSE produkt + inventar ----------
 alter table public.services add column if not exists kind        text not null default 'service' check (kind in ('service','product'));
+alter table public.services add column if not exists description text;            -- detaje për klientin (p.sh. 199 ml, erë e fortë, përbërës)
 alter table public.services add column if not exists sku         text;            -- kodi i produktit (opsional)
 alter table public.services add column if not exists track_stock boolean not null default false;
 alter table public.services add column if not exists stock       numeric;         -- null = i pakufizuar

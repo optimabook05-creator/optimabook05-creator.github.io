@@ -100,12 +100,13 @@ const T = {
     emptyActivityHint: "Çdo veprim i AI-së (rezervime, anulime, kujtesa) shfaqet këtu në kohë reale.",
     emptyBlockHint: "Blloko orare kur s'punon (pushime, dreka) që AI të mos rezervojë atëherë.",
     tabCatalog: "📦 Katalogu", catalogDesc: "Produktet dhe shërbimet e tua — çmim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).",
-    addItem: "+ Shto artikull", emptyCatalog: "Ende pa artikuj.", emptyCatalogHint: "Shto produktet ose shërbimet që shet — me çmim, stok dhe çmime sipas sasisë.",
-    itemNew: "Artikull i ri", itemEdit: "Ndrysho artikullin", itemName: "Emri", itemKind: "Lloji",
-    kindService: "Shërbim", kindProduct: "Produkt / mall", itemPrice: "Çmimi bazë", itemUnit: "Njësia",
+    addItem: "+ Shto artikull", emptyCatalog: "Ende pa artikuj.", emptyCatalogHint: "Shembull: 'Parfum 199ml' → Produkt, çmimi 45, dhe çmime shumice: nga 2 → 40, nga 100 → 12.",
+    itemNew: "Artikull i ri", itemEdit: "Ndrysho artikullin", itemName: "Emri", itemNamePh: "p.sh. Parfum 'Tobako Mix'", itemKind: "Lloji",
+    itemDesc: "Përshkrimi (detaje për klientin & AI-në)", itemDescPh: "p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako",
+    kindService: "Shërbim", kindProduct: "Produkt / mall", itemPrice: "Çmimi për 1 (bazë)", itemUnit: "Njësia", itemUnitPh: "copë, shishe, kg, m…",
     itemTrack: "Ndiq stokun", itemStock: "Sasia në stok", itemSku: "Kodi (SKU, opsional)",
-    itemTiers: "Çmime sipas sasisë (shumicë) — opsionale", tiersHint: "P.sh. nga 10 copë → 8€, nga 100 → 6€. Çmimi më i mirë zbatohet sipas sasisë.",
-    addTier: "+ Shkallë çmimi", tierQty: "Nga sasia", tierPrice: "Çmimi/njësi", stockLbl: "Stok", hasTiers: "💹 çmime shumice",
+    itemTiers: "Çmime sipas sasisë (shumicë) — opsionale", tiersHint: "Shkruaj nga sa copë dhe çmimin. P.sh. nga 2 → 40, nga 100 → 12. Aplikohet vetë sipas sasisë.",
+    addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
     commerceLbl: "🛒 Tregti (produkte, porosi, raporte) & monedha", commerceOnLbl: "Aktivizo katalogun, porositë & raportet",
     delete: "Fshi", confirmDelete: "Ta fshij këtë? S'kthehet mbrapsht.",
     tabOrders: "🧾 Porositë", tabReports: "📈 Raporte",
@@ -211,12 +212,13 @@ const T = {
     emptyActivityHint: "Every AI action (bookings, cancellations, reminders) appears here in real time.",
     emptyBlockHint: "Block off times when you're closed (holidays, lunch) so the AI won't book then.",
     tabCatalog: "📦 Catalog", catalogDesc: "Your products and services — price, stock, unit and quantity pricing (wholesale/retail).",
-    addItem: "+ Add item", emptyCatalog: "No items yet.", emptyCatalogHint: "Add the products or services you sell — with price, stock and quantity pricing.",
-    itemNew: "New item", itemEdit: "Edit item", itemName: "Name", itemKind: "Type",
-    kindService: "Service", kindProduct: "Product / goods", itemPrice: "Base price", itemUnit: "Unit",
+    addItem: "+ Add item", emptyCatalog: "No items yet.", emptyCatalogHint: "Example: 'Perfume 199ml' → Product, price 45, plus wholesale tiers: from 2 → 40, from 100 → 12.",
+    itemNew: "New item", itemEdit: "Edit item", itemName: "Name", itemNamePh: "e.g. Perfume 'Tobacco Mix'", itemKind: "Type",
+    itemDesc: "Description (details for customer & AI)", itemDescPh: "e.g. 199 ml · strong scent · cinnamon–lemon–tobacco mix",
+    kindService: "Service", kindProduct: "Product / goods", itemPrice: "Price for 1 (base)", itemUnit: "Unit", itemUnitPh: "pc, bottle, kg, m…",
     itemTrack: "Track stock", itemStock: "Stock quantity", itemSku: "Code (SKU, optional)",
-    itemTiers: "Quantity pricing (wholesale) — optional", tiersHint: "E.g. from 10 pcs → 8, from 100 → 6. The best price applies based on quantity.",
-    addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price/unit", stockLbl: "Stock", hasTiers: "💹 wholesale pricing",
+    itemTiers: "Quantity pricing (wholesale) — optional", tiersHint: "Enter from how many and the price. E.g. from 2 → 40, from 100 → 12. Applied automatically by quantity.",
+    addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
     commerceLbl: "🛒 Commerce (products, orders, reports) & currency", commerceOnLbl: "Enable catalog, orders & reports",
     delete: "Delete", confirmDelete: "Delete this? This cannot be undone.",
     tabOrders: "🧾 Orders", tabReports: "📈 Reports",
@@ -595,10 +597,11 @@ function renderCatalog() {
       const low = Number(s.stock) <= 3;
       meta.push(`<span class="stock-badge ${low ? "low" : ""}">${tr("stockLbl")}: ${s.stock != null ? s.stock : 0}</span>`);
     }
-    if (tiers.length) meta.push(tr("hasTiers"));
+    if (tiers.length) meta.push(`💹 ${tiers.map((t) => `${plainNum(t.min_qty)}+ → ${money(t.unit_price)}`).join(", ")}`);
+    const desc = s.description ? `<div class="cat-desc">${esc(s.description)}</div>` : "";
     const item = document.createElement("div");
     item.className = "cat-item";
-    item.innerHTML = `<span class="grow"><div class="cat-name">${esc(s.name)}</div><div class="cat-meta">${meta.join(" ")}</div></span><span class="cat-price">${money(s.price)}</span>`;
+    item.innerHTML = `<span class="grow"><div class="cat-name">${esc(s.name)}</div>${desc}<div class="cat-meta">${meta.join(" ")}</div></span><span class="cat-price">${money(s.price)}</span>`;
     item.onclick = () => openItem(s);
     list.appendChild(item);
   });
@@ -609,6 +612,7 @@ function openItem(s) {
   $("#itemTitle").textContent = s ? tr("itemEdit") : tr("itemNew");
   $("#itemName").value = s ? s.name : "";
   $("#itemKind").value = s && s.kind === "product" ? "product" : "service";
+  $("#itemDesc").value = s && s.description ? s.description : "";
   $("#itemPrice").value = s ? s.price : 0;
   $("#itemUnit").value = s && s.unit_label ? s.unit_label : "";
   $("#itemTrack").checked = !!(s && s.track_stock);
@@ -644,6 +648,7 @@ async function saveItem() {
     business_id: biz.id, name,
     price: Number($("#itemPrice").value) || 0,
     kind: $("#itemKind").value === "product" ? "product" : "service",
+    description: $("#itemDesc").value.trim() || null,
     sku: $("#itemSku").value.trim() || null,
     unit_label: $("#itemUnit").value.trim() || null,
     track_stock: track,
