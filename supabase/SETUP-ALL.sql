@@ -141,7 +141,64 @@ end; $$;
 drop trigger if exists trg_appt_cancelled on public.appointments;
 create trigger trg_appt_cancelled after update on public.appointments for each row execute function public.on_appt_cancelled();
 
+-- ---------- SHTRESA E TREGTISË (commerce): produkte, stok, çmime sipas sasisë, porosi ----------
+alter table public.businesses add column if not exists currency text not null default 'EUR';
+alter table public.services add column if not exists kind        text not null default 'service' check (kind in ('service','product'));
+alter table public.services add column if not exists sku         text;
+alter table public.services add column if not exists track_stock boolean not null default false;
+alter table public.services add column if not exists stock       numeric;
+alter table public.services add column if not exists unit_label  text;
+
+create table if not exists public.price_tiers (
+  id uuid primary key default gen_random_uuid(),
+  service_id uuid not null references public.services(id) on delete cascade,
+  business_id uuid not null references public.businesses(id) on delete cascade,
+  min_qty numeric not null default 1, unit_price numeric(12,2) not null default 0,
+  label text, created_at timestamptz not null default now()
+);
+create index if not exists price_tiers_service_idx on public.price_tiers (service_id, min_qty);
+
+create table if not exists public.orders (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete cascade,
+  customer_name text, customer_contact text, channel text, chat_id text,
+  order_type text not null default 'retail' check (order_type in ('retail','wholesale')),
+  status text not null default 'new' check (status in ('new','confirmed','in_progress','shipped','delivered','completed','cancelled')),
+  placed_at timestamptz not null default now(), due_at date,
+  currency text not null default 'EUR',
+  subtotal numeric(12,2) not null default 0, discount numeric(12,2) not null default 0, total numeric(12,2) not null default 0,
+  paid_status text not null default 'unpaid' check (paid_status in ('unpaid','partial','paid')),
+  amount_paid numeric(12,2) not null default 0, notes text,
+  created_by text not null default 'manual' check (created_by in ('manual','ai')),
+  created_at timestamptz not null default now()
+);
+create index if not exists orders_business_idx on public.orders (business_id, placed_at desc);
+create index if not exists orders_status_idx on public.orders (business_id, status);
+create index if not exists orders_due_idx on public.orders (business_id, due_at);
+
+create table if not exists public.order_items (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.orders(id) on delete cascade,
+  business_id uuid not null references public.businesses(id) on delete cascade,
+  service_id uuid references public.services(id) on delete set null,
+  name text not null, qty numeric(12,2) not null default 1,
+  unit_price numeric(12,2) not null default 0, line_total numeric(12,2) not null default 0
+);
+create index if not exists order_items_order_idx on public.order_items (order_id);
+create index if not exists order_items_business_idx on public.order_items (business_id, service_id);
+
+alter table public.price_tiers enable row level security;
+alter table public.orders      enable row level security;
+alter table public.order_items enable row level security;
+drop policy if exists "own_price_tiers" on public.price_tiers;
+create policy "own_price_tiers" on public.price_tiers for all using (public.is_my_business(business_id)) with check (public.is_my_business(business_id));
+drop policy if exists "own_orders" on public.orders;
+create policy "own_orders" on public.orders for all using (public.is_my_business(business_id)) with check (public.is_my_business(business_id));
+drop policy if exists "own_order_items" on public.order_items;
+create policy "own_order_items" on public.order_items for all using (public.is_my_business(business_id)) with check (public.is_my_business(business_id));
+
 -- =====================================================================
--- Gati! Të gjitha tabelat, kolonat, RLS, indeksi dhe triggeri janë vendosur.
+-- Gati! Të gjitha tabelat, kolonat, RLS, indeksi, triggeri + shtresa e
+-- tregtisë (produkte/porosi) janë vendosur.
 -- (Cron-et për kujtesa/win-back/reviews vendosen veç, pasi të jenë funksionet.)
 -- =====================================================================
