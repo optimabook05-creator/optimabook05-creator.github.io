@@ -120,6 +120,12 @@ const T = {
     orderAmountPaid: "Shuma e paguar", orderNotes: "Shënime",
     emptyOrders: "Ende pa porosi.", emptyOrdersHint: "Krijo një porosi ose lëre AI-në ta marrë vetë — do shfaqet këtu me status e total.",
     orderNeedItem: "Shto të paktën një artikull.", noItems: "(pa artikuj)", noName: "Pa emër", etaShort: "ETA",
+    reportsDesc: "Raport shitjesh: sa u shit, çfarë, te kush — sipas periudhës që zgjedh.",
+    rep_today: "Sot", rep_week: "7 ditë", rep_month: "Këtë muaj", rep_lastMonth: "Muaji i kaluar", rep_year: "Këtë vit", rep_custom: "Periudhë", apply: "Apliko",
+    repNoData: "Pa shitje në këtë periudhë.", repNoDataHint: "Kur të regjistrosh porosi në këtë periudhë, raporti shfaqet këtu.",
+    repRevenue: "Të ardhura", repOrders: "Porosi", repUnits: "Njësi të shitura",
+    repPaid: "Të arkëtuara", repOutstanding: "Për t'u arkëtuar", repRetail: "Pakicë", repWholesale: "Shumicë",
+    repTopProducts: "Më të shiturat", repTopCustomers: "Klientët kryesorë",
   },
   en: {
     dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
@@ -224,6 +230,12 @@ const T = {
     orderAmountPaid: "Amount paid", orderNotes: "Notes",
     emptyOrders: "No orders yet.", emptyOrdersHint: "Create an order or let the AI capture it — it'll appear here with status and total.",
     orderNeedItem: "Add at least one item.", noItems: "(no items)", noName: "No name", etaShort: "ETA",
+    reportsDesc: "Sales report: how much you sold, what, to whom — for the period you pick.",
+    rep_today: "Today", rep_week: "7 days", rep_month: "This month", rep_lastMonth: "Last month", rep_year: "This year", rep_custom: "Custom", apply: "Apply",
+    repNoData: "No sales in this period.", repNoDataHint: "Once you record orders in this period, the report shows up here.",
+    repRevenue: "Revenue", repOrders: "Orders", repUnits: "Units sold",
+    repPaid: "Collected", repOutstanding: "Outstanding", repRetail: "Retail", repWholesale: "Wholesale",
+    repTopProducts: "Best sellers", repTopCustomers: "Top customers",
   },
 };
 const tr = (k) => T[lang][k];
@@ -792,6 +804,94 @@ async function deleteOrder() {
     toast(tr("toastSaved"));
     await renderOrders();
   } catch (ex) { alert(ex.message || String(ex)); }
+}
+
+/* ---------------- Raporte shitjesh (sa u shit, çfarë, te kush, kur) ---------------- */
+let reportPeriod = "month";
+let reportFrom = null, reportTo = null;
+
+function periodRange(p) {
+  const now = new Date();
+  const sod = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+  const eod = (d) => { const x = new Date(d); x.setHours(23, 59, 59, 999); return x; };
+  let from, to = eod(now);
+  if (p === "today") from = sod(now);
+  else if (p === "week") { from = sod(now); from.setDate(from.getDate() - 6); }
+  else if (p === "lastMonth") { from = new Date(now.getFullYear(), now.getMonth() - 1, 1); to = eod(new Date(now.getFullYear(), now.getMonth(), 0)); }
+  else if (p === "year") from = new Date(now.getFullYear(), 0, 1);
+  else if (p === "custom") {
+    from = reportFrom ? sod(parseDate(reportFrom)) : new Date(now.getFullYear(), now.getMonth(), 1);
+    to = reportTo ? eod(parseDate(reportTo)) : eod(now);
+  } else from = new Date(now.getFullYear(), now.getMonth(), 1); // month
+  return { from, to };
+}
+
+async function renderReports() {
+  const box = $("#reportsBox");
+  if (!box || !biz || !biz.commerce_enabled) return;
+  const periods = ["today", "week", "month", "lastMonth", "year", "custom"];
+  box.innerHTML =
+    `<div class="rep-periods">` +
+    periods.map((p) => `<button class="rep-pbtn ${p === reportPeriod ? "active" : ""}" data-p="${p}">${tr("rep_" + p)}</button>`).join("") +
+    `</div>
+    <div class="rep-custom" ${reportPeriod === "custom" ? "" : "hidden"}>
+      <input type="date" id="repFrom" value="${reportFrom || ""}">
+      <input type="date" id="repTo" value="${reportTo || ""}">
+      <button class="btn small primary" id="repApply">${tr("apply")}</button>
+    </div>
+    <div id="repResults"><div class="bi-load"></div></div>`;
+  box.querySelectorAll(".rep-pbtn").forEach((b) => { b.onclick = () => { reportPeriod = b.dataset.p; renderReports(); }; });
+  if ($("#repApply")) $("#repApply").onclick = () => { reportFrom = $("#repFrom").value || null; reportTo = $("#repTo").value || null; reportPeriod = "custom"; renderReports(); };
+
+  const { from, to } = periodRange(reportPeriod);
+  const results = $("#repResults");
+  let orders = [];
+  try {
+    const { data } = await sb.from("orders").select("*").eq("business_id", biz.id)
+      .gte("placed_at", from.toISOString()).lte("placed_at", to.toISOString());
+    orders = (data || []).filter((o) => o.status !== "cancelled");
+  } catch (e) { results.innerHTML = emptyHTML("📈", tr("repNoData"), tr("repNoDataHint")); return; }
+  if (!orders.length) { results.innerHTML = emptyHTML("📈", tr("repNoData"), tr("repNoDataHint")); return; }
+
+  let items = [];
+  try { const { data } = await sb.from("order_items").select("*").in("order_id", orders.map((o) => o.id)); items = data || []; } catch (e) {}
+
+  const revenue = orders.reduce((a, o) => a + (Number(o.total) || 0), 0);
+  const paid = orders.reduce((a, o) => a + (Number(o.amount_paid) || 0), 0);
+  const outstanding = Math.max(0, revenue - paid);
+  const units = items.reduce((a, i) => a + (Number(i.qty) || 0), 0);
+  const retailRev = orders.filter((o) => o.order_type !== "wholesale").reduce((a, o) => a + (Number(o.total) || 0), 0);
+  const wholeRev = Math.max(0, revenue - retailRev);
+
+  const prod = {};
+  items.forEach((i) => { const k = i.name || "—"; prod[k] = prod[k] || { qty: 0, rev: 0 }; prod[k].qty += Number(i.qty) || 0; prod[k].rev += Number(i.line_total) || 0; });
+  const topProd = Object.entries(prod).sort((a, b) => b[1].rev - a[1].rev).slice(0, 6);
+  const maxRev = topProd.length ? topProd[0][1].rev || 1 : 1;
+
+  const cust = {};
+  orders.forEach((o) => { const k = o.customer_name || tr("noName"); cust[k] = (cust[k] || 0) + (Number(o.total) || 0); });
+  const topCust = Object.entries(cust).sort((a, b) => b[1] - a[1]).slice(0, 6);
+
+  results.innerHTML = `
+    <div class="stats-grid-top">
+      <div class="stat-card highlight"><div class="num">${money(revenue)}</div><div class="lbl">${tr("repRevenue")}</div></div>
+      <div class="stat-card"><div class="num">${orders.length}</div><div class="lbl">${tr("repOrders")}</div></div>
+      <div class="stat-card"><div class="num">${plainNum(units)}</div><div class="lbl">${tr("repUnits")}</div></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="num">${money(paid)}</div><div class="lbl">${tr("repPaid")}</div></div>
+      <div class="stat-card ${outstanding > 0 ? "warn" : ""}"><div class="num">${money(outstanding)}</div><div class="lbl">${tr("repOutstanding")}</div></div>
+      <div class="stat-card"><div class="num">${money(retailRev)}</div><div class="lbl">${tr("repRetail")}</div></div>
+      <div class="stat-card"><div class="num">${money(wholeRev)}</div><div class="lbl">${tr("repWholesale")}</div></div>
+    </div>
+    <div class="bi-cols">
+      <div class="bi-box"><h4 class="bi-h">${tr("repTopProducts")}</h4>
+        ${topProd.map(([n, d]) => `<div class="bi-bar-row"><span class="bi-bar-lbl">${esc(n)} <small style="color:var(--ink-faint)">×${plainNum(d.qty)}</small></span><span class="bi-bar"><span class="bi-bar-fill" style="width:${Math.round((d.rev / maxRev) * 100)}%"></span></span><span class="bi-bar-num">${money(d.rev)}</span></div>`).join("")}
+      </div>
+      <div class="bi-box"><h4 class="bi-h">${tr("repTopCustomers")}</h4>
+        ${topCust.map(([n, v], i) => `<div class="bi-vip-row"><span class="bi-rank">${i + 1}</span><span class="bi-vip-name">${esc(n)}</span><span class="bi-vip-c">${money(v)}</span></div>`).join("")}
+      </div>
+    </div>`;
 }
 
 // Përgatit selektorët e stafit (filtri i kalendarit + fusha te takimi manual)
@@ -1675,6 +1775,10 @@ function wire() {
       document.querySelectorAll(".tab-pane").forEach((x) => x.classList.remove("active"));
       tab.classList.add("active");
       $("#pane-" + tab.dataset.tab).classList.add("active");
+      // Render lazy për skedat e tregtisë (gjithmonë të freskëta kur i hap)
+      if (tab.dataset.tab === "orders") renderOrders();
+      else if (tab.dataset.tab === "reports") renderReports();
+      else if (tab.dataset.tab === "catalog") renderCatalog();
     };
   });
   $("#blockForm").addEventListener("submit", async (e) => {

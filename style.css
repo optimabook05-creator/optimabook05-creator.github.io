@@ -777,6 +777,18 @@ body::after {
 .paid-pill.paid { background: var(--accent-soft); color: var(--accent-deep); }
 .paid-pill.partial { background: var(--gold-soft); color: var(--gold); }
 .paid-pill.unpaid { background: var(--red-soft); color: var(--red); }
+
+/* ---------- Raporte: përzgjedhësi i periudhës ---------- */
+.rep-periods { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.rep-pbtn { border: 1px solid var(--glass-edge); background: var(--glass-soft); color: var(--ink-soft);
+  border-radius: 999px; padding: 7px 14px; font-family: var(--font-body); font-weight: 700; font-size: 13px;
+  cursor: pointer; transition: transform .14s ease, background .15s, color .15s; }
+.rep-pbtn:hover { color: var(--ink); transform: translateY(-1px); }
+.rep-pbtn.active { background: linear-gradient(160deg, var(--accent-bright), var(--accent)); color: #fff;
+  border-color: transparent; box-shadow: 0 4px 12px var(--accent-glow); }
+.rep-custom { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+.rep-custom input { font-family: var(--font-body); border: 1px solid var(--glass-edge); background: var(--glass-soft);
+  border-radius: var(--r-sm); padding: 8px 10px; font-weight: 600; color: var(--ink); }
 .settings-block .settings-row { background: var(--glass-soft); }
 .settings-row {
   margin-bottom: 12px; padding: 14px 16px; border-radius: 16px;
