@@ -99,6 +99,15 @@ const T = {
     emptyCustomersHint: "AI i ndërton vetë profilet e klientëve nga bisedat — vizita, shpenzime, kanal.",
     emptyActivityHint: "Çdo veprim i AI-së (rezervime, anulime, kujtesa) shfaqet këtu në kohë reale.",
     emptyBlockHint: "Blloko orare kur s'punon (pushime, dreka) që AI të mos rezervojë atëherë.",
+    tabCatalog: "📦 Katalogu", catalogDesc: "Produktet dhe shërbimet e tua — çmim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).",
+    addItem: "+ Shto artikull", emptyCatalog: "Ende pa artikuj.", emptyCatalogHint: "Shto produktet ose shërbimet që shet — me çmim, stok dhe çmime sipas sasisë.",
+    itemNew: "Artikull i ri", itemEdit: "Ndrysho artikullin", itemName: "Emri", itemKind: "Lloji",
+    kindService: "Shërbim", kindProduct: "Produkt / mall", itemPrice: "Çmimi bazë", itemUnit: "Njësia",
+    itemTrack: "Ndiq stokun", itemStock: "Sasia në stok", itemSku: "Kodi (SKU, opsional)",
+    itemTiers: "Çmime sipas sasisë (shumicë) — opsionale", tiersHint: "P.sh. nga 10 copë → 8€, nga 100 → 6€. Çmimi më i mirë zbatohet sipas sasisë.",
+    addTier: "+ Shkallë çmimi", tierQty: "Nga sasia", tierPrice: "Çmimi/njësi", stockLbl: "Stok", hasTiers: "💹 çmime shumice",
+    commerceLbl: "🛒 Tregti (produkte, porosi, raporte) & monedha", commerceOnLbl: "Aktivizo katalogun, porositë & raportet",
+    delete: "Fshi", confirmDelete: "Ta fshij këtë? S'kthehet mbrapsht.",
   },
   en: {
     dayNames: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
@@ -182,6 +191,15 @@ const T = {
     emptyCustomersHint: "The AI builds customer profiles automatically from chats — visits, spend, channel.",
     emptyActivityHint: "Every AI action (bookings, cancellations, reminders) appears here in real time.",
     emptyBlockHint: "Block off times when you're closed (holidays, lunch) so the AI won't book then.",
+    tabCatalog: "📦 Catalog", catalogDesc: "Your products and services — price, stock, unit and quantity pricing (wholesale/retail).",
+    addItem: "+ Add item", emptyCatalog: "No items yet.", emptyCatalogHint: "Add the products or services you sell — with price, stock and quantity pricing.",
+    itemNew: "New item", itemEdit: "Edit item", itemName: "Name", itemKind: "Type",
+    kindService: "Service", kindProduct: "Product / goods", itemPrice: "Base price", itemUnit: "Unit",
+    itemTrack: "Track stock", itemStock: "Stock quantity", itemSku: "Code (SKU, optional)",
+    itemTiers: "Quantity pricing (wholesale) — optional", tiersHint: "E.g. from 10 pcs → 8, from 100 → 6. The best price applies based on quantity.",
+    addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price/unit", stockLbl: "Stock", hasTiers: "💹 wholesale pricing",
+    commerceLbl: "🛒 Commerce (products, orders, reports) & currency", commerceOnLbl: "Enable catalog, orders & reports",
+    delete: "Delete", confirmDelete: "Delete this? This cannot be undone.",
   },
 };
 const tr = (k) => T[lang][k];
@@ -260,6 +278,24 @@ let staff = [];            // [{id, name, role, location_id}] — bosh = biznes 
 let locations = [];        // [{id, name, address}]
 let calStaff = null;       // filtri i kalendarit (id stafi) ose null = të gjithë
 let calDate = fmtDate(new Date());
+let priceTiers = [];       // [{service_id, min_qty, unit_price}] — çmime sipas sasisë
+let editingItemId = null;  // artikulli në editim (katalog)
+
+// Monedha (global) — simboli sipas biznesit
+const CUR_SYM = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
+function curSym() { return CUR_SYM[(biz && biz.currency) || "EUR"] || ((biz && biz.currency) || "€"); }
+function money(n) { const v = Math.round((Number(n) || 0) * 100) / 100; const s = curSym(); return s.length === 1 ? `${v}${s}` : `${v} ${s}`; }
+// Çmimi/njësi sipas sasisë: zgjedh shkallën më të mirë (min_qty më e madhe <= qty), përndryshe çmimi bazë
+function unitPriceFor(item, qty) {
+  let best = Number(item.price) || 0;
+  let bestQ = -1;
+  for (const t of priceTiers) {
+    if (t.service_id === item.id && Number(t.min_qty) <= qty && Number(t.min_qty) > bestQ) {
+      best = Number(t.unit_price) || 0; bestQ = Number(t.min_qty);
+    }
+  }
+  return best;
+}
 
 /* =====================================================================
    AUTH
@@ -384,9 +420,17 @@ async function loadLocations() {
   const { data } = await sb.from("locations").select("*").eq("business_id", biz.id).order("sort_order").order("created_at");
   locations = data || [];
 }
+// Çmimet sipas sasisë — graceful nëse commerce.sql s'është ekzekutuar ende
+async function loadTiers() {
+  priceTiers = [];
+  try {
+    const { data } = await sb.from("price_tiers").select("*").eq("business_id", biz.id).order("min_qty");
+    priceTiers = data || [];
+  } catch (e) { /* tabela mund të mungojë */ }
+}
 
 async function loadAll() {
-  await Promise.all([loadServices(), loadHours(), loadStaff(), loadLocations()]);
+  await Promise.all([loadServices(), loadHours(), loadStaff(), loadLocations(), loadTiers()]);
   $("#bizName").textContent = tr("panelPrefix") + biz.name;
   const ru = $("#reviewUrl"); if (ru) ru.value = biz.review_url || "";
   const an = $("#aiNotes"); if (an) an.value = biz.ai_notes || "";
@@ -395,6 +439,7 @@ async function loadAll() {
   applyModeUI();
   renderSettings();
   await renderAll();
+  renderCatalog();
   renderQuickStart();
 }
 
@@ -456,6 +501,113 @@ async function renderQuickStart() {
   box.hidden = false;
 }
 
+/* ---------------- Katalogu (produkte/shërbime + stok + çmime sipas sasisë) ---------------- */
+function renderCatalog() {
+  const list = $("#catalogList");
+  if (!list) return;
+  if (!services.length) { list.innerHTML = emptyHTML("📦", tr("emptyCatalog"), tr("emptyCatalogHint")); return; }
+  list.innerHTML = "";
+  services.forEach((s) => {
+    const kind = s.kind === "product" ? "product" : "service";
+    const tiers = priceTiers.filter((t) => t.service_id === s.id);
+    const meta = [`<span class="kind-badge ${kind}">${kind === "product" ? tr("kindProduct") : tr("kindService")}</span>`];
+    if (s.unit_label) meta.push(esc(s.unit_label));
+    if (s.track_stock) {
+      const low = Number(s.stock) <= 3;
+      meta.push(`<span class="stock-badge ${low ? "low" : ""}">${tr("stockLbl")}: ${s.stock != null ? s.stock : 0}</span>`);
+    }
+    if (tiers.length) meta.push(tr("hasTiers"));
+    const item = document.createElement("div");
+    item.className = "cat-item";
+    item.innerHTML = `<span class="grow"><div class="cat-name">${esc(s.name)}</div><div class="cat-meta">${meta.join(" ")}</div></span><span class="cat-price">${money(s.price)}</span>`;
+    item.onclick = () => openItem(s);
+    list.appendChild(item);
+  });
+}
+
+function openItem(s) {
+  editingItemId = s ? s.id : null;
+  $("#itemTitle").textContent = s ? tr("itemEdit") : tr("itemNew");
+  $("#itemName").value = s ? s.name : "";
+  $("#itemKind").value = s && s.kind === "product" ? "product" : "service";
+  $("#itemPrice").value = s ? s.price : 0;
+  $("#itemUnit").value = s && s.unit_label ? s.unit_label : "";
+  $("#itemTrack").checked = !!(s && s.track_stock);
+  $("#itemStock").value = s && s.stock != null ? s.stock : "";
+  $("#itemSku").value = s && s.sku ? s.sku : "";
+  $("#itemTiers").innerHTML = "";
+  (s ? priceTiers.filter((t) => t.service_id === s.id) : []).forEach((t) => addTierRow(t.min_qty, t.unit_price));
+  $("#itemDelete").hidden = !s;
+  $("#itemModal").hidden = false;
+  setTimeout(() => $("#itemName").focus(), 60);
+}
+
+function addTierRow(minQty, unitPrice) {
+  const row = document.createElement("div");
+  row.className = "tier-row";
+  const q = document.createElement("input");
+  q.type = "number"; q.min = 1; q.step = 1; q.className = "t-qty"; q.placeholder = tr("tierQty");
+  q.value = minQty != null ? minQty : "";
+  const p = document.createElement("input");
+  p.type = "number"; p.min = 0; p.step = 0.01; p.className = "t-price"; p.placeholder = tr("tierPrice");
+  p.value = unitPrice != null ? unitPrice : "";
+  const del = document.createElement("button");
+  del.type = "button"; del.className = "t-del"; del.textContent = "✕"; del.onclick = () => row.remove();
+  row.appendChild(q); row.appendChild(p); row.appendChild(del);
+  $("#itemTiers").appendChild(row);
+}
+
+async function saveItem() {
+  const name = $("#itemName").value.trim();
+  if (!name) { $("#itemName").focus(); return; }
+  const track = $("#itemTrack").checked;
+  const payload = {
+    business_id: biz.id, name,
+    price: Number($("#itemPrice").value) || 0,
+    kind: $("#itemKind").value === "product" ? "product" : "service",
+    sku: $("#itemSku").value.trim() || null,
+    unit_label: $("#itemUnit").value.trim() || null,
+    track_stock: track,
+    stock: track ? (Number($("#itemStock").value) || 0) : null,
+  };
+  try {
+    let itemId = editingItemId;
+    if (itemId) {
+      await sb.from("services").update(payload).eq("id", itemId);
+    } else {
+      payload.duration_min = 30; payload.active = true;
+      const { data, error } = await sb.from("services").insert(payload).select("id").single();
+      if (error) throw error;
+      itemId = data.id;
+    }
+    // Shkallët e çmimit: fshi të vjetrat + rivendos
+    await sb.from("price_tiers").delete().eq("service_id", itemId);
+    const rows = [];
+    document.querySelectorAll("#itemTiers .tier-row").forEach((r) => {
+      const mq = Number(r.querySelector(".t-qty").value);
+      const upv = r.querySelector(".t-price").value;
+      if (mq > 0 && upv !== "") rows.push({ business_id: biz.id, service_id: itemId, min_qty: mq, unit_price: Number(upv) || 0 });
+    });
+    if (rows.length) await sb.from("price_tiers").insert(rows);
+    $("#itemModal").hidden = true;
+    await loadServices(); await loadTiers();
+    renderCatalog();
+    toast(tr("toastSaved"));
+  } catch (ex) { alert(ex.message || String(ex)); }
+}
+
+async function deleteItem() {
+  if (!editingItemId) return;
+  if (!confirm(tr("confirmDelete"))) return;
+  try {
+    await sb.from("services").delete().eq("id", editingItemId);
+    $("#itemModal").hidden = true;
+    await loadServices(); await loadTiers();
+    renderCatalog();
+    toast(tr("toastSaved"));
+  } catch (ex) { alert(ex.message || String(ex)); }
+}
+
 // Përgatit selektorët e stafit (filtri i kalendarit + fusha te takimi manual)
 function setupStaffUI() {
   const has = staff.length > 0;
@@ -474,11 +626,14 @@ function setupStaffUI() {
 // Mënyra e biznesit: fsheh/shfaq skedat sipas takime vs porosi (inquiry)
 function applyModeUI() {
   const inquiry = !!(biz && biz.mode === "inquiry");
+  const commerce = !!(biz && biz.commerce_enabled);
   const apptTabs = ["calendar", "appointments", "blocks", "waitlist", "staff", "customers"];
+  const commerceTabs = ["catalog", "orders", "reports"];
   document.querySelectorAll(".tabs .tab").forEach((t) => {
     const tab = t.dataset.tab;
     if (apptTabs.includes(tab)) t.hidden = inquiry;
     else if (tab === "leads") t.hidden = !inquiry;
+    else if (commerceTabs.includes(tab)) t.hidden = !commerce;
   });
   const shb = $("#setHoursBlock"); if (shb) shb.hidden = inquiry; // orari pune s'duhet për porosi
   const active = document.querySelector(".tab.active");
@@ -538,6 +693,8 @@ function renderSettings() {
   const sc = $("#setServices"); if (sc) { sc.innerHTML = ""; services.forEach(setServiceRow); }
   const tg = $("#tgToken"); if (tg) tg.value = biz.telegram_token || "";
   const bid = $("#bizIdVal"); if (bid) bid.textContent = biz.id;
+  const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
+  const cc = $("#bizCurrency"); if (cc) cc.value = biz.currency || "EUR";
   updateTgWebhookLink();
   renderSettingsHours();
 }
@@ -1279,6 +1436,24 @@ function wire() {
     } catch (ex) { alert(ex.message || String(ex)); }
   };
   if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
+  // Tregti: monedha + ndezja
+  const scBtn = $("#saveCommerce");
+  if (scBtn) scBtn.onclick = async () => {
+    try {
+      const payload = { commerce_enabled: $("#commerceOn").checked, currency: $("#bizCurrency").value };
+      await sb.from("businesses").update(payload).eq("id", biz.id);
+      biz.commerce_enabled = payload.commerce_enabled; biz.currency = payload.currency;
+      applyModeUI(); renderCatalog(); await renderAll();
+      toast(tr("toastSaved"));
+    } catch (ex) { alert(ex.message || String(ex)); }
+  };
+  // Katalogu: editori i artikullit
+  if ($("#btnAddItem")) $("#btnAddItem").onclick = () => openItem(null);
+  if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
+  if ($("#itemSave")) $("#itemSave").onclick = saveItem;
+  if ($("#itemDelete")) $("#itemDelete").onclick = deleteItem;
+  if ($("#itemCancel")) $("#itemCancel").onclick = () => { $("#itemModal").hidden = true; };
+  if ($("#itemModal")) $("#itemModal").addEventListener("click", (e) => { if (e.target === $("#itemModal")) $("#itemModal").hidden = true; });
   if ($("#setAddService")) $("#setAddService").onclick = () => setServiceRow(null);
   if ($("#saveServices")) $("#saveServices").onclick = saveServicesEdit;
   if ($("#saveHours")) $("#saveHours").onclick = saveHoursEdit;
@@ -1293,7 +1468,11 @@ function wire() {
   $("#manCancel").onclick = () => { $("#manModal").hidden = true; };
   $("#manSave").onclick = saveManual;
   $("#manModal").addEventListener("click", (e) => { if (e.target === $("#manModal")) $("#manModal").hidden = true; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("#manModal").hidden) $("#manModal").hidden = true; });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!$("#manModal").hidden) $("#manModal").hidden = true;
+    if ($("#itemModal") && !$("#itemModal").hidden) $("#itemModal").hidden = true;
+  });
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.onclick = () => {
       document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));

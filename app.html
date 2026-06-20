@@ -144,6 +144,7 @@
       <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
       <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
       <button class="tab" data-tab="leads" data-t="tabLeads">📥 Kërkesa</button>
+      <button class="tab" data-tab="catalog" data-t="tabCatalog">📦 Katalogu</button>
       <button class="tab" data-tab="customers" data-t="tabCustomers">👤 Klientët</button>
       <button class="tab" data-tab="activity" data-t="tabActivity">🔔 Aktiviteti</button>
       <button class="tab" data-tab="settings" data-t="tabSettings">⚙️ Cilësime</button>
@@ -216,6 +217,12 @@
       <div class="block-list" id="customerList"></div>
     </div>
 
+    <div class="tab-pane" id="pane-catalog">
+      <p class="pane-desc" data-t="catalogDesc">Produktet dhe shërbimet e tua — çmim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).</p>
+      <div class="pane-toolbar"><button class="btn primary small" id="btnAddItem" data-t="addItem">+ Shto artikull</button></div>
+      <div class="block-list" id="catalogList"></div>
+    </div>
+
     <div class="tab-pane" id="pane-activity">
       <p class="pane-desc" data-t="activityDesc">Çdo gjë që bën AI: rezervime, anulime, kujtesa, kërkesa — live.</p>
       <div class="block-list" id="activityList"></div>
@@ -256,6 +263,32 @@
             <input type="text" id="setName" maxlength="40">
             <input type="text" id="setAddress" maxlength="60" placeholder="Adresa / Online">
             <button class="btn small primary" id="saveBizInfo" data-t="save">Ruaj</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <label for="bizCurrency" data-t="commerceLbl">🛒 Tregti (produkte, porosi, raporte) & monedha</label>
+          <div class="settings-input">
+            <label class="commerce-toggle"><input type="checkbox" id="commerceOn"> <span data-t="commerceOnLbl">Aktivizo katalogun, porositë & raportet</span></label>
+            <select id="bizCurrency">
+              <option value="EUR">€ EUR</option>
+              <option value="USD">$ USD</option>
+              <option value="GBP">£ GBP</option>
+              <option value="ALL">L ALL (Lek)</option>
+              <option value="CHF">CHF</option>
+              <option value="CAD">$ CAD</option>
+              <option value="AUD">$ AUD</option>
+              <option value="AED">AED</option>
+              <option value="TRY">₺ TRY</option>
+              <option value="RSD">RSD</option>
+              <option value="MKD">MKD</option>
+              <option value="RON">RON</option>
+              <option value="BGN">BGN</option>
+              <option value="SEK">SEK</option>
+              <option value="INR">₹ INR</option>
+              <option value="JPY">¥ JPY</option>
+              <option value="CNY">¥ CNY</option>
+            </select>
+            <button class="btn small primary" id="saveCommerce" data-t="save">Ruaj</button>
           </div>
         </div>
       </div>
@@ -309,6 +342,41 @@
     <div class="modal-actions">
       <button class="btn ghost" id="manCancel" data-t="cancel">Anulo</button>
       <button class="btn primary" id="manSave" data-t="save">Ruaj</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="itemModal" role="dialog" aria-modal="true" hidden>
+  <div class="modal">
+    <div class="modal-head"><h2 id="itemTitle" data-t="itemTitle">Artikull</h2></div>
+    <label class="field"><span data-t="itemName">Emri</span><input type="text" id="itemName" maxlength="60"></label>
+    <label class="field"><span data-t="itemKind">Lloji</span>
+      <select id="itemKind">
+        <option value="service" data-t="kindService">Shërbim</option>
+        <option value="product" data-t="kindProduct">Produkt / mall</option>
+      </select>
+    </label>
+    <div class="field-row">
+      <label class="field"><span data-t="itemPrice">Çmimi bazë</span><input type="number" id="itemPrice" min="0" step="0.01" value="0"></label>
+      <label class="field"><span data-t="itemUnit">Njësia</span><input type="text" id="itemUnit" maxlength="12" placeholder="copë, kg, m…"></label>
+    </div>
+    <div class="field-row" id="stockRow">
+      <label class="field commerce-toggle" style="align-self:end"><input type="checkbox" id="itemTrack"> <span data-t="itemTrack">Ndiq stokun</span></label>
+      <label class="field"><span data-t="itemStock">Sasia në stok</span><input type="number" id="itemStock" min="0" step="1" placeholder="—"></label>
+    </div>
+    <label class="field"><span data-t="itemSku">Kodi (SKU, opsional)</span><input type="text" id="itemSku" maxlength="40"></label>
+
+    <div class="field">
+      <span data-t="itemTiers">Çmime sipas sasisë (shumicë) — opsionale</span>
+      <p class="tier-hint" data-t="tiersHint">P.sh. nga 10 copë → 8€, nga 100 → 6€. Çmimi më i mirë zbatohet sipas sasisë.</p>
+      <div id="itemTiers"></div>
+      <button class="btn ghost small" id="addTier" type="button" data-t="addTier">+ Shkallë çmimi</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost danger" id="itemDelete" data-t="delete" hidden>Fshi</button>
+      <button class="btn ghost" id="itemCancel" data-t="cancel">Anulo</button>
+      <button class="btn primary" id="itemSave" data-t="save">Ruaj</button>
     </div>
   </div>
 </div>

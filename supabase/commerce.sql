@@ -7,8 +7,9 @@
 -- Ekzekuto te SQL Editor (i sigurt disa herë).
 -- =====================================================================
 
--- ---------- Monedha për biznes (global) ----------
+-- ---------- Monedha + ndezja e tregtisë (pronari e ndez kur i duhet) ----------
 alter table public.businesses add column if not exists currency text not null default 'EUR';
+alter table public.businesses add column if not exists commerce_enabled boolean not null default false;
 
 -- ---------- Katalogu universal: shërbim OSE produkt + inventar ----------
 alter table public.services add column if not exists kind        text not null default 'service' check (kind in ('service','product'));

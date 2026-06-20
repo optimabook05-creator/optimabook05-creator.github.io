@@ -143,6 +143,7 @@ create trigger trg_appt_cancelled after update on public.appointments for each r
 
 -- ---------- SHTRESA E TREGTISË (commerce): produkte, stok, çmime sipas sasisë, porosi ----------
 alter table public.businesses add column if not exists currency text not null default 'EUR';
+alter table public.businesses add column if not exists commerce_enabled boolean not null default false;
 alter table public.services add column if not exists kind        text not null default 'service' check (kind in ('service','product'));
 alter table public.services add column if not exists sku         text;
 alter table public.services add column if not exists track_stock boolean not null default false;
