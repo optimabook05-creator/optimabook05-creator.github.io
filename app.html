@@ -125,6 +125,7 @@
       <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
       <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
       <button class="tab" data-tab="leads" data-t="tabLeads">📥 Kërkesa</button>
+      <button class="tab" data-tab="activity" data-t="tabActivity">🔔 Aktiviteti</button>
       <button class="tab" data-tab="settings" data-t="tabSettings">⚙️ Cilësime</button>
     </nav>
 
@@ -185,6 +186,11 @@
         <button class="btn primary small" type="submit" data-t="addStaff">+ Staf</button>
       </form>
       <div class="block-list" id="staffList"></div>
+    </div>
+
+    <div class="tab-pane" id="pane-activity">
+      <p class="pane-desc" data-t="activityDesc">Çdo gjë që bën AI: rezervime, anulime, kujtesa, kërkesa — live.</p>
+      <div class="block-list" id="activityList"></div>
     </div>
 
     <div class="tab-pane" id="pane-settings">

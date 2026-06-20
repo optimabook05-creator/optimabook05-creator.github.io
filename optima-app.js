@@ -59,6 +59,7 @@ const T = {
     setHoursH: "Orari i punës", setAiH: "AI & Vlerësime",
     saveServicesBtn: "Ruaj shërbimet", saveHoursBtn: "Ruaj orarin", deliveryPh: "p.sh. 13 ditë",
     aiActive: "AI aktiv · 24/7",
+    tabActivity: "🔔 Aktiviteti", activityDesc: "Çdo gjë që bën AI: rezervime, anulime, kujtesa, kërkesa — live.", emptyActivity: "Ende pa aktivitet.",
     tabStaff: "👥 Stafi", staffDesc: "Shto staf dhe lokacione. Çdo person pret klientë paralelisht në të njëjtën orë.",
     locNamePh: "Emri i lokacionit", locAddrPh: "Adresa (opsionale)", addLoc: "+ Lokacion",
     staffNamePh: "Emri i personit", staffRolePh: "Roli (p.sh. berber)", addStaff: "+ Staf",
@@ -126,6 +127,7 @@ const T = {
     setHoursH: "Working hours", setAiH: "AI & Reviews",
     saveServicesBtn: "Save services", saveHoursBtn: "Save hours", deliveryPh: "e.g. 13 days",
     aiActive: "AI active · 24/7",
+    tabActivity: "🔔 Activity", activityDesc: "Everything the AI does: bookings, cancellations, reminders, requests — live.", emptyActivity: "No activity yet.",
     tabStaff: "👥 Staff", staffDesc: "Add staff and locations. Each person serves customers in parallel at the same time.",
     locNamePh: "Location name", locAddrPh: "Address (optional)", addLoc: "+ Location",
     staffNamePh: "Person's name", staffRolePh: "Role (e.g. barber)", addStaff: "+ Staff",
@@ -660,7 +662,23 @@ async function finishOnboard() {
    ===================================================================== */
 async function renderAll() {
   renderStaffPane();
-  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads()]);
+  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads(), renderActivity()]);
+}
+
+async function renderActivity() {
+  const list = $("#activityList"); if (!list) return;
+  const { data } = await sb.from("notifications").select("*").eq("business_id", biz.id)
+    .order("created_at", { ascending: false }).limit(60);
+  const rows = data || [];
+  if (!rows.length) { list.innerHTML = `<div class="empty">${tr("emptyActivity")}</div>`; return; }
+  list.innerHTML = "";
+  for (const n of rows) {
+    const d = new Date(n.created_at);
+    const item = document.createElement("div");
+    item.className = "block-item";
+    item.innerHTML = `<span class="grow">${esc(n.text)}<small style="color:var(--ink-faint)"> · ${d.getDate()} ${T[lang].months[d.getMonth()]}, ${pad(d.getHours())}:${pad(d.getMinutes())}</small></span>`;
+    list.appendChild(item);
+  }
 }
 
 async function renderLeads() {
