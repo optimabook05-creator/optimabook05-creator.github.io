@@ -109,6 +109,7 @@ const T = {
     addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
     commerceLbl: "🛒 Tregti (produkte, porosi, raporte) & monedha", commerceOnLbl: "Aktivizo katalogun, porositë & raportet",
     delete: "Fshi", confirmDelete: "Ta fshij këtë? S'kthehet mbrapsht.",
+    tabGeneral: "🏢 General", generalDesc: "Info-ja e kompanisë tënde — emri, kontakti, mënyra dhe monedha. Plotësoji këtu.", phoneLbl: "Telefoni / kontakti",
     tabOrders: "🧾 Porositë", tabReports: "📈 Raporte",
     ordersDesc: "Porositë/shitjet e tua — kush, çfarë, sa, çmimi, statusi dhe pagesa. Edhe porosi që zgjasin muaj (me ETA).",
     addOrder: "+ Porosi e re", filterOpen: "Aktive", filterAll: "Të gjitha",
@@ -247,6 +248,7 @@ const T = {
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
     commerceLbl: "🛒 Commerce (products, orders, reports) & currency", commerceOnLbl: "Enable catalog, orders & reports",
     delete: "Delete", confirmDelete: "Delete this? This cannot be undone.",
+    tabGeneral: "🏢 General", generalDesc: "Your company info — name, contact, mode and currency. Fill it here.", phoneLbl: "Phone / contact",
     tabOrders: "🧾 Orders", tabReports: "📈 Reports",
     ordersDesc: "Your orders/sales — who, what, how many, price, status and payment. Even orders that take months (with ETA).",
     addOrder: "+ New order", filterOpen: "Active", filterAll: "All",
@@ -1207,6 +1209,7 @@ function renderSettings() {
   const op = $("#openPubLink"); if (op) op.href = pubBase;
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
   const cc = $("#bizCurrency"); if (cc) cc.value = biz.currency || "EUR";
+  const ph = $("#bizPhone"); if (ph) ph.value = (biz.config && biz.config.phone) || "";
   // Ekipi: vetëm pronari menaxhon qasjen
   const owner = !!(myUserId && biz.owner_id === myUserId);
   const tb = $("#teamBlock"); if (tb) tb.hidden = !owner;
@@ -2074,6 +2077,12 @@ function wire() {
     } catch (ex) { alert(ex.message || String(ex)); }
   };
   if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
+  if ($("#savePhone")) $("#savePhone").onclick = async () => {
+    const cfg = Object.assign({}, biz.config || {});
+    cfg.phone = $("#bizPhone").value.trim() || null;
+    try { await sb.from("businesses").update({ config: cfg }).eq("id", biz.id); biz.config = cfg; toast(tr("toastSaved")); }
+    catch (ex) { alert(ex.message || String(ex)); }
+  };
   if ($("#addTeam")) $("#addTeam").onclick = async () => {
     const email = ($("#teamEmail").value || "").trim().toLowerCase();
     if (!email || !/.+@.+\..+/.test(email)) { $("#teamEmail").focus(); return; }

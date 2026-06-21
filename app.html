@@ -146,7 +146,8 @@
     </div>
 
     <nav class="tabs">
-      <button class="tab active" data-tab="calendar" data-t="tabCal">📅 Kalendari</button>
+      <button class="tab active" data-tab="general" data-t="tabGeneral">🏢 General</button>
+      <button class="tab" data-tab="calendar" data-t="tabCal">📅 Kalendari</button>
       <button class="tab" data-tab="appointments" data-t="tabAppt">📋 Takimet</button>
       <button class="tab" data-tab="blocks" data-t="tabBlock">⛔ Bllokime</button>
       <button class="tab" data-tab="stats" data-t="tabStat">📊 Statistika</button>
@@ -161,7 +162,65 @@
       <button class="tab" data-tab="settings" data-t="tabSettings">⚙️ Cilësime</button>
     </nav>
 
-    <div class="tab-pane active" id="pane-calendar">
+    <div class="tab-pane active" id="pane-general">
+      <p class="pane-desc" data-t="generalDesc">Info-ja e kompanisë tënde — emri, kontakti, mënyra dhe monedha. Plotësoji këtu.</p>
+      <div class="settings-block">
+        <h3 class="set-h" data-t="setBizH">🏢 Biznesi</h3>
+        <div class="settings-row">
+          <label for="setName" data-t="setNameLbl">Emri & adresa</label>
+          <div class="settings-input">
+            <input type="text" id="setName" maxlength="40">
+            <input type="text" id="setAddress" maxlength="60" placeholder="Adresa / Online">
+            <button class="btn small primary" id="saveBizInfo" data-t="save">Ruaj</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <label for="bizPhone" data-t="phoneLbl">Telefoni / kontakti</label>
+          <div class="settings-input">
+            <input type="text" id="bizPhone" maxlength="40" placeholder="+355 6X XXX XXXX / email">
+            <button class="btn small primary" id="savePhone" data-t="save">Ruaj</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <label for="bizMode" data-t="modeLbl">⚙️ Mënyra e biznesit (ndize/fike kurdo)</label>
+          <div class="settings-input">
+            <select id="bizMode">
+              <option value="appointments" data-t="obModeAppt">📅 Bëj takime (me kalendar)</option>
+              <option value="inquiry" data-t="obModeInquiry">🛒 Marr porosi/kërkesa (pa kalendar)</option>
+            </select>
+            <button class="btn small primary" id="saveMode" data-t="save">Ruaj</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <label for="bizCurrency" data-t="commerceLbl">🛒 Tregti (produkte, porosi, raporte) & monedha</label>
+          <div class="settings-input">
+            <label class="commerce-toggle"><input type="checkbox" id="commerceOn"> <span data-t="commerceOnLbl">Aktivizo katalogun, porositë & raportet</span></label>
+            <select id="bizCurrency">
+              <option value="EUR">€ EUR</option>
+              <option value="USD">$ USD</option>
+              <option value="GBP">£ GBP</option>
+              <option value="ALL">L ALL (Lek)</option>
+              <option value="CHF">CHF</option>
+              <option value="CAD">$ CAD</option>
+              <option value="AUD">$ AUD</option>
+              <option value="AED">AED</option>
+              <option value="TRY">₺ TRY</option>
+              <option value="RSD">RSD</option>
+              <option value="MKD">MKD</option>
+              <option value="RON">RON</option>
+              <option value="BGN">BGN</option>
+              <option value="SEK">SEK</option>
+              <option value="INR">₹ INR</option>
+              <option value="JPY">¥ JPY</option>
+              <option value="CNY">¥ CNY</option>
+            </select>
+            <button class="btn small primary" id="saveCommerce" data-t="save">Ruaj</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane" id="pane-calendar">
       <div class="cal-controls">
         <button class="btn small" id="calPrev">‹</button>
         <div class="cal-date" id="calLabel"></div>
@@ -288,54 +347,6 @@
           <input type="text" id="pubLink" readonly>
           <button class="btn small primary" id="copyPubLink" data-t="copyLink">Kopjo</button>
           <a class="btn small" id="openPubLink" target="_blank" rel="noopener" data-t="openLink">Hap ↗</a>
-        </div>
-      </div>
-
-      <div class="settings-block">
-        <h3 class="set-h" data-t="setBizH">Biznesi</h3>
-        <div class="settings-row">
-          <label for="bizMode" data-t="modeLbl">⚙️ Mënyra e biznesit (ndize/fike kurdo)</label>
-          <div class="settings-input">
-            <select id="bizMode">
-              <option value="appointments" data-t="obModeAppt">📅 Bëj takime (me kalendar)</option>
-              <option value="inquiry" data-t="obModeInquiry">🛒 Marr porosi/kërkesa (pa kalendar)</option>
-            </select>
-            <button class="btn small primary" id="saveMode" data-t="save">Ruaj</button>
-          </div>
-        </div>
-        <div class="settings-row">
-          <label for="setName" data-t="setNameLbl">Emri & adresa</label>
-          <div class="settings-input">
-            <input type="text" id="setName" maxlength="40">
-            <input type="text" id="setAddress" maxlength="60" placeholder="Adresa / Online">
-            <button class="btn small primary" id="saveBizInfo" data-t="save">Ruaj</button>
-          </div>
-        </div>
-        <div class="settings-row">
-          <label for="bizCurrency" data-t="commerceLbl">🛒 Tregti (produkte, porosi, raporte) & monedha</label>
-          <div class="settings-input">
-            <label class="commerce-toggle"><input type="checkbox" id="commerceOn"> <span data-t="commerceOnLbl">Aktivizo katalogun, porositë & raportet</span></label>
-            <select id="bizCurrency">
-              <option value="EUR">€ EUR</option>
-              <option value="USD">$ USD</option>
-              <option value="GBP">£ GBP</option>
-              <option value="ALL">L ALL (Lek)</option>
-              <option value="CHF">CHF</option>
-              <option value="CAD">$ CAD</option>
-              <option value="AUD">$ AUD</option>
-              <option value="AED">AED</option>
-              <option value="TRY">₺ TRY</option>
-              <option value="RSD">RSD</option>
-              <option value="MKD">MKD</option>
-              <option value="RON">RON</option>
-              <option value="BGN">BGN</option>
-              <option value="SEK">SEK</option>
-              <option value="INR">₹ INR</option>
-              <option value="JPY">¥ JPY</option>
-              <option value="CNY">¥ CNY</option>
-            </select>
-            <button class="btn small primary" id="saveCommerce" data-t="save">Ruaj</button>
-          </div>
         </div>
       </div>
 
