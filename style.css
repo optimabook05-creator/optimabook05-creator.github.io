@@ -755,6 +755,9 @@ body::after {
 .ins-m { font-size: 13px; color: var(--ink-soft); font-weight: 600; margin-top: 2px; line-height: 1.5; }
 .ins-go { flex-shrink: 0; }
 .ins-actions { display: flex; gap: 7px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.team-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; margin-bottom: 8px;
+  background: var(--glass-soft); border: 1px solid var(--glass-line); border-radius: var(--r-sm); font-size: 13.5px; font-weight: 700; }
+.team-row .grow { flex: 1; min-width: 0; word-break: break-all; }
 
 /* ---------- Aksesueshmëri: unazë fokusi e qartë për tastierën (specificitet i ulët, s'prish stilet) ---------- */
 :where(button, a, select, input, textarea, [tabindex]):focus-visible {

@@ -146,6 +146,9 @@ const T = {
     manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
     setPubH: "🌐 Faqja publike (link për klientët)", pubDesc: "Ndaje këtë link kudo (bio, WhatsApp, Instagram) — klientët rezervojnë/porosisin vetë, pa bisedë, pa app.",
     copyLink: "Kopjo", openLink: "Hap ↗", copied: "✅ U kopjua",
+    teamH: "👥 Ekipi (qasja për punonjësit)", teamDesc: "Shto punonjës me email. Kur regjistrohen me atë email te OptimaBook, hyjnë në KËTË biznes. Pa email-e — thjesht thuaju email-in.",
+    teamEmailPh: "email i punonjësit", roleStaff: "Staf", roleManager: "Manaxher", addTeamBtn: "+ Shto",
+    teamEmpty: "Ende pa anëtarë ekipi.", teamEmptyHint: "Vetëm ti (pronari) ke qasje tani. Shto punonjës që ta menaxhojnë biznesin bashkë.",
     printDoc: "🧾 Faturë / Ofertë", invInvoice: "FATURË", invQuote: "OFERTË", invNo: "Nr.", invDate: "Data",
     invFrom: "Nga", invTo: "Për", invItem: "Artikulli", invQty: "Sasia", invPrice: "Çmimi", invLineTotal: "Totali",
     invSubtotal: "Nëntotali", invDiscount: "Zbritje", invTotal: "TOTALI", invPaid: "Paguar", invDue: "Mbetet",
@@ -280,6 +283,9 @@ const T = {
     manTimes: "How many", recurDone: "✅ Created {n} appointments",
     setPubH: "🌐 Public page (link for customers)", pubDesc: "Share this link anywhere (bio, WhatsApp, Instagram) — customers book/order themselves, no chat, no app.",
     copyLink: "Copy", openLink: "Open ↗", copied: "✅ Copied",
+    teamH: "👥 Team (employee access)", teamDesc: "Add employees by email. When they sign up with that email on OptimaBook, they get into THIS business. No emails sent — just tell them the address.",
+    teamEmailPh: "employee email", roleStaff: "Staff", roleManager: "Manager", addTeamBtn: "+ Add",
+    teamEmpty: "No team members yet.", teamEmptyHint: "Only you (owner) have access now. Add employees to run the business together.",
     printDoc: "🧾 Invoice / Quote", invInvoice: "INVOICE", invQuote: "QUOTE", invNo: "No.", invDate: "Date",
     invFrom: "From", invTo: "To", invItem: "Item", invQty: "Qty", invPrice: "Price", invLineTotal: "Total",
     invSubtotal: "Subtotal", invDiscount: "Discount", invTotal: "TOTAL", invPaid: "Paid", invDue: "Outstanding",
@@ -366,6 +372,7 @@ let calStaff = null;       // filtri i kalendarit (id stafi) ose null = të gjit
 let calDate = fmtDate(new Date());
 let priceTiers = [];       // [{service_id, min_qty, unit_price}] — çmime sipas sasisë
 let editingItemId = null;  // artikulli në editim (katalog)
+let myUserId = null, myEmail = "";  // përdoruesi aktual (për pronar vs anëtar ekipi)
 
 // Monedha (global) — simboli sipas biznesit
 const CUR_SYM = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
@@ -467,6 +474,7 @@ async function handleAuth(e) {
 }
 
 async function afterLogin() {
+  try { const { data } = await sb.auth.getUser(); myUserId = data.user ? data.user.id : null; myEmail = data.user ? (data.user.email || "") : ""; } catch (e) {}
   await loadBusiness();
   if (biz) { renderBizSwitch(); showView("app"); await loadAll(); }   // shfaq panelin së pari → s'mbetet kurrë bosh
   else { openOnboard(); showView("onboard"); }
@@ -1168,6 +1176,10 @@ function renderSettings() {
   const op = $("#openPubLink"); if (op) op.href = pubBase;
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
   const cc = $("#bizCurrency"); if (cc) cc.value = biz.currency || "EUR";
+  // Ekipi: vetëm pronari menaxhon qasjen
+  const owner = !!(myUserId && biz.owner_id === myUserId);
+  const tb = $("#teamBlock"); if (tb) tb.hidden = !owner;
+  if (owner) renderTeam();
   // Kur tregtia është aktive, Katalogu (me përshkrim/stok/çmime) është vendi i vetëm → fshehim editorin e thjeshtë që të mos ngatërrohet
   const svb = $("#servicesBlock"); if (svb) svb.hidden = commerceOn();
   const cph = $("#catalogPointer"); if (cph) cph.hidden = !commerceOn();
@@ -1180,6 +1192,27 @@ function renderSettings() {
   if ($("#cfgTiers")) $("#cfgTiers").checked = showField("catTiers");
   updateTgWebhookLink();
   renderSettingsHours();
+}
+
+// Ekipi: lista e anëtarëve (vetëm pronari)
+async function renderTeam() {
+  const list = $("#teamList");
+  if (!list) return;
+  let rows = [];
+  try { const { data } = await sb.from("team_members").select("*").eq("business_id", biz.id).order("created_at"); rows = data || []; }
+  catch (e) { list.innerHTML = ""; return; }
+  if (!rows.length) { list.innerHTML = emptyHTML("👥", tr("teamEmpty"), tr("teamEmptyHint")); return; }
+  list.innerHTML = "";
+  rows.forEach((m) => {
+    const item = document.createElement("div");
+    item.className = "team-row";
+    item.innerHTML = `<span class="grow">👤 <strong>${esc(m.email)}</strong> <small style="color:var(--ink-faint)">· ${m.role === "manager" ? tr("roleManager") : tr("roleStaff")}</small></span>`;
+    const del = document.createElement("button");
+    del.className = "btn small ghost danger"; del.textContent = tr("remove");
+    del.onclick = async () => { try { await sb.from("team_members").delete().eq("id", m.id); renderTeam(); toast(tr("toastSaved")); } catch (ex) { alert(ex.message || String(ex)); } };
+    item.appendChild(del);
+    list.appendChild(item);
+  });
 }
 
 // Lidhja Telegram: ndërton linkun e setWebhook (e hap pronari në një tab të ri)
@@ -1999,6 +2032,14 @@ function wire() {
     } catch (ex) { alert(ex.message || String(ex)); }
   };
   if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
+  if ($("#addTeam")) $("#addTeam").onclick = async () => {
+    const email = ($("#teamEmail").value || "").trim().toLowerCase();
+    if (!email || !/.+@.+\..+/.test(email)) { $("#teamEmail").focus(); return; }
+    try {
+      await sb.from("team_members").insert({ business_id: biz.id, email, role: $("#teamRole").value });
+      $("#teamEmail").value = ""; renderTeam(); toast(tr("toastSaved"));
+    } catch (ex) { alert(ex.message || String(ex)); }
+  };
   if ($("#copyPubLink")) $("#copyPubLink").onclick = async () => {
     const v = $("#pubLink").value;
     try { await navigator.clipboard.writeText(v); toast(tr("copied")); }
