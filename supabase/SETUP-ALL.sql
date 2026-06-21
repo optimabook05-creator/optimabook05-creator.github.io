@@ -23,6 +23,9 @@ alter table public.businesses   add column if not exists timezone          text 
 alter table public.businesses   add column if not exists ai_notes          text;
 alter table public.businesses   add column if not exists linguistic_profile jsonb;
 alter table public.businesses   add column if not exists mode              text not null default 'appointments';
+-- Lejo 3 mënyra: takime / porosi / të dyja
+alter table public.businesses   drop constraint if exists businesses_mode_check;
+alter table public.businesses   add  constraint businesses_mode_check check (mode in ('appointments','inquiry','both'));
 alter table public.businesses   add column if not exists telegram_token    text;
 
 alter table public.services     add column if not exists delivery          text;

@@ -68,7 +68,7 @@ const T = {
     staffNamePh: "Emri i personit", staffRolePh: "Roli (p.sh. berber)", addStaff: "+ Staf",
     manStaff: "Stafi", emptyStaff: "Asnjë staf — biznes me një person.", emptyLoc: "Asnjë lokacion.",
     allStaff: "Të gjithë stafin", noLoc: "Pa lokacion",
-    obModeLbl: "Si punon biznesi?", obModeAppt: "📅 Bëj takime (me kalendar)", obModeInquiry: "🛒 Marr porosi/kërkesa (pa kalendar)",
+    obModeLbl: "Si punon biznesi?", obModeAppt: "📅 Bëj takime (me kalendar)", obModeInquiry: "🛒 Marr porosi/kërkesa (pa kalendar)", obModeBoth: "🔀 Të dyja (takime + porosi)",
     tabLeads: "📥 Kërkesa", leadsDesc: "Kërkesat/porositë e klientëve (për biznese pa takime). AI i merr vetë 24/7.",
     emptyLeads: "Asnjë kërkesë ende.", leadNew: "e re", leadContacted: "u kontaktua", markContacted: "Shëno si kontaktuar",
     statActive: "Takime aktive", statRevenue: "Të ardhura të rezervuara",
@@ -210,7 +210,7 @@ const T = {
     staffNamePh: "Person's name", staffRolePh: "Role (e.g. barber)", addStaff: "+ Staff",
     manStaff: "Staff", emptyStaff: "No staff — single-person business.", emptyLoc: "No locations.",
     allStaff: "All staff", noLoc: "No location",
-    obModeLbl: "How does your business work?", obModeAppt: "📅 I take appointments (calendar)", obModeInquiry: "🛒 I take orders/requests (no calendar)",
+    obModeLbl: "How does your business work?", obModeAppt: "📅 I take appointments (calendar)", obModeInquiry: "🛒 I take orders/requests (no calendar)", obModeBoth: "🔀 Both (appointments + orders)",
     tabLeads: "📥 Requests", leadsDesc: "Customer requests/orders (for businesses without appointments). The AI captures them 24/7.",
     emptyLeads: "No requests yet.", leadNew: "new", leadContacted: "contacted", markContacted: "Mark contacted",
     statActive: "Active appointments", statRevenue: "Booked revenue",
@@ -389,7 +389,7 @@ const CUR_SYM = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD
 function curSym() { return CUR_SYM[(biz && biz.currency) || "EUR"] || ((biz && biz.currency) || "€"); }
 function money(n) { const v = Math.round((Number(n) || 0) * 100) / 100; const s = curSym(); return s.length === 1 ? `${v}${s}` : `${v} ${s}`; }
 // Tregtia është aktive kur pronari e ka ndezur OSE biznesi merr porosi (inquiry) → Katalogu/Porositë/Raportet dalin vetë
-function commerceOn() { return !!(biz && (biz.commerce_enabled || biz.mode === "inquiry")); }
+function commerceOn() { return !!(biz && (biz.commerce_enabled || biz.mode === "inquiry" || biz.mode === "both")); }
 
 // A shfaqet një fushë e katalogut? (pronari mund të fikë çdo fushë; default = shfaqet)
 function showField(key) { return !(biz && biz.config && biz.config[key] === false); }
@@ -1113,17 +1113,19 @@ function setupStaffUI() {
 
 // Mënyra e biznesit: fsheh/shfaq skedat sipas takime vs porosi (inquiry)
 function applyModeUI() {
-  const inquiry = !!(biz && biz.mode === "inquiry");
+  const mode = (biz && biz.mode) || "appointments";
+  const showAppt = mode !== "inquiry";                 // takime OSE të dyja → kalendar
+  const showLeads = mode === "inquiry" || mode === "both"; // porosi OSE të dyja → kërkesa
   const commerce = commerceOn();
   const apptTabs = ["calendar", "appointments", "blocks", "waitlist", "staff", "customers"];
   const commerceTabs = ["catalog", "orders", "reports"];
   document.querySelectorAll(".tabs .tab").forEach((t) => {
     const tab = t.dataset.tab;
-    if (apptTabs.includes(tab)) t.hidden = inquiry;
-    else if (tab === "leads") t.hidden = !inquiry;
+    if (apptTabs.includes(tab)) t.hidden = !showAppt;
+    else if (tab === "leads") t.hidden = !showLeads;
     else if (commerceTabs.includes(tab)) t.hidden = !commerce;
   });
-  const shb = $("#setHoursBlock"); if (shb) shb.hidden = inquiry; // orari pune s'duhet për porosi
+  const shb = $("#setHoursBlock"); if (shb) shb.hidden = !showAppt; // orari vetëm kur ka kalendar
   const active = document.querySelector(".tab.active");
   if (active && active.hidden) {
     const fb = document.querySelector('.tab[data-tab="stats"]') || document.querySelector(".tab:not([hidden])");

@@ -9,8 +9,10 @@
 -- =====================================================================
 
 alter table public.businesses
-  add column if not exists mode text not null default 'appointments'
-  check (mode in ('appointments', 'inquiry'));
+  add column if not exists mode text not null default 'appointments';
+-- Lejo 3 mënyra: takime / porosi / të dyja
+alter table public.businesses drop constraint if exists businesses_mode_check;
+alter table public.businesses add  constraint businesses_mode_check check (mode in ('appointments', 'inquiry', 'both'));
 
 -- Kërkesat/porositë (leads) për bizneset 'inquiry'
 create table if not exists public.leads (

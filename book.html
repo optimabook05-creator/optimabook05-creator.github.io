@@ -18,6 +18,9 @@
   .pub-biz { font-family: var(--font-display); font-size: 24px; font-weight: 800; letter-spacing: -.03em; }
   .pub-addr { color: var(--ink-soft); font-weight: 600; font-size: 13.5px; margin-top: 3px; }
   .pub-sec { font-family: var(--font-display); font-weight: 800; font-size: 14px; margin: 22px 0 10px; }
+  .pub-switch { display: flex; gap: 6px; margin: 18px 0 6px; background: var(--glass-soft); border: 1px solid var(--glass-edge); border-radius: 14px; padding: 5px; }
+  .pub-sw { flex: 1; border: none; background: none; color: var(--ink-soft); font-family: var(--font-body); font-weight: 800; font-size: 14px; padding: 10px; border-radius: 10px; cursor: pointer; transition: all .18s; }
+  .pub-sw.active { background: linear-gradient(160deg, var(--accent-bright), var(--accent)); color: #fff; box-shadow: 0 4px 12px var(--accent-glow); }
   .pub-card label.f { display: block; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft); margin: 14px 0 6px; }
   .pub-card input, .pub-card select, .pub-card textarea { width: 100%; font-family: var(--font-body); border: 1px solid var(--glass-edge);
     background: var(--glass-soft); border-radius: var(--r-sm); padding: 12px 13px; font-size: 14.5px; font-weight: 600; color: var(--ink); outline: none; }
@@ -117,9 +120,22 @@ function header() {
 }
 
 function render() {
-  const commerce = DATA.commerce_enabled && DATA.mode !== "appointments";
-  $("#card").innerHTML = header() + (commerce || DATA.mode === "inquiry" ? orderUI() : bookUI());
-  if (commerce || DATA.mode === "inquiry") wireOrder(); else wireBook();
+  const mode = DATA.mode || "appointments";
+  const canBook = mode !== "inquiry";                                              // takime ose të dyja
+  const canOrder = !!(DATA.commerce_enabled || mode === "inquiry" || mode === "both"); // porosi/tregti
+  if (canBook && canOrder) {
+    // Të dyja → ndërrues Rezervo / Porosit
+    $("#card").innerHTML = header() +
+      `<div class="pub-switch"><button type="button" class="pub-sw active" id="swBook">📅 ${tr("book")}</button><button type="button" class="pub-sw" id="swOrder">🛒 ${tr("order")}</button></div><div id="pubBody"></div>`;
+    const showBook = () => { $("#pubBody").innerHTML = bookUI(); wireBook(); $("#swBook").classList.add("active"); $("#swOrder").classList.remove("active"); };
+    const showOrder = () => { $("#pubBody").innerHTML = orderUI(); wireOrder(); $("#swOrder").classList.add("active"); $("#swBook").classList.remove("active"); };
+    $("#swBook").onclick = showBook; $("#swOrder").onclick = showOrder;
+    showBook();
+  } else if (canOrder) {
+    $("#card").innerHTML = header() + orderUI(); wireOrder();
+  } else {
+    $("#card").innerHTML = header() + bookUI(); wireBook();
+  }
 }
 
 /* ---------- Appointments ---------- */
