@@ -116,6 +116,9 @@
 :root[data-theme="dark"] .bi-chip { background: var(--glass-soft); }
 :root[data-theme="dark"] .biz-switch { background: var(--glass-soft); }
 :root[data-theme="dark"] .timeline::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .14); }
+:root[data-theme="dark"] .modal { background: rgba(20, 28, 25, .95); box-shadow: var(--shadow-deep), inset 0 1px 0 rgba(255, 255, 255, .05); }
+:root[data-theme="dark"] .order-line input, :root[data-theme="dark"] .order-line select, :root[data-theme="dark"] .tier-row input, :root[data-theme="dark"] .ot-row input, :root[data-theme="dark"] .rep-custom input { background: rgba(255, 255, 255, .05); }
+:root[data-theme="dark"] .theme-toggle { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06); }
 
 /* ---------- Toggle i temës ---------- */
 .theme-toggle {
@@ -425,7 +428,7 @@ body::after {
   border: 1px solid var(--glass-edge);
   border-radius: var(--r-xl);
   box-shadow: var(--shadow-float);
-  padding: 28px 30px; min-height: 760px;
+  padding: 28px 30px; min-height: 520px;
   animation: panelIn .45s cubic-bezier(.2, .9, .3, 1);
 }
 @keyframes panelIn { from { opacity: 0; transform: translateY(12px); } }
