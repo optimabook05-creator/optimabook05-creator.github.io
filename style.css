@@ -754,6 +754,7 @@ body::after {
 .ins-t { font-weight: 800; font-size: 14px; }
 .ins-m { font-size: 13px; color: var(--ink-soft); font-weight: 600; margin-top: 2px; line-height: 1.5; }
 .ins-go { flex-shrink: 0; }
+.ins-actions { display: flex; gap: 7px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
 
 /* ---------- Tregti: katalog, shkallë çmimi, toggle ---------- */
 .field-row { display: flex; gap: 10px; }

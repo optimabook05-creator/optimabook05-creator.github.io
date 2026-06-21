@@ -135,6 +135,9 @@ const T = {
     insTopT: "Më fitimprurësi", insTopM: "{name} të sjell më shumë ({a}). Veçoje ose bëj paketë.",
     insChannelT: "Lidh një kanal", insChannelM: "Lidh WhatsApp/Telegram që AI t'u përgjigjet klientëve 24/7.",
     insPubT: "Ndaj faqen publike", insPubM: "Vendos linkun e faqes në bio/WhatsApp — klientët rezervojnë vetë.",
+    draftBtn: "Shkruaj", draftTitle: "Mesazh i gatshëm", draftHint: "Kopjoje dhe dërgoje klientit në WhatsApp/Telegram", draftCopy: "📋 Kopjo",
+    winbackMsg: "Përshëndetje! 👋 Ka kohë që s'ju kemi parë te {biz}. Kemi një ofertë të veçantë për ju këtë javë — na shkruani për ta rezervuar! 🙌",
+    paymentMsg: "Përshëndetje! Ju kujtojmë me dashamirësi se keni një pagesë në pritje te {biz}. Faleminderit shumë! 🙏",
     addBiz: "+ Biznes", obBack: "← Kthehu",
     setFieldsH: "🧩 Fushat e katalogut (fik ato që s'të duhen)", fieldsDesc: "Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.",
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
@@ -266,6 +269,9 @@ const T = {
     insTopT: "Top earner", insTopM: "{name} earns you the most ({a}). Feature it or make a package.",
     insChannelT: "Connect a channel", insChannelM: "Connect WhatsApp/Telegram so the AI answers customers 24/7.",
     insPubT: "Share your public page", insPubM: "Put your page link in bio/WhatsApp — customers book themselves.",
+    draftBtn: "Draft", draftTitle: "Ready-to-send message", draftHint: "Copy and send it to the customer on WhatsApp/Telegram", draftCopy: "📋 Copy",
+    winbackMsg: "Hi! 👋 We haven't seen you at {biz} in a while. We've got a special offer for you this week — message us to book! 🙌",
+    paymentMsg: "Hi! A friendly reminder that you have a pending payment at {biz}. Thank you so much! 🙏",
     addBiz: "+ Business", obBack: "← Back",
     setFieldsH: "🧩 Catalog fields (turn off what you don't need)", fieldsDesc: "Everything is on by default. Turn off what you don't need — the panel becomes truly yours.",
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
@@ -1657,11 +1663,22 @@ async function renderInsights() {
   const ins = buildInsights(appts, orders, items);
   box.innerHTML = ins.length ? `<div class="ins-h">💡 ${tr("insTitle")}</div>` + ins.slice(0, 6).map(insCard).join("") : "";
   box.querySelectorAll("[data-go]").forEach((b) => b.onclick = () => { const t = document.querySelector('.tab[data-tab="' + b.dataset.go + '"]'); if (t) t.click(); });
+  box.querySelectorAll("[data-draft]").forEach((b) => b.onclick = () => openDraft(b.dataset.draft));
 }
 function insCard(i) {
   return `<div class="ins-card ${i.sev || ""}"><span class="ins-ic">${i.icon}</span>
     <div class="ins-body"><div class="ins-t">${i.title}</div><div class="ins-m">${i.msg}</div></div>
-    ${i.tab ? `<button class="btn small ${i.sev === "warn" ? "primary" : ""} ins-go" data-go="${i.tab}">${tr("insGo")}</button>` : ""}</div>`;
+    <div class="ins-actions">
+      ${i.draft ? `<button class="btn small primary ins-go" data-draft="${i.draft}">✍️ ${tr("draftBtn")}</button>` : ""}
+      ${i.tab ? `<button class="btn small ${i.sev === "warn" && !i.draft ? "primary" : ""} ins-go" data-go="${i.tab}">${tr("insGo")}</button>` : ""}
+    </div></div>`;
+}
+// AI Manager (agjentik-lite): harton mesazhin gati për dërgim
+function openDraft(kind) {
+  const key = kind === "payment" ? "paymentMsg" : "winbackMsg";
+  $("#draftText").value = tr(key).replace("{biz}", biz.name);
+  $("#draftModal").hidden = false;
+  setTimeout(() => { $("#draftText").focus(); $("#draftText").select(); }, 60);
 }
 function buildInsights(appts, orders, items) {
   const out = [];
@@ -1671,7 +1688,7 @@ function buildInsights(appts, orders, items) {
   // Para për t'u arkëtuar
   const outstanding = activeOrders.reduce((s, o) => s + Math.max(0, (Number(o.total) || 0) - (Number(o.amount_paid) || 0)), 0);
   const unpaidN = activeOrders.filter((o) => (Number(o.total) || 0) > (Number(o.amount_paid) || 0)).length;
-  if (outstanding > 0) out.push({ impact: outstanding, icon: "💰", sev: "warn", title: tr("insUnpaidT"), msg: tr("insUnpaidM").replace("{a}", money(outstanding)).replace("{n}", unpaidN), tab: "orders" });
+  if (outstanding > 0) out.push({ impact: outstanding, icon: "💰", sev: "warn", title: tr("insUnpaidT"), msg: tr("insUnpaidM").replace("{a}", money(outstanding)).replace("{n}", unpaidN), tab: "orders", draft: "payment" });
   // Stok i ulët
   const low = services.filter((s) => s.track_stock && Number(s.stock) <= 3);
   if (low.length) out.push({ impact: 60, icon: "📦", sev: "warn", title: tr("insStockT"), msg: tr("insStockM").replace("{items}", low.map((s) => esc(s.name) + " (" + (s.stock != null ? s.stock : 0) + ")").join(", ")), tab: "catalog" });
@@ -1682,7 +1699,7 @@ function buildInsights(appts, orders, items) {
   const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 45);
   const cutoffS = fmtDate(cutoff);
   const churn = Object.entries(last).filter(([k, d]) => k && k !== "Web" && d < cutoffS).length;
-  if (churn >= 2) out.push({ impact: 40 * churn, icon: "👋", sev: "", title: tr("insChurnT"), msg: tr("insChurnM").replace("{n}", churn), tab: "customers" });
+  if (churn >= 2) out.push({ impact: 40 * churn, icon: "👋", sev: "", title: tr("insChurnT"), msg: tr("insChurnM").replace("{n}", churn), tab: "customers", draft: "winback" });
   // Anulime të larta
   const cancN = appts.length - activeAppts.length;
   if (appts.length >= 5 && cancN / appts.length >= 0.2) out.push({ impact: 35, icon: "⚠️", sev: "warn", title: tr("insCancelT"), msg: tr("insCancelM").replace("{p}", Math.round(cancN / appts.length * 100)), tab: "settings" });
@@ -2009,6 +2026,14 @@ function wire() {
     } catch (ex) { alert(ex.message || String(ex)); }
   };
   if ($("#goCatalog")) $("#goCatalog").onclick = () => { const t = document.querySelector('.tab[data-tab="catalog"]'); if (t) t.click(); };
+  // AI Manager: modali i mesazhit të gatshëm
+  if ($("#draftClose")) $("#draftClose").onclick = () => { $("#draftModal").hidden = true; };
+  if ($("#draftModal")) $("#draftModal").addEventListener("click", (e) => { if (e.target === $("#draftModal")) $("#draftModal").hidden = true; });
+  if ($("#draftCopy")) $("#draftCopy").onclick = async () => {
+    const v = $("#draftText").value;
+    try { await navigator.clipboard.writeText(v); toast(tr("copied")); }
+    catch (e) { $("#draftText").select(); document.execCommand && document.execCommand("copy"); toast(tr("copied")); }
+  };
   // Katalogu: editori i artikullit
   if ($("#btnAddItem")) $("#btnAddItem").onclick = () => openItem(null);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
@@ -2050,6 +2075,7 @@ function wire() {
     if (!$("#manModal").hidden) $("#manModal").hidden = true;
     if ($("#itemModal") && !$("#itemModal").hidden) $("#itemModal").hidden = true;
     if ($("#orderModal") && !$("#orderModal").hidden) $("#orderModal").hidden = true;
+    if ($("#draftModal") && !$("#draftModal").hidden) $("#draftModal").hidden = true;
   });
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.onclick = () => {

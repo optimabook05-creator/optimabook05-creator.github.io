@@ -519,6 +519,17 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="draftModal" role="dialog" aria-modal="true" hidden>
+  <div class="modal small-modal">
+    <div class="modal-head"><h2 id="draftTitle" data-t="draftTitle">Mesazh i gatshëm</h2></div>
+    <label class="field"><span data-t="draftHint">Kopjoje dhe dërgoje klientit në WhatsApp/Telegram</span><textarea id="draftText" rows="5"></textarea></label>
+    <div class="modal-actions">
+      <button class="btn ghost" id="draftClose" data-t="cancel">Mbyll</button>
+      <button class="btn primary" id="draftCopy" data-t="draftCopy">📋 Kopjo</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* Auto-përditësim: kap versionin e ri pa rifreskim manual */
 if ("serviceWorker" in navigator && location.protocol === "https:") {
