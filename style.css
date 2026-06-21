@@ -762,6 +762,30 @@ body::after {
   background: var(--glass-soft); border: 1px solid var(--glass-line); border-radius: var(--r-sm); font-size: 13.5px; font-weight: 700; }
 .team-row .grow { flex: 1; min-width: 0; word-break: break-all; }
 
+/* Kartë shërbimi/produkti në Cilësime (emër + lloj + përshkrim + kohë/çmim) */
+.service-card { background: var(--glass-soft); border: 1px solid var(--glass-line); border-radius: var(--r-md);
+  padding: 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+.service-card .sc-top { display: flex; gap: 8px; align-items: center; }
+.service-card .s-name { flex: 1; min-width: 0; }
+.service-card .s-kind { width: 130px; flex: 0 0 auto; }
+.service-card .sc-bottom { display: flex; gap: 8px; align-items: center; }
+.service-card .sc-dur { display: flex; gap: 8px; flex: 1; min-width: 0; }
+.service-card .sc-dur .s-dur { width: 72px; flex: 0 0 auto; }
+.service-card .sc-dur .s-unit { flex: 1; min-width: 0; }
+.service-card .sc-price { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.service-card .sc-price .s-price { width: 84px; }
+.service-card .sc-cur { font-weight: 800; color: var(--ink-soft); font-size: 14px; }
+.service-card input, .service-card select { font-family: var(--font-body); border: 1px solid var(--glass-edge);
+  background: var(--glass); border-radius: var(--r-sm); padding: 9px 11px; font-size: 14px; font-weight: 600; color: var(--ink); outline: none; }
+.service-card input:focus, .service-card select:focus { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+.service-card .s-del { width: 38px; height: 38px; flex: 0 0 auto; border: none; background: var(--red-soft);
+  color: var(--red); border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 800; transition: filter .15s; }
+.service-card .s-del:hover { filter: brightness(.95); }
+@media (max-width: 640px) {
+  .service-card .s-kind { width: 110px; }
+  .service-card .sc-bottom { flex-wrap: wrap; }
+}
+
 /* ---------- Aksesueshmëri: unazë fokusi e qartë për tastierën (specificitet i ulët, s'prish stilet) ---------- */
 :where(button, a, select, input, textarea, [tabindex]):focus-visible {
   outline: 3px solid var(--accent-glow); outline-offset: 2px; border-radius: 10px;

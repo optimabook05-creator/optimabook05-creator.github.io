@@ -1123,22 +1123,45 @@ function applyModeUI() {
 
 /* ---------------- Cilësimet (edito gjithçka pas regjistrimit) ---------------- */
 function setServiceRow(s) {
-  const row = document.createElement("div");
-  row.className = "service-row";
-  if (s && s.id) row.dataset.id = s.id;
+  const card = document.createElement("div");
+  card.className = "service-card";
+  if (s && s.id) card.dataset.id = s.id;
+
+  const top = document.createElement("div"); top.className = "sc-top";
   const nameI = document.createElement("input");
-  nameI.className = "s-name"; nameI.type = "text"; nameI.maxLength = 40; nameI.placeholder = tr("svcNamePh"); nameI.value = s ? s.name : "";
+  nameI.className = "s-name"; nameI.type = "text"; nameI.maxLength = 60; nameI.placeholder = tr("svcNamePh"); nameI.value = s ? s.name : "";
+  const kindS = document.createElement("select");
+  kindS.className = "s-kind";
+  kindS.innerHTML = `<option value="service">${tr("kindService")}</option><option value="product">${tr("kindProduct")}</option>`;
+  kindS.value = s && s.kind === "product" ? "product" : "service";
+  const del = document.createElement("button");
+  del.className = "s-del"; del.type = "button"; del.textContent = "✕"; del.onclick = () => card.remove();
+  top.append(nameI, kindS, del);
+
+  const descI = document.createElement("input");
+  descI.className = "s-desc"; descI.type = "text"; descI.maxLength = 300; descI.placeholder = tr("itemDescPh"); descI.value = s && s.description ? s.description : "";
+
+  const bottom = document.createElement("div"); bottom.className = "sc-bottom";
+  const durWrap = document.createElement("div"); durWrap.className = "sc-dur";
   const durI = document.createElement("input");
   durI.className = "s-dur"; durI.type = "number"; durI.min = 0; durI.step = 1;
   durI.value = s ? (s.duration_value != null ? s.duration_value : s.duration_min) : 30;
   const unitS = document.createElement("select");
   unitS.className = "s-unit"; unitS.innerHTML = unitOptions(s && s.duration_unit ? s.duration_unit : "min");
+  durWrap.append(durI, unitS);
   const priceI = document.createElement("input");
   priceI.className = "s-price"; priceI.type = "number"; priceI.min = 0; priceI.step = 0.5; priceI.value = s ? s.price : 0;
-  const del = document.createElement("button");
-  del.className = "s-del"; del.type = "button"; del.textContent = "✕"; del.onclick = () => row.remove();
-  row.append(nameI, durI, unitS, priceI, del);
-  $("#setServices").appendChild(row);
+  const priceWrap = document.createElement("div"); priceWrap.className = "sc-price";
+  const cur = document.createElement("span"); cur.className = "sc-cur"; cur.textContent = curSym();
+  priceWrap.append(priceI, cur);
+  bottom.append(durWrap, priceWrap);
+
+  // Produkt → kohëzgjatja s'ka kuptim, fshihet
+  const applyKind = () => { durWrap.style.visibility = kindS.value === "product" ? "hidden" : "visible"; };
+  kindS.onchange = applyKind; applyKind();
+
+  card.append(top, descI, bottom);
+  $("#setServices").appendChild(card);
 }
 
 function renderSettingsHours() {
@@ -1225,8 +1248,20 @@ function updateTgWebhookLink() {
   link.hidden = false;
 }
 
+// Ruajtje e sigurt e një artikulli — me fallback nëse kolonat e reja s'ekzistojnë ende
+async function upsertService(id, data) {
+  try {
+    if (id) { const { error } = await sb.from("services").update(data).eq("id", id); if (error) throw error; }
+    else { const { error } = await sb.from("services").insert({ business_id: biz.id, ...data }); if (error) throw error; }
+  } catch (e) {
+    const { kind, description, ...base } = data; // hiq kolonat e reja dhe riprovo
+    if (id) await sb.from("services").update(base).eq("id", id);
+    else await sb.from("services").insert({ business_id: biz.id, ...base });
+  }
+}
+
 async function saveServicesEdit() {
-  const rows = [...document.querySelectorAll("#setServices .service-row")];
+  const rows = [...document.querySelectorAll("#setServices .service-card")];
   const seen = new Set();
   let i = 0;
   for (const r of rows) {
@@ -1236,13 +1271,11 @@ async function saveServicesEdit() {
     const value = Math.max(0, +r.querySelector(".s-dur").value || 0);
     const duration_min = durToMin(value, unit);
     const price = +r.querySelector(".s-price").value || 0;
-    const rowData = { name, duration_min, duration_value: value, duration_unit: unit, price, sort_order: i, active: true };
-    if (r.dataset.id) {
-      await sb.from("services").update(rowData).eq("id", r.dataset.id);
-      seen.add(r.dataset.id);
-    } else {
-      await sb.from("services").insert({ business_id: biz.id, ...rowData });
-    }
+    const kind = r.querySelector(".s-kind") ? r.querySelector(".s-kind").value : "service";
+    const description = r.querySelector(".s-desc") ? (r.querySelector(".s-desc").value.trim() || null) : null;
+    const rowData = { name, kind, description, duration_min, duration_value: value, duration_unit: unit, price, sort_order: i, active: true };
+    await upsertService(r.dataset.id || null, rowData);
+    if (r.dataset.id) seen.add(r.dataset.id);
     i++;
   }
   for (const s of services) if (!seen.has(s.id)) await sb.from("services").update({ active: false }).eq("id", s.id);
