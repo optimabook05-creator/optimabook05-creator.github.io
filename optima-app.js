@@ -33,7 +33,7 @@ const T = {
     obTitle: "Krijo biznesin tënd",
     obSub: "Gati për klientë në nën 5 minuta.",
     obType: "Lloji i biznesit", obName: "Emri i biznesit", obAddress: "Adresa",
-    obServices: "Shërbimet (emër, kohëzgjatje, çmim)", addService: "+ Shto shërbim",
+    obServices: "Shërbimet / Produktet", addService: "+ Shto shërbim",
     unitMin: "min", unitHour: "orë", unitDay: "ditë", unitWeek: "javë", unitMonth: "muaj", unitYear: "vit", unitNone: "— pa kohë",
     obHours: "Orari i punës", closed: "pushim",
     obFinish: "Përfundo — jam gati ✓", svcNamePh: "Emri i shërbimit",
@@ -175,7 +175,7 @@ const T = {
     obTitle: "Create your business",
     obSub: "Ready for customers in under 5 minutes.",
     obType: "Business type", obName: "Business name", obAddress: "Address",
-    obServices: "Services (name, duration, price)", addService: "+ Add service",
+    obServices: "Services / Products", addService: "+ Add service",
     unitMin: "min", unitHour: "hours", unitDay: "days", unitWeek: "weeks", unitMonth: "months", unitYear: "years", unitNone: "— none",
     obHours: "Working hours", closed: "closed",
     obFinish: "Finish — I'm ready ✓", svcNamePh: "Service name",
@@ -1117,7 +1117,7 @@ function applyModeUI() {
   const showAppt = mode !== "inquiry";                 // takime OSE të dyja → kalendar
   const showLeads = mode === "inquiry" || mode === "both"; // porosi OSE të dyja → kërkesa
   const commerce = commerceOn();
-  const apptTabs = ["calendar", "appointments", "blocks", "waitlist", "staff", "customers"];
+  const apptTabs = ["calendar", "appointments", "blocks", "waitlist", "staff"]; // "customers" = universal (takime + porosi)
   const commerceTabs = ["catalog", "orders", "reports"];
   document.querySelectorAll(".tabs .tab").forEach((t) => {
     const tab = t.dataset.tab;
@@ -1511,19 +1511,33 @@ async function renderAll() {
 
 async function renderCustomers() {
   const list = $("#customerList"); if (!list) return;
+  const map = {};
+  const keyFor = (name, fallback) => ((name && name.trim().toLowerCase()) || fallback || "?");
+  // Nga takimet
   const { data } = await sb.from("appointments")
     .select("client_name, chat_id, channel, appt_date, status, services(price)").eq("business_id", biz.id);
-  const map = {};
   for (const a of (data || [])) {
-    const key = (a.chat_id || a.client_name || "?") + "|" + (a.channel || "");
+    if (a.status === "cancelled") continue;
+    const key = keyFor(a.client_name, a.chat_id);
     const c = map[key] || { name: a.client_name || "Klient", channel: a.channel || "manual", visits: 0, last: "", spent: 0 };
     if (a.client_name) c.name = a.client_name;
-    if (a.status !== "cancelled") {
-      c.visits++; c.spent += a.services ? Number(a.services.price) || 0 : 0;
-      if (a.appt_date > c.last) c.last = a.appt_date;
-    }
+    c.visits++; c.spent += a.services ? Number(a.services.price) || 0 : 0;
+    if (a.appt_date > c.last) c.last = a.appt_date;
     map[key] = c;
   }
+  // Nga porositë (biznese tregtie/të dyja)
+  try {
+    const { data: od } = await sb.from("orders").select("customer_name, total, status, placed_at, channel").eq("business_id", biz.id);
+    for (const o of (od || [])) {
+      if (o.status === "cancelled") continue;
+      const key = keyFor(o.customer_name, null);
+      const c = map[key] || { name: o.customer_name || "Klient", channel: o.channel || "order", visits: 0, last: "", spent: 0 };
+      if (o.customer_name) c.name = o.customer_name;
+      c.visits++; c.spent += Number(o.total) || 0;
+      const d = (o.placed_at || "").slice(0, 10); if (d > c.last) c.last = d;
+      map[key] = c;
+    }
+  } catch (e) {}
   let rows = Object.values(map).filter((c) => c.visits > 0).sort((a, b) => (b.last || "").localeCompare(a.last || ""));
   const q = ($("#custSearch") && $("#custSearch").value.trim().toLowerCase()) || "";
   if (q) rows = rows.filter((c) => (c.name || "").toLowerCase().includes(q));
@@ -2055,27 +2069,7 @@ function wire() {
       toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
-  const modeBtn = $("#saveMode");
-  if (modeBtn) modeBtn.onclick = async () => {
-    const m = $("#bizMode").value;
-    try {
-      await sb.from("businesses").update({ mode: m }).eq("id", biz.id);
-      biz.mode = m;
-      renderSettings(); applyModeUI(); renderCatalog(); if (commerceOn()) renderOrders();
-      toast(tr("toastSaved"));
-    } catch (ex) { alert(ex.message || String(ex)); }
-  };
-  const biBtn = $("#saveBizInfo");
-  if (biBtn) biBtn.onclick = async () => {
-    const name = $("#setName").value.trim() || biz.name;
-    const address = $("#setAddress").value.trim();
-    try {
-      await sb.from("businesses").update({ name, address }).eq("id", biz.id);
-      biz.name = name; biz.address = address;
-      $("#bizName").textContent = tr("panelPrefix") + biz.name;
-      toast(tr("toastSaved"));
-    } catch (ex) { alert(ex.message || String(ex)); }
-  };
+  // (Mënyra, emri/adresa, tregtia ruhen tani me një buton të vetëm "Ruaj gjithçka" te General → #saveGeneral)
   if ($("#custSearch")) $("#custSearch").oninput = renderCustomers;
   const tgBtn = $("#saveTgToken");
   if (tgBtn) tgBtn.onclick = async () => {
@@ -2124,17 +2118,6 @@ function wire() {
     const v = $("#pubLink").value;
     try { await navigator.clipboard.writeText(v); toast(tr("copied")); }
     catch (e) { $("#pubLink").select(); document.execCommand && document.execCommand("copy"); toast(tr("copied")); }
-  };
-  // Tregti: monedha + ndezja
-  const scBtn = $("#saveCommerce");
-  if (scBtn) scBtn.onclick = async () => {
-    try {
-      const payload = { commerce_enabled: $("#commerceOn").checked, currency: $("#bizCurrency").value };
-      await sb.from("businesses").update(payload).eq("id", biz.id);
-      biz.commerce_enabled = payload.commerce_enabled; biz.currency = payload.currency;
-      renderSettings(); applyModeUI(); renderCatalog(); if (commerceOn()) renderOrders(); await renderAll();
-      toast(tr("toastSaved"));
-    } catch (ex) { alert(ex.message || String(ex)); }
   };
   // Përshtatja: fik/ndiz fushat e katalogut
   if ($("#saveFields")) $("#saveFields").onclick = async () => {
