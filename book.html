@@ -250,6 +250,11 @@ function done(title, p, trackUrl) {
     <button class="btn" style="margin-top:10px" onclick="location.reload()">${tr("another")}</button></div>`;
 }
 
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  let _r = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!_r) { _r = true; location.reload(); } });
+  navigator.serviceWorker.register("sw.js").then((reg) => reg.update()).catch(() => {});
+}
 init();
 </script>
 </body>

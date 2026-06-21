@@ -108,6 +108,11 @@ function renderAppt(d) {
     <div class="tk-line"><span class="k">${L.time}</span><span>${esc((d.time || "").slice(0,5))}</span></div>
     ${d.customer ? `<div class="tk-line"><span class="k">${L.customer}</span><span>${esc(d.customer)}</span></div>` : ""}`;
 }
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  let _r = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!_r) { _r = true; location.reload(); } });
+  navigator.serviceWorker.register("sw.js").then((reg) => reg.update()).catch(() => {});
+}
 init();
 </script>
 </body>
