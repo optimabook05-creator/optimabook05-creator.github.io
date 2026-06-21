@@ -155,6 +155,9 @@ const T = {
     teamH: "👥 Ekipi (qasja për punonjësit)", teamDesc: "Shto punonjës me email. Kur regjistrohen me atë email te OptimaBook, hyjnë në KËTË biznes. Pa email-e — thjesht thuaju email-in.",
     teamEmailPh: "email i punonjësit", roleStaff: "Staf", roleManager: "Manaxher", addTeamBtn: "+ Shto",
     teamEmpty: "Ende pa anëtarë ekipi.", teamEmptyHint: "Vetëm ti (pronari) ke qasje tani. Shto punonjës që ta menaxhojnë biznesin bashkë.",
+    dangerH: "⚠️ Zona e rrezikut", dangerDesc: "Fshirja heq përgjithmonë biznesin dhe të gjitha të dhënat e tij (shërbime, takime, porosi, klientë). S'kthehet mbrapsht.",
+    deleteBiz: "🗑 Fshi këtë biznes", delBizTitle: "🗑 Fshi biznesin", delBizGo: "🗑 Fshi përgjithmonë",
+    delBizMsg: "Për të konfirmuar, shkruaj saktësisht emrin e biznesit:", delBizHuman: "Nuk jam robot — e konfirmoj që dua ta fshij", toastDeleted: "🗑 Biznesi u fshi",
     printDoc: "🧾 Faturë / Ofertë", invInvoice: "FATURË", invQuote: "OFERTË", invNo: "Nr.", invDate: "Data",
     invFrom: "Nga", invTo: "Për", invItem: "Artikulli", invQty: "Sasia", invPrice: "Çmimi", invLineTotal: "Totali",
     invSubtotal: "Nëntotali", invDiscount: "Zbritje", invTotal: "TOTALI", invPaid: "Paguar", invDue: "Mbetet",
@@ -298,6 +301,9 @@ const T = {
     teamH: "👥 Team (employee access)", teamDesc: "Add employees by email. When they sign up with that email on OptimaBook, they get into THIS business. No emails sent — just tell them the address.",
     teamEmailPh: "employee email", roleStaff: "Staff", roleManager: "Manager", addTeamBtn: "+ Add",
     teamEmpty: "No team members yet.", teamEmptyHint: "Only you (owner) have access now. Add employees to run the business together.",
+    dangerH: "⚠️ Danger zone", dangerDesc: "Deleting permanently removes the business and all its data (services, appointments, orders, customers). This cannot be undone.",
+    deleteBiz: "🗑 Delete this business", delBizTitle: "🗑 Delete business", delBizGo: "🗑 Delete permanently",
+    delBizMsg: "To confirm, type the business name exactly:", delBizHuman: "I'm not a robot — I confirm I want to delete", toastDeleted: "🗑 Business deleted",
     printDoc: "🧾 Invoice / Quote", invInvoice: "INVOICE", invQuote: "QUOTE", invNo: "No.", invDate: "Date",
     invFrom: "From", invTo: "To", invItem: "Item", invQty: "Qty", invPrice: "Price", invLineTotal: "Total",
     invSubtotal: "Subtotal", invDiscount: "Discount", invTotal: "TOTAL", invPaid: "Paid", invDue: "Outstanding",
@@ -609,10 +615,10 @@ async function renderQuickStart() {
   } catch (e) {}
 
   const items = [];
-  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: "general" });
-  if (!inquiry) items.push({ key: "hrs", done: Object.values(hours).some((h) => h), label: tr("qsHrs"), tab: "general" });
-  items.push({ key: "chan", done: !!biz.telegram_token, label: tr("qsChan"), tab: "settings" });
-  items.push({ key: "msg", done: gotMsg, label: tr("qsMsg"), tab: "settings" });
+  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: "general", el: "servicesBlock" });
+  if (!inquiry) items.push({ key: "hrs", done: Object.values(hours).some((h) => h), label: tr("qsHrs"), tab: "general", el: "setHoursBlock" });
+  items.push({ key: "chan", done: !!biz.telegram_token, label: tr("qsChan"), tab: "settings", el: "channelBlock" });
+  items.push({ key: "msg", done: gotMsg, label: tr("qsMsg"), tab: "settings", el: "channelBlock" });
 
   const doneN = items.filter((i) => i.done).length;
   const allDone = doneN === items.length;
@@ -637,6 +643,7 @@ async function renderQuickStart() {
       const t = document.querySelector('.tab[data-tab="' + it.tab + '"]');
       if (t) t.click();
       if (it.key === "msg" && !it.done) toast(tr("qsMsgHelp"));
+      if (it.el) setTimeout(() => { const e = $("#" + it.el); if (e) { e.scrollIntoView({ behavior: "smooth", block: "center" }); e.classList.add("flash"); setTimeout(() => e.classList.remove("flash"), 1200); } }, 90);
     };
     row.appendChild(act);
     list.appendChild(row);
@@ -1223,6 +1230,7 @@ function renderSettings() {
   // Ekipi: vetëm pronari menaxhon qasjen
   const owner = !!(myUserId && biz.owner_id === myUserId);
   const tb = $("#teamBlock"); if (tb) tb.hidden = !owner;
+  const dz = $("#dangerZone"); if (dz) dz.hidden = !owner;
   if (owner) renderTeam();
   // Kur tregtia është aktive, Katalogu (me përshkrim/stok/çmime) është vendi i vetëm → fshehim editorin e thjeshtë që të mos ngatërrohet
   const svb = $("#servicesBlock"); if (svb) svb.hidden = commerceOn();
@@ -1236,6 +1244,39 @@ function renderSettings() {
   if ($("#cfgTiers")) $("#cfgTiers").checked = showField("catTiers");
   updateTgWebhookLink();
   renderSettingsHours();
+}
+
+// Fshirja e biznesit — me verifikim (shkruaj emrin + konfirmim njerëzor)
+function openDeleteBiz() {
+  $("#delBizMsg").innerHTML = `${esc(tr("delBizMsg"))} <b>${esc(biz.name)}</b>`;
+  $("#delBizName").value = ""; $("#delBizName").placeholder = biz.name;
+  if ($("#delBizHuman")) $("#delBizHuman").checked = false;
+  $("#delBizGo").disabled = true;
+  $("#deleteBizModal").hidden = false;
+  setTimeout(() => $("#delBizName").focus(), 60);
+}
+function delBizCheck() {
+  const ok = $("#delBizName").value.trim() === (biz && biz.name) && $("#delBizHuman") && $("#delBizHuman").checked;
+  $("#delBizGo").disabled = !ok;
+}
+async function doDeleteBiz() {
+  const id = biz.id;
+  $("#delBizGo").disabled = true;
+  try {
+    const { error } = await sb.from("businesses").delete().eq("id", id);
+    if (error) throw error;
+    businesses = businesses.filter((b) => b.id !== id);
+    try { localStorage.removeItem("ob-active-biz"); } catch (e) {}
+    $("#deleteBizModal").hidden = true;
+    toast(tr("toastDeleted"));
+    if (businesses.length) {
+      biz = businesses[0]; setActiveBiz(biz.id); renderBizSwitch();
+      $("#bizName").textContent = tr("panelPrefix") + biz.name;
+      await loadAll();
+    } else {
+      biz = null; addingBiz = false; openOnboard(); showView("onboard");
+    }
+  } catch (ex) { alert(ex.message || String(ex)); $("#delBizGo").disabled = false; }
 }
 
 // Ekipi: lista e anëtarëve (vetëm pronari)
@@ -2105,6 +2146,13 @@ function wire() {
       toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
+  // Fshirja e biznesit (me verifikim: shkruaj emrin + konfirmim)
+  if ($("#btnDeleteBiz")) $("#btnDeleteBiz").onclick = openDeleteBiz;
+  if ($("#delBizName")) $("#delBizName").oninput = delBizCheck;
+  if ($("#delBizHuman")) $("#delBizHuman").onchange = delBizCheck;
+  if ($("#delBizGo")) $("#delBizGo").onclick = doDeleteBiz;
+  if ($("#delBizCancel")) $("#delBizCancel").onclick = () => { $("#deleteBizModal").hidden = true; };
+  if ($("#deleteBizModal")) $("#deleteBizModal").addEventListener("click", (e) => { if (e.target === $("#deleteBizModal")) $("#deleteBizModal").hidden = true; });
   if ($("#addTeam")) $("#addTeam").onclick = async () => {
     const email = ($("#teamEmail").value || "").trim().toLowerCase();
     if (!email || !/.+@.+\..+/.test(email)) { $("#teamEmail").focus(); return; }
@@ -2179,6 +2227,7 @@ function wire() {
     if ($("#itemModal") && !$("#itemModal").hidden) $("#itemModal").hidden = true;
     if ($("#orderModal") && !$("#orderModal").hidden) $("#orderModal").hidden = true;
     if ($("#draftModal") && !$("#draftModal").hidden) $("#draftModal").hidden = true;
+    if ($("#deleteBizModal") && !$("#deleteBizModal").hidden) $("#deleteBizModal").hidden = true;
   });
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.onclick = () => {

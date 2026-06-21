@@ -773,6 +773,18 @@ body::after {
 .gen-full { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 @media (max-width: 640px) { .gen-grid { grid-template-columns: 1fr; } }
 
+/* Zona e rrezikut (fshi biznesin) */
+.danger-zone { border-color: rgba(224, 49, 49, .35) !important; background: linear-gradient(165deg, var(--red-soft), var(--glass-soft)); }
+.danger-zone .set-h { color: var(--red); }
+#delBizName { width: 100%; font-family: var(--font-body); border: 1px solid var(--glass-edge); background: var(--glass);
+  border-radius: var(--r-sm); padding: 11px 13px; font-size: 14.5px; font-weight: 700; color: var(--ink); outline: none; }
+#delBizName:focus { border-color: var(--red); box-shadow: 0 0 0 3.5px var(--red-soft); }
+.btn.primary.danger { background: linear-gradient(160deg, #ff6b6b, var(--red)); border-color: transparent; }
+
+/* Theksim i shkurtër kur klikon "Ndrysho" te Quick start */
+.flash { animation: flashHi 1.2s ease; }
+@keyframes flashHi { 0%, 100% { box-shadow: var(--shadow-glass); } 30% { box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-float); } }
+
 .team-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; margin-bottom: 8px;
   background: var(--glass-soft); border: 1px solid var(--glass-line); border-radius: var(--r-sm); font-size: 13.5px; font-weight: 700; }
 .team-row .grow { flex: 1; min-width: 0; word-break: break-all; }

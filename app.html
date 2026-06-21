@@ -258,6 +258,12 @@
         </div>
         <button class="btn small primary" id="saveFields" data-t="save" style="margin-top:12px">Ruaj</button>
       </div>
+
+      <div class="settings-block danger-zone" id="dangerZone" hidden>
+        <h3 class="set-h" data-t="dangerH">⚠️ Zona e rrezikut</h3>
+        <p class="pane-desc" data-t="dangerDesc">Fshirja heq përgjithmonë biznesin dhe të gjitha të dhënat e tij (shërbime, takime, porosi, klientë). S'kthehet mbrapsht.</p>
+        <button class="btn ghost danger" id="btnDeleteBiz" type="button" data-t="deleteBiz">🗑 Fshi këtë biznes</button>
+      </div>
     </div>
 
     <div class="tab-pane" id="pane-calendar">
@@ -366,7 +372,7 @@
     <div class="tab-pane" id="pane-settings">
       <p class="pane-desc" data-t="settingsDesc">Ndrysho gjithçka kurdo — pa rifilluar.</p>
 
-      <div class="settings-block">
+      <div class="settings-block" id="channelBlock">
         <h3 class="set-h" data-t="setChannelH">🔗 Lidh kanalin (Telegram)</h3>
         <p class="pane-desc" data-t="channelDesc">2 minuta: krijo një bot te @BotFather → kopjo token-in → ngjite këtu → Ruaj → kliko "Aktivizo".</p>
         <div class="settings-row">
@@ -547,6 +553,19 @@
       <button class="btn ghost" id="orderPrint" type="button" data-t="printDoc">🧾 Faturë / Ofertë</button>
       <button class="btn ghost" id="orderCancel" data-t="cancel">Anulo</button>
       <button class="btn primary" id="orderSave" data-t="save">Ruaj</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="deleteBizModal" role="dialog" aria-modal="true" hidden>
+  <div class="modal small-modal">
+    <div class="modal-head"><h2 data-t="delBizTitle">🗑 Fshi biznesin</h2></div>
+    <p class="pane-desc" id="delBizMsg"></p>
+    <input type="text" id="delBizName" autocomplete="off" placeholder="">
+    <label class="commerce-toggle" style="margin-top:12px"><input type="checkbox" id="delBizHuman"> <span data-t="delBizHuman">Nuk jam robot — e konfirmoj që dua ta fshij</span></label>
+    <div class="modal-actions">
+      <button class="btn ghost" id="delBizCancel" data-t="cancel">Anulo</button>
+      <button class="btn primary danger" id="delBizGo" data-t="delBizGo" disabled>🗑 Fshi përgjithmonë</button>
     </div>
   </div>
 </div>
