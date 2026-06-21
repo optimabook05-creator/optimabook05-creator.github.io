@@ -15,7 +15,7 @@ returns jsonb language sql security definer stable set search_path = public as $
     'currency', b.currency, 'commerce_enabled', b.commerce_enabled, 'config', b.config,
     'timezone', b.timezone, 'lang', b.lang,
     'services', coalesce((select jsonb_agg(jsonb_build_object(
-        'id', s.id, 'name', s.name, 'price', s.price, 'kind', s.kind,
+        'id', s.id, 'name', s.name, 'price', s.price, 'kind', s.kind, 'bookable', s.bookable,
         'description', s.description, 'unit_label', s.unit_label,
         'duration_min', s.duration_min, 'duration_value', s.duration_value, 'duration_unit', s.duration_unit
       ) order by s.sort_order) from services s where s.business_id = b.id and s.active), '[]'::jsonb),

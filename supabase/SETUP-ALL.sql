@@ -151,6 +151,7 @@ alter table public.services add column if not exists sku         text;
 alter table public.services add column if not exists track_stock boolean not null default false;
 alter table public.services add column if not exists stock       numeric;
 alter table public.services add column if not exists unit_label  text;
+alter table public.services add column if not exists bookable    boolean not null default true;
 
 create table if not exists public.price_tiers (
   id uuid primary key default gen_random_uuid(),
@@ -208,7 +209,7 @@ returns jsonb language sql security definer stable set search_path = public as $
     'currency', b.currency, 'commerce_enabled', b.commerce_enabled, 'config', b.config,
     'timezone', b.timezone, 'lang', b.lang,
     'services', coalesce((select jsonb_agg(jsonb_build_object(
-        'id', s.id, 'name', s.name, 'price', s.price, 'kind', s.kind,
+        'id', s.id, 'name', s.name, 'price', s.price, 'kind', s.kind, 'bookable', s.bookable,
         'description', s.description, 'unit_label', s.unit_label,
         'duration_min', s.duration_min, 'duration_value', s.duration_value, 'duration_unit', s.duration_unit
       ) order by s.sort_order) from services s where s.business_id = b.id and s.active), '[]'::jsonb),

@@ -124,7 +124,7 @@ function render() {
 
 /* ---------- Appointments ---------- */
 function bookUI() {
-  const svc = DATA.services.filter((s) => s.kind !== "product");
+  const svc = DATA.services.filter((s) => s.bookable !== false);
   const today = new Date().toISOString().slice(0, 10);
   return `
     <div class="pub-sec">${tr("book")}</div>

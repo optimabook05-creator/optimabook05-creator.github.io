@@ -781,6 +781,8 @@ body::after {
 .service-card .s-del { width: 38px; height: 38px; flex: 0 0 auto; border: none; background: var(--red-soft);
   color: var(--red); border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 800; transition: filter .15s; }
 .service-card .s-del:hover { filter: brightness(.95); }
+.service-card .sc-book { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink-soft); cursor: pointer; padding: 2px 0; }
+.service-card .sc-book input { width: 16px; height: 16px; accent-color: var(--accent); flex: 0 0 auto; }
 @media (max-width: 640px) {
   .service-card .s-kind { width: 110px; }
   .service-card .sc-bottom { flex-wrap: wrap; }

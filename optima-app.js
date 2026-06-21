@@ -142,6 +142,7 @@ const T = {
     setFieldsH: "🧩 Fushat e katalogut (fik ato që s'të duhen)", fieldsDesc: "Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.",
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
     catalogPointerTxt: "Produktet & shërbimet me përshkrim, çmim, stok dhe çmime shumice menaxhohen te skeda 📦 Catalog lart.", goCatalogBtn: "📦 Hap Katalogun",
+    bookableLbl: "📅 Prenotohet me kalendar",
     manRepeat: "Përsërit", repNone: "Pa përsëritje", repWeekly: "Çdo javë", repBiweekly: "Çdo 2 javë", repMonthly: "Çdo muaj",
     manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
     setPubH: "🌐 Faqja publike (link për klientët)", pubDesc: "Ndaje këtë link kudo (bio, WhatsApp, Instagram) — klientët rezervojnë/porosisin vetë, pa bisedë, pa app.",
@@ -279,6 +280,7 @@ const T = {
     setFieldsH: "🧩 Catalog fields (turn off what you don't need)", fieldsDesc: "Everything is on by default. Turn off what you don't need — the panel becomes truly yours.",
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
     catalogPointerTxt: "Products & services with description, price, stock and wholesale pricing are managed in the 📦 Catalog tab above.", goCatalogBtn: "📦 Open Catalog",
+    bookableLbl: "📅 Bookable on calendar",
     manRepeat: "Repeat", repNone: "No repeat", repWeekly: "Weekly", repBiweekly: "Every 2 weeks", repMonthly: "Monthly",
     manTimes: "How many", recurDone: "✅ Created {n} appointments",
     setPubH: "🌐 Public page (link for customers)", pubDesc: "Share this link anywhere (bio, WhatsApp, Instagram) — customers book/order themselves, no chat, no app.",
@@ -1156,11 +1158,17 @@ function setServiceRow(s) {
   priceWrap.append(priceI, cur);
   bottom.append(durWrap, priceWrap);
 
+  const bookWrap = document.createElement("label"); bookWrap.className = "sc-book";
+  const bookC = document.createElement("input"); bookC.type = "checkbox"; bookC.className = "s-book";
+  bookC.checked = s ? (s.bookable !== false) : true;
+  const bookT = document.createElement("span"); bookT.textContent = tr("bookableLbl");
+  bookWrap.append(bookC, bookT);
+
   // Produkt → kohëzgjatja s'ka kuptim, fshihet
   const applyKind = () => { durWrap.style.visibility = kindS.value === "product" ? "hidden" : "visible"; };
   kindS.onchange = applyKind; applyKind();
 
-  card.append(top, descI, bottom);
+  card.append(top, descI, bottom, bookWrap);
   $("#setServices").appendChild(card);
 }
 
@@ -1254,7 +1262,7 @@ async function upsertService(id, data) {
     if (id) { const { error } = await sb.from("services").update(data).eq("id", id); if (error) throw error; }
     else { const { error } = await sb.from("services").insert({ business_id: biz.id, ...data }); if (error) throw error; }
   } catch (e) {
-    const { kind, description, ...base } = data; // hiq kolonat e reja dhe riprovo
+    const { kind, description, bookable, ...base } = data; // hiq kolonat e reja dhe riprovo
     if (id) await sb.from("services").update(base).eq("id", id);
     else await sb.from("services").insert({ business_id: biz.id, ...base });
   }
@@ -1273,7 +1281,8 @@ async function saveServicesEdit() {
     const price = +r.querySelector(".s-price").value || 0;
     const kind = r.querySelector(".s-kind") ? r.querySelector(".s-kind").value : "service";
     const description = r.querySelector(".s-desc") ? (r.querySelector(".s-desc").value.trim() || null) : null;
-    const rowData = { name, kind, description, duration_min, duration_value: value, duration_unit: unit, price, sort_order: i, active: true };
+    const bookable = r.querySelector(".s-book") ? r.querySelector(".s-book").checked : true;
+    const rowData = { name, kind, description, bookable, duration_min, duration_value: value, duration_unit: unit, price, sort_order: i, active: true };
     await upsertService(r.dataset.id || null, rowData);
     if (r.dataset.id) seen.add(r.dataset.id);
     i++;
@@ -1923,7 +1932,7 @@ async function renderStats() {
 
 /* ---------------- Takim manual ---------------- */
 async function openManual() {
-  $("#manService").innerHTML = services.map((s) => `<option value="${s.id}">${esc(s.name)} (${s.duration_min} min)</option>`).join("");
+  $("#manService").innerHTML = services.filter((s) => s.bookable !== false).map((s) => `<option value="${s.id}">${esc(s.name)} (${s.duration_min} min)</option>`).join("");
   if (staff.length) {
     $("#manStaff").innerHTML = staff.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join("");
     $("#manStaff").value = calStaff || staff[0].id;
