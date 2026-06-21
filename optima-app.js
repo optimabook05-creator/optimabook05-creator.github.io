@@ -130,6 +130,7 @@ const T = {
     addBiz: "+ Biznes", obBack: "← Kthehu",
     setFieldsH: "🧩 Fushat e katalogut (fik ato që s'të duhen)", fieldsDesc: "Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.",
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
+    catalogPointerTxt: "Produktet & shërbimet me përshkrim, çmim, stok dhe çmime shumice menaxhohen te skeda 📦 Catalog lart.", goCatalogBtn: "📦 Hap Katalogun",
     manRepeat: "Përsërit", repNone: "Pa përsëritje", repWeekly: "Çdo javë", repBiweekly: "Çdo 2 javë", repMonthly: "Çdo muaj",
     manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
     setPubH: "🌐 Faqja publike (link për klientët)", pubDesc: "Ndaje këtë link kudo (bio, WhatsApp, Instagram) — klientët rezervojnë/porosisin vetë, pa bisedë, pa app.",
@@ -252,6 +253,7 @@ const T = {
     addBiz: "+ Business", obBack: "← Back",
     setFieldsH: "🧩 Catalog fields (turn off what you don't need)", fieldsDesc: "Everything is on by default. Turn off what you don't need — the panel becomes truly yours.",
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
+    catalogPointerTxt: "Products & services with description, price, stock and wholesale pricing are managed in the 📦 Catalog tab above.", goCatalogBtn: "📦 Open Catalog",
     manRepeat: "Repeat", repNone: "No repeat", repWeekly: "Weekly", repBiweekly: "Every 2 weeks", repMonthly: "Monthly",
     manTimes: "How many", recurDone: "✅ Created {n} appointments",
     setPubH: "🌐 Public page (link for customers)", pubDesc: "Share this link anywhere (bio, WhatsApp, Instagram) — customers book/order themselves, no chat, no app.",
@@ -347,6 +349,9 @@ let editingItemId = null;  // artikulli në editim (katalog)
 const CUR_SYM = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
 function curSym() { return CUR_SYM[(biz && biz.currency) || "EUR"] || ((biz && biz.currency) || "€"); }
 function money(n) { const v = Math.round((Number(n) || 0) * 100) / 100; const s = curSym(); return s.length === 1 ? `${v}${s}` : `${v} ${s}`; }
+// Tregtia është aktive kur pronari e ka ndezur OSE biznesi merr porosi (inquiry) → Katalogu/Porositë/Raportet dalin vetë
+function commerceOn() { return !!(biz && (biz.commerce_enabled || biz.mode === "inquiry")); }
+
 // A shfaqet një fushë e katalogut? (pronari mund të fikë çdo fushë; default = shfaqet)
 function showField(key) { return !(biz && biz.config && biz.config[key] === false); }
 
@@ -543,7 +548,7 @@ async function loadAll() {
   renderSettings();
   await renderAll();
   renderCatalog();
-  if (biz.commerce_enabled) renderOrders();
+  if (commerceOn()) renderOrders();
   renderQuickStart();
 }
 
@@ -731,7 +736,7 @@ const plainNum = (n) => { const v = Number(n) || 0; return String(v); };
 
 async function renderOrders() {
   const list = $("#ordersList");
-  if (!list || !biz || !biz.commerce_enabled) return;
+  if (!list || !biz || !commerceOn()) return;
   const filter = ($("#orderFilter") && $("#orderFilter").value) || "open";
   let orders = [];
   try {
@@ -985,7 +990,7 @@ function periodRange(p) {
 
 async function renderReports() {
   const box = $("#reportsBox");
-  if (!box || !biz || !biz.commerce_enabled) return;
+  if (!box || !biz || !commerceOn()) return;
   const periods = ["today", "week", "month", "lastMonth", "year", "custom"];
   box.innerHTML =
     `<div class="rep-periods">` +
@@ -1069,7 +1074,7 @@ function setupStaffUI() {
 // Mënyra e biznesit: fsheh/shfaq skedat sipas takime vs porosi (inquiry)
 function applyModeUI() {
   const inquiry = !!(biz && biz.mode === "inquiry");
-  const commerce = !!(biz && biz.commerce_enabled);
+  const commerce = commerceOn();
   const apptTabs = ["calendar", "appointments", "blocks", "waitlist", "staff", "customers"];
   const commerceTabs = ["catalog", "orders", "reports"];
   document.querySelectorAll(".tabs .tab").forEach((t) => {
@@ -1141,8 +1146,11 @@ function renderSettings() {
   const op = $("#openPubLink"); if (op) op.href = pubBase;
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
   const cc = $("#bizCurrency"); if (cc) cc.value = biz.currency || "EUR";
+  // Kur tregtia është aktive, Katalogu (me përshkrim/stok/çmime) është vendi i vetëm → fshehim editorin e thjeshtë që të mos ngatërrohet
+  const svb = $("#servicesBlock"); if (svb) svb.hidden = commerceOn();
+  const cph = $("#catalogPointer"); if (cph) cph.hidden = !commerceOn();
   // Toggle-t e fushave të katalogut
-  const cfb = $("#catFieldsBlock"); if (cfb) cfb.hidden = !biz.commerce_enabled;
+  const cfb = $("#catFieldsBlock"); if (cfb) cfb.hidden = !commerceOn();
   if ($("#cfgDesc")) $("#cfgDesc").checked = showField("catDesc");
   if ($("#cfgUnit")) $("#cfgUnit").checked = showField("catUnit");
   if ($("#cfgStock")) $("#cfgStock").checked = showField("catStock");
@@ -1879,7 +1887,7 @@ function wire() {
     try {
       await sb.from("businesses").update({ mode: m }).eq("id", biz.id);
       biz.mode = m;
-      applyModeUI();
+      renderSettings(); applyModeUI(); renderCatalog(); if (commerceOn()) renderOrders();
       toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
@@ -1918,8 +1926,7 @@ function wire() {
       const payload = { commerce_enabled: $("#commerceOn").checked, currency: $("#bizCurrency").value };
       await sb.from("businesses").update(payload).eq("id", biz.id);
       biz.commerce_enabled = payload.commerce_enabled; biz.currency = payload.currency;
-      const cfb = $("#catFieldsBlock"); if (cfb) cfb.hidden = !biz.commerce_enabled;
-      applyModeUI(); renderCatalog(); if (biz.commerce_enabled) renderOrders(); await renderAll();
+      renderSettings(); applyModeUI(); renderCatalog(); if (commerceOn()) renderOrders(); await renderAll();
       toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
@@ -1933,6 +1940,7 @@ function wire() {
       biz.config = cfg; renderCatalog(); toast(tr("toastSaved"));
     } catch (ex) { alert(ex.message || String(ex)); }
   };
+  if ($("#goCatalog")) $("#goCatalog").onclick = () => { const t = document.querySelector('.tab[data-tab="catalog"]'); if (t) t.click(); };
   // Katalogu: editori i artikullit
   if ($("#btnAddItem")) $("#btnAddItem").onclick = () => openItem(null);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
