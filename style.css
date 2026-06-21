@@ -716,6 +716,17 @@ body::after {
 .qs-item.done .qs-lab { text-decoration: line-through; text-decoration-color: var(--ink-faint); }
 .qs-go { flex-shrink: 0; }
 
+/* ---------- AI Ekonomisti (insights) ---------- */
+.ins-h { font-family: var(--font-display); font-size: 15px; font-weight: 800; letter-spacing: -.02em; margin: 4px 0 12px; display: flex; align-items: center; gap: 7px; }
+.ins-card { display: flex; align-items: center; gap: 13px; padding: 13px 15px; margin-bottom: 10px; border-radius: var(--r-md);
+  background: linear-gradient(160deg, var(--accent-soft), var(--glass)); border: 1px solid var(--glass-edge); box-shadow: var(--shadow-glass); }
+.ins-card.warn { background: linear-gradient(160deg, var(--amber-soft), var(--glass)); border-color: rgba(245, 159, 26, .3); }
+.ins-ic { font-size: 24px; line-height: 1; flex-shrink: 0; }
+.ins-body { flex: 1; min-width: 0; }
+.ins-t { font-weight: 800; font-size: 14px; }
+.ins-m { font-size: 13px; color: var(--ink-soft); font-weight: 600; margin-top: 2px; line-height: 1.5; }
+.ins-go { flex-shrink: 0; }
+
 /* ---------- Tregti: katalog, shkallë çmimi, toggle ---------- */
 .field-row { display: flex; gap: 10px; }
 .field-row .field { flex: 1; min-width: 0; }

@@ -3,7 +3,7 @@
 
 "use strict";
 
-const CACHE = "optimabook-v18";
+const CACHE = "optimabook-v19";
 
 self.addEventListener("install", () => self.skipWaiting());
 

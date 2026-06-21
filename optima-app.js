@@ -127,6 +127,14 @@ const T = {
     repRevenue: "Të ardhura", repOrders: "Porosi", repUnits: "Njësi të shitura",
     repPaid: "Të arkëtuara", repOutstanding: "Për t'u arkëtuar", repRetail: "Pakicë", repWholesale: "Shumicë",
     repTopProducts: "Më të shiturat", repTopCustomers: "Klientët kryesorë",
+    insTitle: "AI Ekonomisti — çfarë të bësh tani", insGo: "Shko",
+    insUnpaidT: "Para për t'u arkëtuar", insUnpaidM: "{a} të papaguara në {n} porosi. Dërgo kujtesë pagese.",
+    insStockT: "Stok i ulët", insStockM: "Po mbaron: {items}. Rimbush para se të shitet.",
+    insChurnT: "Klientë që po ikin", insChurnM: "{n} klientë s'janë kthyer prej 45+ ditësh. Shkruaju një ofertë kthimi.",
+    insCancelT: "Anulime të larta", insCancelM: "{p}% e takimeve anulohen. Ndiz kujtesat / kërko depozitë.",
+    insTopT: "Më fitimprurësi", insTopM: "{name} të sjell më shumë ({a}). Veçoje ose bëj paketë.",
+    insChannelT: "Lidh një kanal", insChannelM: "Lidh WhatsApp/Telegram që AI t'u përgjigjet klientëve 24/7.",
+    insPubT: "Ndaj faqen publike", insPubM: "Vendos linkun e faqes në bio/WhatsApp — klientët rezervojnë vetë.",
     addBiz: "+ Biznes", obBack: "← Kthehu",
     setFieldsH: "🧩 Fushat e katalogut (fik ato që s'të duhen)", fieldsDesc: "Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.",
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
@@ -250,6 +258,14 @@ const T = {
     repRevenue: "Revenue", repOrders: "Orders", repUnits: "Units sold",
     repPaid: "Collected", repOutstanding: "Outstanding", repRetail: "Retail", repWholesale: "Wholesale",
     repTopProducts: "Best sellers", repTopCustomers: "Top customers",
+    insTitle: "AI Economist — what to do now", insGo: "Go",
+    insUnpaidT: "Money to collect", insUnpaidM: "{a} unpaid across {n} orders. Send a payment reminder.",
+    insStockT: "Low stock", insStockM: "Running out: {items}. Restock before it sells out.",
+    insChurnT: "Customers slipping away", insChurnM: "{n} customers haven't returned in 45+ days. Send a win-back offer.",
+    insCancelT: "High cancellations", insCancelM: "{p}% of appointments cancel. Turn on reminders / ask a deposit.",
+    insTopT: "Top earner", insTopM: "{name} earns you the most ({a}). Feature it or make a package.",
+    insChannelT: "Connect a channel", insChannelM: "Connect WhatsApp/Telegram so the AI answers customers 24/7.",
+    insPubT: "Share your public page", insPubM: "Put your page link in bio/WhatsApp — customers book themselves.",
     addBiz: "+ Business", obBack: "← Back",
     setFieldsH: "🧩 Catalog fields (turn off what you don't need)", fieldsDesc: "Everything is on by default. Turn off what you don't need — the panel becomes truly yours.",
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
@@ -1630,7 +1646,59 @@ async function renderBlocks() {
   }
 }
 
+/* ---------------- AI Ekonomisti — këshilla që çojnë te vendime (jo vetëm shifra) ---------------- */
+async function renderInsights() {
+  const box = $("#insightsBox");
+  if (!box || !biz) return;
+  let appts = [], orders = [], items = [];
+  try { const { data } = await sb.from("appointments").select("appt_date,status,client_name,services(price)").eq("business_id", biz.id); appts = data || []; } catch (e) {}
+  try { const { data } = await sb.from("orders").select("*").eq("business_id", biz.id); orders = data || []; } catch (e) {}
+  try { const { data } = await sb.from("order_items").select("name,qty,line_total").eq("business_id", biz.id); items = data || []; } catch (e) {}
+  const ins = buildInsights(appts, orders, items);
+  box.innerHTML = ins.length ? `<div class="ins-h">💡 ${tr("insTitle")}</div>` + ins.slice(0, 6).map(insCard).join("") : "";
+  box.querySelectorAll("[data-go]").forEach((b) => b.onclick = () => { const t = document.querySelector('.tab[data-tab="' + b.dataset.go + '"]'); if (t) t.click(); });
+}
+function insCard(i) {
+  return `<div class="ins-card ${i.sev || ""}"><span class="ins-ic">${i.icon}</span>
+    <div class="ins-body"><div class="ins-t">${i.title}</div><div class="ins-m">${i.msg}</div></div>
+    ${i.tab ? `<button class="btn small ${i.sev === "warn" ? "primary" : ""} ins-go" data-go="${i.tab}">${tr("insGo")}</button>` : ""}</div>`;
+}
+function buildInsights(appts, orders, items) {
+  const out = [];
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const activeAppts = appts.filter((a) => a.status !== "cancelled");
+  const activeOrders = orders.filter((o) => o.status !== "cancelled");
+  // Para për t'u arkëtuar
+  const outstanding = activeOrders.reduce((s, o) => s + Math.max(0, (Number(o.total) || 0) - (Number(o.amount_paid) || 0)), 0);
+  const unpaidN = activeOrders.filter((o) => (Number(o.total) || 0) > (Number(o.amount_paid) || 0)).length;
+  if (outstanding > 0) out.push({ impact: outstanding, icon: "💰", sev: "warn", title: tr("insUnpaidT"), msg: tr("insUnpaidM").replace("{a}", money(outstanding)).replace("{n}", unpaidN), tab: "orders" });
+  // Stok i ulët
+  const low = services.filter((s) => s.track_stock && Number(s.stock) <= 3);
+  if (low.length) out.push({ impact: 60, icon: "📦", sev: "warn", title: tr("insStockT"), msg: tr("insStockM").replace("{items}", low.map((s) => esc(s.name) + " (" + (s.stock != null ? s.stock : 0) + ")").join(", ")), tab: "catalog" });
+  // Klientë që po ikin
+  const last = {};
+  activeAppts.forEach((a) => { const d = a.appt_date; const k = a.client_name; if (k && (!last[k] || d > last[k])) last[k] = d; });
+  activeOrders.forEach((o) => { const d = (o.placed_at || "").slice(0, 10); const k = o.customer_name; if (k && (!last[k] || d > last[k])) last[k] = d; });
+  const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 45);
+  const cutoffS = fmtDate(cutoff);
+  const churn = Object.entries(last).filter(([k, d]) => k && k !== "Web" && d < cutoffS).length;
+  if (churn >= 2) out.push({ impact: 40 * churn, icon: "👋", sev: "", title: tr("insChurnT"), msg: tr("insChurnM").replace("{n}", churn), tab: "customers" });
+  // Anulime të larta
+  const cancN = appts.length - activeAppts.length;
+  if (appts.length >= 5 && cancN / appts.length >= 0.2) out.push({ impact: 35, icon: "⚠️", sev: "warn", title: tr("insCancelT"), msg: tr("insCancelM").replace("{p}", Math.round(cancN / appts.length * 100)), tab: "settings" });
+  // Më fitimprurësi
+  const earn = {};
+  items.forEach((i) => { const k = i.name || "—"; earn[k] = (earn[k] || 0) + (Number(i.line_total) || 0); });
+  const topE = Object.entries(earn).sort((a, b) => b[1] - a[1])[0];
+  if (topE && topE[1] > 0) out.push({ impact: 25, icon: "🏆", sev: "", title: tr("insTopT"), msg: tr("insTopM").replace("{name}", esc(topE[0])).replace("{a}", money(topE[1])), tab: "reports" });
+  // Nudges (setup)
+  if (!biz.telegram_token) out.push({ impact: 12, icon: "🔗", sev: "", title: tr("insChannelT"), msg: tr("insChannelM"), tab: "settings" });
+  out.push({ impact: 6, icon: "🌐", sev: "", title: tr("insPubT"), msg: tr("insPubM"), tab: "settings" });
+  return out.sort((a, b) => b.impact - a.impact);
+}
+
 async function renderStats() {
+  renderInsights();
   // Marrim çdo takim me emrin/çmimin e shërbimit (edhe nëse shërbimi është çaktivizuar)
   const { data } = await sb.from("appointments")
     .select("appt_date, appt_time, status, source, client_name, services(name, price)")
