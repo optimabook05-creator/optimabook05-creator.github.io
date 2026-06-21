@@ -212,9 +212,8 @@
 </script>
 <script>
 if ("serviceWorker" in navigator && location.protocol === "https:") {
-  var _r = false;
-  navigator.serviceWorker.addEventListener("controllerchange", function(){ if(!_r){_r=true;location.reload();} });
-  navigator.serviceWorker.register("sw.js").then(function(reg){reg.update();}).catch(function(){});
+  navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});
+  if (window.caches) caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});
 }
 </script>
 <script src="app.js"></script>

@@ -640,9 +640,8 @@ apply();
 })();
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {
-  let _reloaded = false;
-  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!_reloaded) { _reloaded = true; location.reload(); } });
-  navigator.serviceWorker.register("sw.js").then((reg) => { reg.update(); }).catch(() => {});
+  navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+  if (window.caches) caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
 }
 </script>
 </body>
