@@ -206,6 +206,35 @@
         <label class="commerce-toggle" style="margin-top:6px"><input type="checkbox" id="commerceOn"> <span data-t="commerceOnLbl">Aktivizo katalogun, porositë & raportet (tregti)</span></label>
         <div style="margin-top:14px"><button class="btn primary" id="saveGeneral" data-t="saveAllBtn">💾 Ruaj gjithçka</button></div>
       </div>
+
+      <div class="settings-block" id="servicesBlock">
+        <h3 class="set-h" data-t="setSvcH">🧾 Shërbimet / Produktet</h3>
+        <p class="pane-desc" data-t="svcDesc">Shto çdo shërbim ose produkt — me lloj, përshkrim, çmim dhe prenotim opsional.</p>
+        <div id="setServices"></div>
+        <div class="settings-input" style="margin-top:8px">
+          <button class="btn ghost small" id="setAddService" type="button" data-t="addService">+ Shto shërbim</button>
+          <button class="btn primary small" id="saveServices" data-t="saveServicesBtn">Ruaj shërbimet</button>
+        </div>
+      </div>
+
+      <div class="settings-block" id="catalogPointer" hidden>
+        <h3 class="set-h" data-t="setSvcH">🧾 Shërbimet / Produktet</h3>
+        <p class="pane-desc" data-t="catalogPointerTxt">Produktet & shërbimet me përshkrim, çmim, stok dhe çmime shumice menaxhohen te skeda <b>📦 Catalog</b> lart.</p>
+        <button class="btn primary small" id="goCatalog" type="button" data-t="goCatalogBtn">📦 Hap Katalogun</button>
+      </div>
+
+      <div class="settings-block" id="catFieldsBlock" hidden>
+        <h3 class="set-h" data-t="setFieldsH">🧩 Fushat e katalogut (fik ato që s'të duhen)</h3>
+        <p class="pane-desc" data-t="fieldsDesc">Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.</p>
+        <div class="field-toggles">
+          <label class="commerce-toggle"><input type="checkbox" id="cfgDesc" checked> <span data-t="cfgDescLbl">Përshkrimi</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgUnit" checked> <span data-t="cfgUnitLbl">Njësia</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgStock" checked> <span data-t="cfgStockLbl">Stoku</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgSku" checked> <span data-t="cfgSkuLbl">Kodi (SKU)</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgTiers" checked> <span data-t="cfgTiersLbl">Çmime shumice</span></label>
+        </div>
+        <button class="btn small primary" id="saveFields" data-t="save" style="margin-top:12px">Ruaj</button>
+      </div>
     </div>
 
     <div class="tab-pane" id="pane-calendar">
@@ -352,33 +381,6 @@
         <div class="block-list" id="teamList" style="margin-top:12px"></div>
       </div>
 
-      <div class="settings-block" id="catFieldsBlock" hidden>
-        <h3 class="set-h" data-t="setFieldsH">🧩 Fushat e katalogut (fik ato që s'të duhen)</h3>
-        <p class="pane-desc" data-t="fieldsDesc">Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.</p>
-        <div class="field-toggles">
-          <label class="commerce-toggle"><input type="checkbox" id="cfgDesc" checked> <span data-t="cfgDescLbl">Përshkrimi</span></label>
-          <label class="commerce-toggle"><input type="checkbox" id="cfgUnit" checked> <span data-t="cfgUnitLbl">Njësia</span></label>
-          <label class="commerce-toggle"><input type="checkbox" id="cfgStock" checked> <span data-t="cfgStockLbl">Stoku</span></label>
-          <label class="commerce-toggle"><input type="checkbox" id="cfgSku" checked> <span data-t="cfgSkuLbl">Kodi (SKU)</span></label>
-          <label class="commerce-toggle"><input type="checkbox" id="cfgTiers" checked> <span data-t="cfgTiersLbl">Çmime shumice</span></label>
-        </div>
-        <button class="btn small primary" id="saveFields" data-t="save" style="margin-top:12px">Ruaj</button>
-      </div>
-
-      <div class="settings-block" id="servicesBlock">
-        <h3 class="set-h" data-t="setSvcH">Shërbimet / Produktet</h3>
-        <div id="setServices"></div>
-        <div class="settings-input" style="margin-top:8px">
-          <button class="btn ghost small" id="setAddService" type="button" data-t="addService">+ Shto shërbim</button>
-          <button class="btn primary small" id="saveServices" data-t="saveServicesBtn">Ruaj shërbimet</button>
-        </div>
-      </div>
-
-      <div class="settings-block" id="catalogPointer" hidden>
-        <h3 class="set-h" data-t="setSvcH">Shërbimet / Produktet</h3>
-        <p class="pane-desc" data-t="catalogPointerTxt">Produktet & shërbimet me përshkrim, çmim, stok dhe çmime shumice menaxhohen te skeda <b>📦 Catalog</b> lart.</p>
-        <button class="btn primary small" id="goCatalog" type="button" data-t="goCatalogBtn">📦 Hap Katalogun</button>
-      </div>
 
       <div class="settings-block" id="setHoursBlock">
         <h3 class="set-h" data-t="setHoursH">Orari i punës</h3>
