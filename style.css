@@ -96,6 +96,27 @@
 :root[data-theme="dark"] .btn { box-shadow: 0 1px 2px rgba(0, 0, 0, .3), inset 0 1px 0 rgba(255, 255, 255, .06); }
 :root[data-theme="dark"] .btn:hover { box-shadow: 0 8px 20px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .06); background: rgba(255, 255, 255, .08); }
 
+/* ---------- DARK MODE — fortësim i komponentëve (ndreq sfonde/kufij të bardhë) ---------- */
+:root[data-theme="dark"] .tabs { background: rgba(255, 255, 255, .04); border-color: var(--glass-edge); }
+:root[data-theme="dark"] .tab.active { background: linear-gradient(135deg, rgba(32, 201, 151, .22), rgba(32, 201, 151, .10)); color: var(--accent-bright); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); }
+:root[data-theme="dark"] .slot { background: var(--glass-soft); border-color: var(--glass-edge); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); }
+:root[data-theme="dark"] .slot:hover { box-shadow: 0 6px 16px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 255, 255, .04); }
+:root[data-theme="dark"] .slot.busy { background: linear-gradient(95deg, rgba(32, 201, 151, .22), var(--glass-soft)); }
+:root[data-theme="dark"] .slot.blocked { background: repeating-linear-gradient(-45deg, rgba(224, 49, 49, .16) 0 10px, var(--glass-soft) 10px 20px); }
+:root[data-theme="dark"] .appt-card { background: var(--glass-soft); border-color: var(--glass-edge); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04); }
+:root[data-theme="dark"] .appt-card:hover { box-shadow: 0 14px 32px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .04); }
+:root[data-theme="dark"] .stat-card { background: linear-gradient(165deg, rgba(255, 255, 255, .06), var(--glass-soft)); border-color: var(--glass-edge); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); }
+:root[data-theme="dark"] .stat-card.highlight { background: linear-gradient(165deg, var(--accent-soft), rgba(32, 201, 151, .06)); }
+:root[data-theme="dark"] .stat-card.warn { background: linear-gradient(165deg, var(--red-soft), var(--glass-soft)); }
+:root[data-theme="dark"] .block-form input, :root[data-theme="dark"] .service-row input, :root[data-theme="dark"] .hours-row input[type="time"], :root[data-theme="dark"] .auth-card input, :root[data-theme="dark"] .onboard-card input, :root[data-theme="dark"] .settings-input input, :root[data-theme="dark"] .settings-input select { background: var(--glass-soft); border-color: var(--glass-edge); color: var(--ink); box-shadow: none; }
+:root[data-theme="dark"] .block-item { background: repeating-linear-gradient(-45deg, rgba(224, 49, 49, .16) 0 10px, var(--glass-soft) 10px 20px); border-color: rgba(224, 49, 49, .3); }
+:root[data-theme="dark"] .notif-item { background: var(--glass-soft); border-color: var(--glass-edge); }
+:root[data-theme="dark"] .notif-item.unread { background: rgba(245, 159, 26, .14); }
+:root[data-theme="dark"] .btn.ghost { background: rgba(255, 255, 255, .05); }
+:root[data-theme="dark"] .bi-chip { background: var(--glass-soft); }
+:root[data-theme="dark"] .biz-switch { background: var(--glass-soft); }
+:root[data-theme="dark"] .timeline::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .14); }
+
 /* ---------- Toggle i temës ---------- */
 .theme-toggle {
   display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px;
