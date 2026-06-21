@@ -167,46 +167,61 @@
       <p class="pane-desc" data-t="generalDesc">Info-ja e kompanisë tënde — plotësoje gjithçka këtu, pastaj kliko Ruaj.</p>
       <div class="settings-block">
         <h3 class="set-h" data-t="setBizH">🏢 Biznesi</h3>
-        <div class="gen-grid">
-          <label class="gen-f"><span data-t="genName">Emri i biznesit</span><input type="text" id="setName" maxlength="60"></label>
-          <label class="gen-f"><span data-t="genAddr">Adresa / Lokacioni</span><input type="text" id="setAddress" maxlength="80" placeholder="Adresa ose 'Online'"></label>
-          <label class="gen-f"><span data-t="phoneLbl">Telefoni / kontakti</span><input type="text" id="bizPhone" maxlength="40" placeholder="+355 6X XXX XXXX"></label>
-          <label class="gen-f"><span data-t="emailLbl">Email</span><input type="email" id="bizEmail" maxlength="60" placeholder="biznesi@email.com"></label>
-          <label class="gen-f"><span data-t="websiteLbl">Website</span><input type="text" id="bizWebsite" maxlength="80" placeholder="https://..."></label>
-          <label class="gen-f"><span data-t="instaLbl">Instagram</span><input type="text" id="bizInstagram" maxlength="50" placeholder="@emri"></label>
-          <label class="gen-f"><span data-t="cityLbl">Qyteti</span><input type="text" id="bizCity" maxlength="40"></label>
-          <label class="gen-f"><span data-t="genMode">Mënyra e biznesit</span>
-            <select id="bizMode">
-              <option value="appointments" data-t="obModeAppt">📅 Bëj takime</option>
-              <option value="inquiry" data-t="obModeInquiry">🛒 Marr porosi/kërkesa</option>
-              <option value="both" data-t="obModeBoth">🔀 Të dyja (takime + porosi)</option>
-            </select>
-          </label>
-          <label class="gen-f"><span data-t="genCurrency">Monedha</span>
-            <select id="bizCurrency">
-              <option value="EUR">€ EUR</option>
-              <option value="USD">$ USD</option>
-              <option value="GBP">£ GBP</option>
-              <option value="ALL">L ALL (Lek)</option>
-              <option value="CHF">CHF</option>
-              <option value="CAD">$ CAD</option>
-              <option value="AUD">$ AUD</option>
-              <option value="AED">AED</option>
-              <option value="TRY">₺ TRY</option>
-              <option value="RSD">RSD</option>
-              <option value="MKD">MKD</option>
-              <option value="RON">RON</option>
-              <option value="BGN">BGN</option>
-              <option value="SEK">SEK</option>
-              <option value="INR">₹ INR</option>
-              <option value="JPY">¥ JPY</option>
-              <option value="CNY">¥ CNY</option>
-            </select>
-          </label>
+
+        <div class="gen-section">
+          <h4 class="gen-h" data-t="secIdentity">👤 Identiteti & kontakti</h4>
+          <div class="gen-grid">
+            <label class="gen-f"><span data-t="genName">Emri i biznesit</span><input type="text" id="setName" maxlength="60"></label>
+            <label class="gen-f"><span data-t="genAddr">Adresa / Lokacioni</span><input type="text" id="setAddress" maxlength="80" placeholder="Adresa ose 'Online'"></label>
+            <label class="gen-f"><span data-t="cityLbl">Qyteti</span><input type="text" id="bizCity" maxlength="40"></label>
+            <label class="gen-f"><span data-t="phoneLbl">Telefoni / kontakti</span><input type="text" id="bizPhone" maxlength="40" placeholder="+355 6X XXX XXXX"></label>
+            <label class="gen-f"><span data-t="emailLbl">Email</span><input type="email" id="bizEmail" maxlength="60" placeholder="biznesi@email.com"></label>
+            <label class="gen-f"><span data-t="websiteLbl">Website</span><input type="text" id="bizWebsite" maxlength="80" placeholder="https://..."></label>
+            <label class="gen-f"><span data-t="instaLbl">Instagram</span><input type="text" id="bizInstagram" maxlength="50" placeholder="@emri"></label>
+          </div>
         </div>
-        <label class="gen-f gen-full"><span data-t="aboutLbl">Përshkrimi i biznesit (çfarë ofron — e përdor edhe AI)</span><textarea id="bizAbout" rows="3" maxlength="600" data-t-ph="aboutPh" placeholder="P.sh. Berber në Shkodër, qethje & rruajtje, hapur 9-19…"></textarea></label>
-        <label class="commerce-toggle" style="margin-top:6px"><input type="checkbox" id="commerceOn"> <span data-t="commerceOnLbl">Aktivizo katalogun, porositë & raportet (tregti)</span></label>
-        <div style="margin-top:14px"><button class="btn primary" id="saveGeneral" data-t="saveAllBtn">💾 Ruaj gjithçka</button></div>
+
+        <div class="gen-section">
+          <h4 class="gen-h" data-t="secConfig">⚙️ Konfigurimi</h4>
+          <div class="gen-grid">
+            <label class="gen-f"><span data-t="genMode">Mënyra e biznesit</span>
+              <select id="bizMode">
+                <option value="appointments" data-t="obModeAppt">📅 Bëj takime</option>
+                <option value="inquiry" data-t="obModeInquiry">🛒 Marr porosi/kërkesa</option>
+                <option value="both" data-t="obModeBoth">🔀 Të dyja (takime + porosi)</option>
+              </select>
+            </label>
+            <label class="gen-f"><span data-t="genCurrency">Monedha</span>
+              <select id="bizCurrency">
+                <option value="EUR">€ EUR</option>
+                <option value="USD">$ USD</option>
+                <option value="GBP">£ GBP</option>
+                <option value="ALL">L ALL (Lek)</option>
+                <option value="CHF">CHF</option>
+                <option value="CAD">$ CAD</option>
+                <option value="AUD">$ AUD</option>
+                <option value="AED">AED</option>
+                <option value="TRY">₺ TRY</option>
+                <option value="RSD">RSD</option>
+                <option value="MKD">MKD</option>
+                <option value="RON">RON</option>
+                <option value="BGN">BGN</option>
+                <option value="SEK">SEK</option>
+                <option value="INR">₹ INR</option>
+                <option value="JPY">¥ JPY</option>
+                <option value="CNY">¥ CNY</option>
+              </select>
+            </label>
+          </div>
+          <label class="commerce-toggle" style="margin-top:10px"><input type="checkbox" id="commerceOn"> <span data-t="commerceOnLbl">Aktivizo katalogun, porositë & raportet (tregti)</span></label>
+        </div>
+
+        <div class="gen-section">
+          <h4 class="gen-h" data-t="secDesc">📝 Përshkrimi</h4>
+          <label class="gen-f gen-full"><span data-t="aboutLbl">Përshkrimi i biznesit (çfarë ofron — e përdor edhe AI)</span><textarea id="bizAbout" rows="3" maxlength="600" data-t-ph="aboutPh" placeholder="P.sh. Berber në Shkodër, qethje & rruajtje, hapur 9-19…"></textarea></label>
+        </div>
+
+        <div style="margin-top:4px"><button class="btn primary" id="saveGeneral" data-t="saveAllBtn">💾 Ruaj gjithçka</button></div>
       </div>
 
       <div class="settings-block" id="servicesBlock">

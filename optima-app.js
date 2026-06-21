@@ -91,7 +91,7 @@ const T = {
     qsDoneTitle: "Gati! 🎉", qsDoneSub: "AI yt po pret klientë 24/7. Mund ta mbyllësh këtë.",
     qsSvc: "Shto shërbimet e tua", qsHrs: "Vendos orarin e punës",
     qsChan: "Lidh kanalin (WhatsApp/Telegram)", qsMsg: "Merr mesazhin e parë të klientit",
-    qsDo: "Bëje", qsHow: "Si?",
+    qsDo: "Bëje", qsHow: "Si?", qsEdit: "Ndrysho",
     qsMsgHelp: "Lidh kanalin te Cilësimet, pastaj dërgo një mesazh provë vetë — do ta shohësh këtu të kryer.",
     emptyApptHint: "Sapo një klient të rezervojë (ose shto një manualisht), takimi shfaqet këtu.",
     emptyWaitHint: "Kur një orar është plot, AI i shton klientët këtu dhe i lajmëron kur lirohet.",
@@ -112,6 +112,7 @@ const T = {
     tabGeneral: "🏢 General", generalDesc: "Info-ja e kompanisë tënde — plotësoje gjithçka këtu, pastaj kliko Ruaj.", phoneLbl: "Telefoni / kontakti",
     genName: "Emri i biznesit", genAddr: "Adresa / Lokacioni", emailLbl: "Email", websiteLbl: "Website", instaLbl: "Instagram", cityLbl: "Qyteti",
     genMode: "Mënyra e biznesit", genCurrency: "Monedha", aboutLbl: "Përshkrimi i biznesit (çfarë ofron — e përdor edhe AI)",
+    secIdentity: "👤 Identiteti & kontakti", secConfig: "⚙️ Konfigurimi", secDesc: "📝 Përshkrimi",
     aboutPh: "P.sh. Berber në Shkodër — qethje, rruajtje, ngjyrosje. Hapur 9:00–19:00.", saveAllBtn: "💾 Ruaj gjithçka",
     tabOrders: "🧾 Porositë", tabReports: "📈 Raporte",
     ordersDesc: "Porositë/shitjet e tua — kush, çfarë, sa, çmimi, statusi dhe pagesa. Edhe porosi që zgjasin muaj (me ETA).",
@@ -233,7 +234,7 @@ const T = {
     qsDoneTitle: "All set! 🎉", qsDoneSub: "Your AI is serving customers 24/7. You can close this.",
     qsSvc: "Add your services", qsHrs: "Set your working hours",
     qsChan: "Connect a channel (WhatsApp/Telegram)", qsMsg: "Get your first customer message",
-    qsDo: "Do it", qsHow: "How?",
+    qsDo: "Do it", qsHow: "How?", qsEdit: "Edit",
     qsMsgHelp: "Connect a channel in Settings, then send a test message yourself — you'll see this checked off.",
     emptyApptHint: "As soon as a customer books (or you add one manually), the appointment shows up here.",
     emptyWaitHint: "When a slot is full, the AI adds customers here and notifies them when it frees up.",
@@ -254,6 +255,7 @@ const T = {
     tabGeneral: "🏢 General", generalDesc: "Your company info — fill everything here, then click Save.", phoneLbl: "Phone / contact",
     genName: "Business name", genAddr: "Address / Location", emailLbl: "Email", websiteLbl: "Website", instaLbl: "Instagram", cityLbl: "City",
     genMode: "Business mode", genCurrency: "Currency", aboutLbl: "Business description (what you offer — used by the AI too)",
+    secIdentity: "👤 Identity & contact", secConfig: "⚙️ Configuration", secDesc: "📝 Description",
     aboutPh: "E.g. Barber in Shkodër — haircut, shave, coloring. Open 9:00–19:00.", saveAllBtn: "💾 Save all",
     tabOrders: "🧾 Orders", tabReports: "📈 Reports",
     ordersDesc: "Your orders/sales — who, what, how many, price, status and payment. Even orders that take months (with ETA).",
@@ -607,8 +609,8 @@ async function renderQuickStart() {
   } catch (e) {}
 
   const items = [];
-  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: "settings" });
-  if (!inquiry) items.push({ key: "hrs", done: Object.values(hours).some((h) => h), label: tr("qsHrs"), tab: "settings" });
+  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: "general" });
+  if (!inquiry) items.push({ key: "hrs", done: Object.values(hours).some((h) => h), label: tr("qsHrs"), tab: "general" });
   items.push({ key: "chan", done: !!biz.telegram_token, label: tr("qsChan"), tab: "settings" });
   items.push({ key: "msg", done: gotMsg, label: tr("qsMsg"), tab: "settings" });
 
@@ -628,18 +630,15 @@ async function renderQuickStart() {
     const lab = document.createElement("span");
     lab.className = "qs-lab"; lab.textContent = it.label;
     row.appendChild(tick); row.appendChild(lab);
-    if (!it.done) {
-      const act = document.createElement("button");
-      act.className = "btn small primary qs-go"; act.type = "button";
-      act.textContent = it.key === "msg" ? tr("qsHow") : tr("qsDo");
-      act.onclick = () => {
-        const t = document.querySelector('.tab[data-tab="' + it.tab + '"]');
-        if (t) t.click();
-        if (it.key === "msg") toast(tr("qsMsgHelp"));
-        box.scrollIntoView({ behavior: "smooth", block: "start" });
-      };
-      row.appendChild(act);
-    }
+    const act = document.createElement("button");
+    act.className = "btn small qs-go" + (it.done ? "" : " primary"); act.type = "button";
+    act.textContent = it.done ? tr("qsEdit") : (it.key === "msg" ? tr("qsHow") : tr("qsDo"));
+    act.onclick = () => {
+      const t = document.querySelector('.tab[data-tab="' + it.tab + '"]');
+      if (t) t.click();
+      if (it.key === "msg" && !it.done) toast(tr("qsMsgHelp"));
+    };
+    row.appendChild(act);
     list.appendChild(row);
   });
 
