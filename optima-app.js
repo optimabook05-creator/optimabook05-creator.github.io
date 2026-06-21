@@ -615,7 +615,9 @@ async function renderQuickStart() {
   } catch (e) {}
 
   const items = [];
-  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: "general", el: "servicesBlock" });
+  // Shërbimet/produktet: kur tregtia është ON menaxhohen te Catalog; përndryshe te General
+  const svcCommerce = commerceOn();
+  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: svcCommerce ? "catalog" : "general", el: svcCommerce ? null : "servicesBlock" });
   if (!inquiry) items.push({ key: "hrs", done: Object.values(hours).some((h) => h), label: tr("qsHrs"), tab: "general", el: "setHoursBlock" });
   items.push({ key: "chan", done: !!biz.telegram_token, label: tr("qsChan"), tab: "settings", el: "channelBlock" });
   items.push({ key: "msg", done: gotMsg, label: tr("qsMsg"), tab: "settings", el: "channelBlock" });
