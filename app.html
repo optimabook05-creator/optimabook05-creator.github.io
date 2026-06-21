@@ -519,6 +519,14 @@
   </div>
 </div>
 
+<script>
+/* Auto-përditësim: kap versionin e ri pa rifreskim manual */
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  let _reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (!_reloaded) { _reloaded = true; location.reload(); } });
+  navigator.serviceWorker.register("sw.js").then((reg) => { reg.update(); }).catch(() => {});
+}
+</script>
 <script type="module" src="optima-app.js"></script>
 </body>
 </html>
