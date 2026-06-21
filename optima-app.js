@@ -109,7 +109,10 @@ const T = {
     addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
     commerceLbl: "🛒 Tregti (produkte, porosi, raporte) & monedha", commerceOnLbl: "Aktivizo katalogun, porositë & raportet",
     delete: "Fshi", confirmDelete: "Ta fshij këtë? S'kthehet mbrapsht.",
-    tabGeneral: "🏢 General", generalDesc: "Info-ja e kompanisë tënde — emri, kontakti, mënyra dhe monedha. Plotësoji këtu.", phoneLbl: "Telefoni / kontakti",
+    tabGeneral: "🏢 General", generalDesc: "Info-ja e kompanisë tënde — plotësoje gjithçka këtu, pastaj kliko Ruaj.", phoneLbl: "Telefoni / kontakti",
+    genName: "Emri i biznesit", genAddr: "Adresa / Lokacioni", emailLbl: "Email", websiteLbl: "Website", instaLbl: "Instagram", cityLbl: "Qyteti",
+    genMode: "Mënyra e biznesit", genCurrency: "Monedha", aboutLbl: "Përshkrimi i biznesit (çfarë ofron — e përdor edhe AI)",
+    aboutPh: "P.sh. Berber në Shkodër — qethje, rruajtje, ngjyrosje. Hapur 9:00–19:00.", saveAllBtn: "💾 Ruaj gjithçka",
     tabOrders: "🧾 Porositë", tabReports: "📈 Raporte",
     ordersDesc: "Porositë/shitjet e tua — kush, çfarë, sa, çmimi, statusi dhe pagesa. Edhe porosi që zgjasin muaj (me ETA).",
     addOrder: "+ Porosi e re", filterOpen: "Aktive", filterAll: "Të gjitha",
@@ -248,7 +251,10 @@ const T = {
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
     commerceLbl: "🛒 Commerce (products, orders, reports) & currency", commerceOnLbl: "Enable catalog, orders & reports",
     delete: "Delete", confirmDelete: "Delete this? This cannot be undone.",
-    tabGeneral: "🏢 General", generalDesc: "Your company info — name, contact, mode and currency. Fill it here.", phoneLbl: "Phone / contact",
+    tabGeneral: "🏢 General", generalDesc: "Your company info — fill everything here, then click Save.", phoneLbl: "Phone / contact",
+    genName: "Business name", genAddr: "Address / Location", emailLbl: "Email", websiteLbl: "Website", instaLbl: "Instagram", cityLbl: "City",
+    genMode: "Business mode", genCurrency: "Currency", aboutLbl: "Business description (what you offer — used by the AI too)",
+    aboutPh: "E.g. Barber in Shkodër — haircut, shave, coloring. Open 9:00–19:00.", saveAllBtn: "💾 Save all",
     tabOrders: "🧾 Orders", tabReports: "📈 Reports",
     ordersDesc: "Your orders/sales — who, what, how many, price, status and payment. Even orders that take months (with ETA).",
     addOrder: "+ New order", filterOpen: "Active", filterAll: "All",
@@ -1209,7 +1215,10 @@ function renderSettings() {
   const op = $("#openPubLink"); if (op) op.href = pubBase;
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
   const cc = $("#bizCurrency"); if (cc) cc.value = biz.currency || "EUR";
-  const ph = $("#bizPhone"); if (ph) ph.value = (biz.config && biz.config.phone) || "";
+  const cfg = biz.config || {};
+  const setCfg = (id, key) => { const el = $(id); if (el) el.value = cfg[key] || ""; };
+  setCfg("#bizPhone", "phone"); setCfg("#bizEmail", "email"); setCfg("#bizWebsite", "website");
+  setCfg("#bizInstagram", "instagram"); setCfg("#bizCity", "city"); setCfg("#bizAbout", "about");
   // Ekipi: vetëm pronari menaxhon qasjen
   const owner = !!(myUserId && biz.owner_id === myUserId);
   const tb = $("#teamBlock"); if (tb) tb.hidden = !owner;
@@ -2077,11 +2086,29 @@ function wire() {
     } catch (ex) { alert(ex.message || String(ex)); }
   };
   if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
-  if ($("#savePhone")) $("#savePhone").onclick = async () => {
+  // General: ruaj GJITHÇKA me një buton
+  if ($("#saveGeneral")) $("#saveGeneral").onclick = async () => {
     const cfg = Object.assign({}, biz.config || {});
-    cfg.phone = $("#bizPhone").value.trim() || null;
-    try { await sb.from("businesses").update({ config: cfg }).eq("id", biz.id); biz.config = cfg; toast(tr("toastSaved")); }
-    catch (ex) { alert(ex.message || String(ex)); }
+    const g = (id) => ($(id) ? $(id).value.trim() || null : null);
+    cfg.phone = g("#bizPhone"); cfg.email = g("#bizEmail"); cfg.website = g("#bizWebsite");
+    cfg.instagram = g("#bizInstagram"); cfg.city = g("#bizCity"); cfg.about = g("#bizAbout");
+    const payload = {
+      name: ($("#setName").value.trim() || biz.name),
+      address: g("#setAddress"),
+      mode: $("#bizMode").value,
+      currency: $("#bizCurrency").value,
+      commerce_enabled: $("#commerceOn").checked,
+      config: cfg,
+    };
+    try {
+      await sb.from("businesses").update(payload).eq("id", biz.id);
+      Object.assign(biz, payload);
+      $("#bizName").textContent = tr("panelPrefix") + biz.name;
+      renderBizSwitch();
+      applyModeUI(); renderCatalog(); if (commerceOn()) renderOrders();
+      renderSettings(); await renderAll();
+      toast(tr("toastSaved"));
+    } catch (ex) { alert(ex.message || String(ex)); }
   };
   if ($("#addTeam")) $("#addTeam").onclick = async () => {
     const email = ($("#teamEmail").value || "").trim().toLowerCase();

@@ -758,6 +758,17 @@ body::after {
 .ins-m { font-size: 13px; color: var(--ink-soft); font-weight: 600; margin-top: 2px; line-height: 1.5; }
 .ins-go { flex-shrink: 0; }
 .ins-actions { display: flex; gap: 7px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+/* Formulari General — rrjetë e pastër 2-kolonëshe */
+.gen-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.gen-f { display: flex; flex-direction: column; gap: 6px; }
+.gen-f > span { font-weight: 800; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
+.gen-f input, .gen-f select, .gen-f textarea { font-family: var(--font-body); border: 1px solid var(--glass-edge);
+  background: var(--glass); border-radius: var(--r-sm); padding: 10px 12px; font-size: 14px; font-weight: 600; color: var(--ink); outline: none; width: 100%; }
+.gen-f input:focus, .gen-f select:focus, .gen-f textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+.gen-f textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+.gen-full { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+@media (max-width: 640px) { .gen-grid { grid-template-columns: 1fr; } }
+
 .team-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; margin-bottom: 8px;
   background: var(--glass-soft); border: 1px solid var(--glass-line); border-radius: var(--r-sm); font-size: 13.5px; font-weight: 700; }
 .team-row .grow { flex: 1; min-width: 0; word-break: break-all; }
