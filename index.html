@@ -342,6 +342,27 @@ h2{font-size:clamp(28px,4.4vw,42px);letter-spacing:-.045em}
 .nav .btn.primary{box-shadow:0 6px 18px -4px var(--accent-glow),inset 0 1.5px 0 rgba(255,255,255,.4)}
 @media(max-width:920px){.nav-links{display:none}}
 @media(max-width:560px){.brand-tag{display:none}.nav .btn{padding:9px 13px;font-size:13px}}
+
+/* ✨ Detaje premium */
+/* Titulli: gradient me shkëlqim që rrëshqet */
+h1 .grad{background:linear-gradient(115deg,var(--accent-bright),var(--accent-deep) 50%,var(--accent-bright));
+  background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 8px 22px var(--accent-glow));animation:shimmer 7s linear infinite}
+@keyframes shimmer{to{background-position:220% center}}
+/* Eyebrow: pikë jeshile pulsuese */
+.eyebrow{display:inline-flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent-bright);
+  box-shadow:0 0 0 4px var(--accent-soft);animation:ebpulse 2.4s ease-in-out infinite;flex:0 0 auto}
+@keyframes ebpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.78)}}
+/* Stat: ndarje më e pastër + kufi i butë */
+.stat{border-color:var(--glass-edge);transition:transform .2s,box-shadow .25s}
+.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-float)}
+/* CTA final: kartë me theks jeshil */
+.final .glass-cta{background:linear-gradient(165deg,var(--glass-strong),var(--accent-soft));border-color:rgba(32,201,151,.25)}
+:root[data-theme="dark"] .final .glass-cta{background:linear-gradient(165deg,rgba(38,52,47,.8),rgba(32,201,151,.12))}
+/* Lidhjet e footer-it me hover */
+footer a{transition:color .15s}
+@media (prefers-reduced-motion:reduce){h1 .grad,.eyebrow::before{animation:none}}
 </style>
 </head>
 <body>
