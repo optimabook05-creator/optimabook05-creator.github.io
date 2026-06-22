@@ -291,7 +291,7 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
       <button data-l="en">EN</button>
     </div>
     <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ndrysho temën" title="Temë e errët / e çelët">🌙</button>
-    <a class="btn" href="app.html" data-t="navLogin">Hyr</a>
+    <a class="btn" id="portalLink" href="app.html">Portal</a>
     <a class="btn primary" href="demo.html" data-t="navDemo">▶ Provo demon</a>
   </div>
 </nav>
@@ -478,7 +478,7 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
 "use strict";
 const T = {
   sq: {
-    navDemo: "▶ Provo demon", navLogin: "Hyr",
+    navDemo: "▶ Provo demon", navLogin: "🔑 Hyr / Regjistrohu", navPortal: "🟢 Paneli im",
     eyebrow: "Për çdo biznes me takime · Në çdo gjuhë · 24/7",
     h1html: 'Recepsionisti AI që <span class="grad">nuk fle kurrë</span>',
     sub: "OptimaBook i përgjigjet klientëve të tu në WhatsApp, rezervon takimet në kalendarin tënd dhe u kujton që të vijnë — 24 orë në ditë, pa lëvizur ti gishtin.",
@@ -526,7 +526,7 @@ const T = {
     cmpR1: "Përgjigje në çast, 24/7", cmpR2: "Rezervon në kalendar, pa dyfishim", cmpR3: "Kupton tekstin e lirë & çdo gjuhë", cmpR4: "Kujtesa + mbush oraret e anuluara", cmpR5: "Punon edhe për porosi/kërkesa", cmpR6: "Pa app për klientin (vetëm WhatsApp)", cmpR7: "Kosto fikse mujore, jo rrogë",
   },
   en: {
-    navDemo: "▶ Try the demo", navLogin: "Sign in",
+    navDemo: "▶ Try the demo", navLogin: "🔑 Sign in / Sign up", navPortal: "🟢 My panel",
     eyebrow: "For every appointment business · In any language · 24/7",
     h1html: 'The AI receptionist that <span class="grad">never sleeps</span>',
     sub: "OptimaBook answers your customers on WhatsApp, books appointments into your calendar and reminds them to show up — 24 hours a day, without you lifting a finger.",
@@ -598,6 +598,25 @@ function apply() {
     s.textContent = c;
     chips.appendChild(s);
   }
+  updatePortalLink();
+}
+
+// Butoni i portalit: e kupton vetë nëse je i loguar → "Paneli im"; përndryshe "Hyr / Regjistrohu"
+function isLoggedIn() {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (/^sb-.*-auth-token$/.test(k)) { const v = localStorage.getItem(k); if (v && v.length > 20) return true; }
+    }
+  } catch (e) {}
+  return false;
+}
+function updatePortalLink() {
+  const a = document.getElementById("portalLink");
+  if (!a) return;
+  const logged = isLoggedIn();
+  a.textContent = logged ? T[lang].navPortal : T[lang].navLogin;
+  a.classList.toggle("primary", logged);
 }
 document.querySelectorAll("#lang button").forEach((b) => {
   b.onclick = () => { lang = b.dataset.l; localStorage.setItem(LK, lang); apply(); };
