@@ -402,6 +402,38 @@ footer a{transition:color .15s}
 .live-dot[hidden]{display:none}
 @keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.7)}}
 @media (prefers-reduced-motion:reduce){.live-dot{animation:none}}
+
+/* ============================================================
+   ✨ KALIM I PLOTË PREMIUM — kohezion qelqi në të gjitha kartat
+   ============================================================ */
+.step,.feat,.plan,.stat,.faq details{
+  background:var(--glass-strong);border:1px solid var(--glass-edge);
+  backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);
+  box-shadow:0 1px 1px rgba(22,32,28,.03),0 14px 34px -18px rgba(22,32,28,.16),inset 0 1px 0 rgba(255,255,255,.6);
+}
+:root[data-theme="dark"] .step,:root[data-theme="dark"] .feat,:root[data-theme="dark"] .plan,
+:root[data-theme="dark"] .stat,:root[data-theme="dark"] .faq details{
+  background:var(--glass-soft);border-color:rgba(255,255,255,.08);
+  box-shadow:0 16px 42px -22px rgba(0,0,0,.72),inset 0 1px 0 rgba(255,255,255,.05);
+}
+.step:hover,.feat:hover,.plan:hover{
+  box-shadow:0 2px 4px rgba(22,32,28,.04),0 26px 52px -22px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.6);
+}
+/* Ikonat e veçorive — badge me theks (si ikona app-i) */
+.feat .ic{display:inline-grid;place-items:center;width:48px;height:48px;border-radius:14px;
+  background:linear-gradient(150deg,var(--accent-soft),rgba(32,201,151,.05));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5);font-size:24px;margin-bottom:14px}
+:root[data-theme="dark"] .feat .ic{box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+/* Numri i hapave — badge i rrumbullakët më i theksuar */
+.step .n{box-shadow:0 6px 16px -4px var(--accent-glow),inset 0 1px 0 rgba(255,255,255,.4)}
+/* FAQ — qelq + hover */
+.faq summary:hover{color:var(--accent-deep)}
+.faq details[open]{border-color:rgba(32,201,151,.3)}
+/* Bizneset chips — më premium */
+.bchip{background:var(--glass-strong);border:1px solid var(--glass-edge);backdrop-filter:blur(12px);transition:transform .16s,box-shadow .2s,color .16s}
+.bchip:hover{transform:translateY(-2px);color:var(--accent-deep);box-shadow:0 10px 22px -10px var(--accent-glow)}
+/* Footer i pastër */
+footer{border-top:1px solid var(--glass-edge)}
 </style>
 </head>
 <body>
