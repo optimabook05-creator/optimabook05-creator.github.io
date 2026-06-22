@@ -394,6 +394,14 @@ footer a{transition:color .15s}
 :root[data-theme="dark"] .theme-toggle{background:rgba(255,255,255,.08)}
 /* Logo me shkëlqim qelqi */
 .logo{box-shadow:0 8px 22px var(--accent-glow),inset 0 1.5px 0 rgba(255,255,255,.55),inset 0 -2px 6px rgba(0,0,0,.12)}
+
+/* Butoni "Paneli im" — pikë 'live' e bardhë pulsuese (jo emoji) */
+#portalLink{display:inline-flex;align-items:center;gap:0}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#fff;flex:0 0 auto;margin-right:9px;
+  box-shadow:0 0 0 3px rgba(255,255,255,.35),0 0 8px rgba(255,255,255,.8);animation:livePulse 2s ease-in-out infinite}
+.live-dot[hidden]{display:none}
+@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.7)}}
+@media (prefers-reduced-motion:reduce){.live-dot{animation:none}}
 </style>
 </head>
 <body>
@@ -411,7 +419,7 @@ footer a{transition:color .15s}
       <button data-l="en">EN</button>
     </div>
     <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ndrysho temën" title="Temë e errët / e çelët">🌙</button>
-    <a class="btn" id="portalLink" href="app.html">Portal</a>
+    <a class="btn" id="portalLink" href="app.html"><span class="live-dot" id="portalDot" hidden></span><span id="portalText">Portal</span></a>
     <a class="btn" id="demoLink" href="demo.html" data-t="navDemo">▶ Provo demon</a>
   </div>
 </nav>
@@ -598,7 +606,7 @@ footer a{transition:color .15s}
 "use strict";
 const T = {
   sq: {
-    navDemo: "▶ Provo demon", navLogin: "🔑 Hyr / Regjistrohu", navPortal: "🟢 Paneli im",
+    navDemo: "▶ Provo demon", navLogin: "Hyr / Regjistrohu", navPortal: "Paneli im",
     brandTag: "Recepsionisti AI", navFeatures: "Veçoritë", navPricing: "Çmimet", navFaq: "FAQ",
     eyebrow: "Për çdo biznes me takime · Në çdo gjuhë · 24/7",
     h1html: 'Recepsionisti AI që <span class="grad">nuk fle kurrë</span>',
@@ -647,7 +655,7 @@ const T = {
     cmpR1: "Përgjigje në çast, 24/7", cmpR2: "Rezervon në kalendar, pa dyfishim", cmpR3: "Kupton tekstin e lirë & çdo gjuhë", cmpR4: "Kujtesa + mbush oraret e anuluara", cmpR5: "Punon edhe për porosi/kërkesa", cmpR6: "Pa app për klientin (vetëm WhatsApp)", cmpR7: "Kosto fikse mujore, jo rrogë",
   },
   en: {
-    navDemo: "▶ Try the demo", navLogin: "🔑 Sign in / Sign up", navPortal: "🟢 My panel",
+    navDemo: "▶ Try the demo", navLogin: "Sign in / Sign up", navPortal: "My panel",
     brandTag: "The AI receptionist", navFeatures: "Features", navPricing: "Pricing", navFaq: "FAQ",
     eyebrow: "For every appointment business · In any language · 24/7",
     h1html: 'The AI receptionist that <span class="grad">never sleeps</span>',
@@ -737,7 +745,10 @@ function updatePortalLink() {
   const a = document.getElementById("portalLink");
   if (!a) return;
   const logged = isLoggedIn();
-  a.textContent = logged ? T[lang].navPortal : T[lang].navLogin;
+  const txt = document.getElementById("portalText");
+  const dot = document.getElementById("portalDot");
+  if (txt) txt.textContent = logged ? T[lang].navPortal : T[lang].navLogin;
+  if (dot) dot.hidden = !logged;
   // Hierarki: i loguar → "Paneli im" primar, demo dytësor; i paloguar → demo primar
   a.classList.toggle("primary", logged);
   const demo = document.getElementById("demoLink");
