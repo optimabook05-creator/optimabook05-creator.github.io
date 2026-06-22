@@ -363,6 +363,37 @@ h1 .grad{background:linear-gradient(115deg,var(--accent-bright),var(--accent-dee
 /* Lidhjet e footer-it me hover */
 footer a{transition:color .15s}
 @media (prefers-reduced-motion:reduce){h1 .grad,.eyebrow::before{animation:none}}
+
+/* ============================================================
+   🪟 LIQUID GLASS — navbar i nivelit të lartë teknologjik
+   ============================================================ */
+.nav{
+  position:relative;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,.24));
+  backdrop-filter:blur(34px) saturate(190%);-webkit-backdrop-filter:blur(34px) saturate(190%);
+  border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 10px 36px -10px rgba(22,32,28,.22),inset 0 1px 0 rgba(255,255,255,.75),inset 0 -1px 0 rgba(255,255,255,.15);
+}
+/* Shkëlqim specular (liquid) lart-majtas */
+.nav::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:0;
+  background:radial-gradient(130% 120% at 0% -20%,rgba(255,255,255,.55),transparent 55%)}
+.nav > *{position:relative;z-index:1}
+:root[data-theme="dark"] .nav{
+  background:linear-gradient(180deg,rgba(40,54,49,.5),rgba(18,26,23,.32));
+  border-color:rgba(255,255,255,.12);
+  box-shadow:0 14px 44px -12px rgba(0,0,0,.65),inset 0 1px 0 rgba(255,255,255,.10);
+}
+:root[data-theme="dark"] .nav::before{background:radial-gradient(130% 120% at 0% -20%,rgba(255,255,255,.10),transparent 55%)}
+
+/* Butonat & kontrollet e navit — qelq i akullt konsistent */
+.nav .btn:not(.primary){background:rgba(255,255,255,.35);border-color:rgba(255,255,255,.55);backdrop-filter:blur(10px)}
+:root[data-theme="dark"] .nav .btn:not(.primary){background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12)}
+.lang{background:rgba(255,255,255,.30);backdrop-filter:blur(10px)}
+:root[data-theme="dark"] .lang{background:rgba(255,255,255,.06)}
+.theme-toggle{background:rgba(255,255,255,.35);backdrop-filter:blur(10px)}
+:root[data-theme="dark"] .theme-toggle{background:rgba(255,255,255,.08)}
+/* Logo me shkëlqim qelqi */
+.logo{box-shadow:0 8px 22px var(--accent-glow),inset 0 1.5px 0 rgba(255,255,255,.55),inset 0 -2px 6px rgba(0,0,0,.12)}
 </style>
 </head>
 <body>
