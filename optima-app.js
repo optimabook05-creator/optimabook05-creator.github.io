@@ -40,6 +40,20 @@ const T = {
     logout: "Dil", panelPrefix: "Paneli — ",
     tabCal: "📅 Kalendari", tabAppt: "📋 Takimet", tabBlock: "⛔ Bllokime", tabStat: "🏠 Përmbledhje",
     grpHome: "Kreu", grpWork: "Puna", grpBiz: "Biznesi", grpOther: "Tjera",
+    tabAiDemo: "🤖 Provo AI-në", aiBadge: "Demo · truri lokal", aiSend: "Dërgo",
+    aiDemoDesc: "Provo recepsionistin tënd AI — përgjigjet me të dhënat reale të biznesit (çmime, orar, shërbime, rezervime). Kështu do t'u flasë klientëve 24/7.",
+    aiPlaceholder: "Shkruaj si klient… p.sh. 'Sa kushton qethja?'",
+    aiGreet: "Përshëndetje! 👋 Mirë se vjen te {x}. Si mund të të ndihmoj — çmime, orar, shërbime apo një rezervim?",
+    aiChipOffer: "Çfarë ofroni?", aiChipHours: "Cili është orari?", aiChipBook: "Dua të rezervoj", aiChipPrice: "Sa kushton…?",
+    aiAnsOfferHead: "Ja çfarë ofrojmë:", aiAnsPriceList: "Disa nga çmimet tona:",
+    aiAnsNoItems: "Ende s'kemi shtuar artikuj. (Shtoji te 📦 Çfarë ofroj që AI t'u përgjigjet klientëve.)",
+    aiAnsHoursHead: "Orari ynë:", aiAnsClosed: "Mbyllur", aiAnsNoHours: "Orari s'është vendosur ende. (Vendose te 🏢 Profili & orari.)",
+    aiAnsLoc: "Na gjen te: {x} 📍", aiAnsNoLoc: "Adresa s'është vendosur ende.",
+    aiAnsNoContact: "Kontakti s'është vendosur ende.",
+    aiAnsBook: "Me kënaqësi! 😊 Për cilën ditë dhe orë e dëshiron? Ma thuaj dhe ta rezervoj.",
+    aiAnsBookItem: "Me kënaqësi! 😊 Për '{x}' — për cilën ditë dhe orë e dëshiron?",
+    aiAnsThanks: "S'ka përse! Të presim për një vizitë. 😊", aiWholesale: "shumicë",
+    aiAnsFallback: "Mund të të ndihmoj me: çmimet, orarin, shërbimet/produktet, vendndodhjen ose një rezervim. Çfarë të duhet?",
     today: "Sot", dayOff: "Ditë pushimi.", free: "I lirë", cont: "↳ vazhdim", blocked: "⛔ Bllokuar",
     confirmed: "konfirmuar", pending: "në pritje",
     addManual: "+ Shto takim manual", emptyAppt: "Asnjë takim ende.",
@@ -190,6 +204,20 @@ const T = {
     logout: "Sign out", panelPrefix: "Panel — ",
     tabCal: "📅 Calendar", tabAppt: "📋 Appointments", tabBlock: "⛔ Blocks", tabStat: "🏠 Overview",
     grpHome: "Home", grpWork: "Work", grpBiz: "Business", grpOther: "More",
+    tabAiDemo: "🤖 Try the AI", aiBadge: "Demo · local brain", aiSend: "Send",
+    aiDemoDesc: "Try your AI receptionist — it answers with your real business data (prices, hours, services, bookings). This is how it will talk to customers 24/7.",
+    aiPlaceholder: "Type like a customer… e.g. 'How much is a haircut?'",
+    aiGreet: "Hi! 👋 Welcome to {x}. How can I help — prices, hours, services or a booking?",
+    aiChipOffer: "What do you offer?", aiChipHours: "What are your hours?", aiChipBook: "I'd like to book", aiChipPrice: "How much is…?",
+    aiAnsOfferHead: "Here's what we offer:", aiAnsPriceList: "Some of our prices:",
+    aiAnsNoItems: "No items added yet. (Add them in 📦 What I offer so the AI can answer customers.)",
+    aiAnsHoursHead: "Our hours:", aiAnsClosed: "Closed", aiAnsNoHours: "Hours not set yet. (Set them in 🏢 Profile & hours.)",
+    aiAnsLoc: "Find us at: {x} 📍", aiAnsNoLoc: "Address not set yet.",
+    aiAnsNoContact: "Contact not set yet.",
+    aiAnsBook: "Happy to! 😊 What day and time would you like? Tell me and I'll book it.",
+    aiAnsBookItem: "Happy to! 😊 For '{x}' — what day and time would you like?",
+    aiAnsThanks: "You're welcome! See you soon. 😊", aiWholesale: "wholesale",
+    aiAnsFallback: "I can help with: prices, hours, services/products, location or a booking. What do you need?",
     today: "Today", dayOff: "Day off.", free: "Free", cont: "↳ continues", blocked: "⛔ Blocked",
     confirmed: "confirmed", pending: "pending",
     addManual: "+ Add manual appointment", emptyAppt: "No appointments yet.",
@@ -696,6 +724,125 @@ function renderCatalog() {
     item.onclick = () => openItem(s);
     list.appendChild(item);
   });
+}
+
+/* ---------------- Recepsionisti AI (demo · truri lokal me të dhënat reale) ---------------- */
+// Normalizon tekstin shqip/anglisht për krahasim (ë→e, ç→c, pa shenja)
+function aiNorm(s) {
+  return String(s || "").toLowerCase()
+    .replace(/[ëé]/g, "e").replace(/ç/g, "c").replace(/[áàâ]/g, "a").replace(/[íì]/g, "i").replace(/[óò]/g, "o").replace(/[úù]/g, "u")
+    .replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+function tr2(k, x) { return tr(k).replace("{x}", x); }
+const AI_KW = {
+  price: ["sa kushton", "kushton", "cmim", "price", "cost", "how much", "sa eshte", "vlera", "sa ben"],
+  offer: ["cfare ofro", "cfare keni", "cfare beni", "sherbim", "produkt", "menu", "lista", "what do you offer", "services", "products", "offer", "what do you have"],
+  hours: ["orar", "hapur", "mbyllur", "kur jeni", "kur hapeni", "open", "close", "hours", "schedule", "a punoni", "kur punoni"],
+  loc: ["ku jeni", "ku ndodh", "adres", "ku je", "where", "address", "location", "ku gjend", "ku ju gjej"],
+  contact: ["telefon", "kontakt", "numri", "instagram", "email", "phone", "contact", "whatsapp"],
+  book: ["rezerv", "prenot", "takim", "dua nje", "book", "appointment", "caktoj", "dua te vij", "dua te porosit", "porosi", "schedule a"],
+  greet: ["pershendetje", "ckemi", "tung", "hi", "hello", "hey", "tungjatjeta", "mirembrema", "miredita", "good morning"],
+  thanks: ["faleminderit", "flm", "thanks", "thank", "rrofsh"],
+};
+function bizAddr() { const c = (biz && biz.config) || {}; return biz && (biz.address || c.city) ? [biz.address, c.city].filter(Boolean).join(", ") : ""; }
+function bizContact() {
+  const c = (biz && biz.config) || {}; const out = [];
+  if (c.phone) out.push("📞 " + c.phone);
+  if (c.whatsapp) out.push("💬 " + c.whatsapp);
+  if (c.instagram) out.push("📷 " + c.instagram);
+  if (c.email) out.push("✉ " + c.email);
+  if (c.website) out.push("🌐 " + c.website);
+  return out.join("\n");
+}
+function aiGreetText() { return tr2("aiGreet", (biz && biz.name) || "—"); }
+function aiItemLine(s, full) {
+  let t = s.name + " — " + money(s.price);
+  if (s.kind !== "product") {
+    const dv = s.duration_value != null ? s.duration_value : s.duration_min;
+    if (dv) { const du = s.duration_unit ? tr(UNIT_KEY[s.duration_unit] || "unitMin") : tr("unitMin"); t += " (" + plainNum(dv) + " " + du + ")"; }
+  } else if (s.unit_label) { t += " / " + s.unit_label; }
+  if (full) {
+    const tiers = priceTiers.filter((x) => x.service_id === s.id);
+    if (tiers.length) t += " · " + tr("aiWholesale") + ": " + tiers.map((x) => plainNum(x.min_qty) + "+ → " + money(x.unit_price)).join(", ");
+    if (s.description) t += "\n  " + s.description;
+  }
+  return t;
+}
+function aiFindItem(q) {
+  const nq = aiNorm(q); let best = null, score = 0;
+  services.forEach((s) => {
+    const name = aiNorm(s.name); if (!name) return; let sc = 0;
+    if (nq.includes(name)) sc = name.length;
+    else name.split(" ").forEach((w) => { if (w.length > 2 && nq.includes(w)) sc += w.length; });
+    if (sc > score) { score = sc; best = s; }
+  });
+  return score >= 3 ? best : null;
+}
+function aiHoursText() {
+  if (!Object.values(hours).some((h) => h)) return tr("aiAnsNoHours");
+  let out = tr("aiAnsHoursHead");
+  for (let i = 1; i <= 7; i++) { const dow = i % 7; const h = hours[dow]; out += "\n• " + T[lang].dayNames[dow] + ": " + (h ? h.open + "–" + h.close : tr("aiAnsClosed")); }
+  return out;
+}
+// Truri: pyetje klienti → përgjigje me të dhënat reale të biznesit
+function aiAnswer(q) {
+  const nq = aiNorm(q);
+  const has = (arr) => arr.some((k) => nq.includes(aiNorm(k)));
+  if (has(AI_KW.price)) {
+    const it = aiFindItem(q);
+    if (it) return aiItemLine(it, true);
+    if (services.length) return tr("aiAnsPriceList") + "\n" + services.slice(0, 6).map((s) => "• " + aiItemLine(s, false)).join("\n");
+    return tr("aiAnsNoItems");
+  }
+  if (has(AI_KW.offer)) {
+    if (!services.length) return tr("aiAnsNoItems");
+    return tr("aiAnsOfferHead") + "\n" + services.slice(0, 12).map((s) => "• " + aiItemLine(s, false)).join("\n");
+  }
+  if (has(AI_KW.hours)) return aiHoursText();
+  if (has(AI_KW.loc)) { const a = bizAddr(); return a ? tr2("aiAnsLoc", a) : tr("aiAnsNoLoc"); }
+  if (has(AI_KW.contact)) { const c = bizContact(); return c || tr("aiAnsNoContact"); }
+  if (has(AI_KW.book)) { const it = aiFindItem(q); return it ? tr2("aiAnsBookItem", it.name) : tr("aiAnsBook"); }
+  if (has(AI_KW.thanks)) return tr("aiAnsThanks");
+  if (has(AI_KW.greet)) return aiGreetText();
+  const it = aiFindItem(q);
+  if (it) return aiItemLine(it, true);
+  if (biz && biz.ai_notes) return biz.ai_notes;
+  if (biz && biz.config && biz.config.about) return biz.config.about;
+  return tr("aiAnsFallback");
+}
+function aiPush(role, text) {
+  const m = $("#aiMsgs"); if (!m) return;
+  const b = document.createElement("div");
+  b.className = "ai-bubble " + role;
+  b.innerHTML = esc(text).replace(/\n/g, "<br>");
+  m.appendChild(b); m.scrollTop = m.scrollHeight;
+}
+function aiSend(text) {
+  const inp = $("#aiInput"); if (!inp) return;
+  const q = (text != null ? text : inp.value).trim();
+  if (!q) return;
+  inp.value = "";
+  aiPush("user", q);
+  const m = $("#aiMsgs");
+  const t = document.createElement("div");
+  t.className = "ai-bubble ai typing"; t.innerHTML = "<span></span><span></span><span></span>";
+  m.appendChild(t); m.scrollTop = m.scrollHeight;
+  setTimeout(() => { t.remove(); aiPush("ai", aiAnswer(q)); }, 480 + Math.random() * 380);
+}
+function renderAiDemo() {
+  const m = $("#aiMsgs"); if (!m || !biz) return;
+  const hn = $("#aiHeadName"); if (hn) hn.textContent = biz.name || "AI";
+  m.innerHTML = "";
+  aiPush("ai", aiGreetText());
+  const chips = $("#aiChips"); if (chips) {
+    chips.innerHTML = "";
+    ["aiChipOffer", "aiChipHours", "aiChipPrice", "aiChipBook"].forEach((k) => {
+      const c = document.createElement("button");
+      c.type = "button"; c.className = "ai-chip"; c.textContent = tr(k);
+      c.onclick = () => aiSend(tr(k));
+      chips.appendChild(c);
+    });
+  }
 }
 
 function openItem(s) {
@@ -2311,8 +2458,10 @@ function wire() {
       if (tab.dataset.tab === "orders") renderOrders();
       else if (tab.dataset.tab === "reports") renderReports();
       else if (tab.dataset.tab === "catalog") renderCatalog();
+      else if (tab.dataset.tab === "aidemo") renderAiDemo();
     };
   });
+  if ($("#aiForm")) $("#aiForm").addEventListener("submit", (e) => { e.preventDefault(); aiSend(); });
   $("#blockForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const from = $("#blockFrom").value, to = $("#blockTo").value;
