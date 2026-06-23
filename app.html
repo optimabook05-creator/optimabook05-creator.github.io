@@ -135,6 +135,31 @@
       </div>
     </div>
 
+    <div class="panel-body">
+    <aside class="sidebar">
+    <nav class="tabs">
+      <div class="nav-group" data-t="grpHome">Kreu</div>
+      <button class="tab active" data-tab="stats" data-t="tabStat">🏠 Përmbledhje</button>
+      <div class="nav-group" data-t="grpWork">Puna</div>
+      <button class="tab" data-tab="calendar" data-t="tabCal">📅 Kalendari</button>
+      <button class="tab" data-tab="appointments" data-t="tabAppt">📋 Takimet</button>
+      <button class="tab" data-tab="orders" data-t="tabOrders">🧾 Porositë</button>
+      <button class="tab" data-tab="leads" data-t="tabLeads">📥 Kërkesa</button>
+      <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
+      <button class="tab" data-tab="blocks" data-t="tabBlock">⛔ Bllokime</button>
+      <div class="nav-group" data-t="grpBiz">Biznesi</div>
+      <button class="tab" data-tab="general" data-t="tabGeneral">🏢 General</button>
+      <button class="tab" data-tab="catalog" data-t="tabCatalog">📦 Katalogu</button>
+      <button class="tab" data-tab="customers" data-t="tabCustomers">👤 Klientët</button>
+      <button class="tab" data-tab="reports" data-t="tabReports">📈 Raporte</button>
+      <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
+      <div class="nav-group" data-t="grpOther">Tjera</div>
+      <button class="tab" data-tab="activity" data-t="tabActivity">🔔 Aktiviteti</button>
+      <button class="tab" data-tab="settings" data-t="tabSettings">⚙️ Cilësime</button>
+    </nav>
+    </aside>
+    <div class="panel-content">
+
     <div class="quickstart" id="quickStart" hidden>
       <div class="qs-head">
         <div class="qs-headtxt">
@@ -147,24 +172,7 @@
       <div class="qs-list" id="qsList"></div>
     </div>
 
-    <nav class="tabs">
-      <button class="tab active" data-tab="general" data-t="tabGeneral">🏢 General</button>
-      <button class="tab" data-tab="calendar" data-t="tabCal">📅 Kalendari</button>
-      <button class="tab" data-tab="appointments" data-t="tabAppt">📋 Takimet</button>
-      <button class="tab" data-tab="blocks" data-t="tabBlock">⛔ Bllokime</button>
-      <button class="tab" data-tab="stats" data-t="tabStat">📊 Statistika</button>
-      <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
-      <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
-      <button class="tab" data-tab="leads" data-t="tabLeads">📥 Kërkesa</button>
-      <button class="tab" data-tab="catalog" data-t="tabCatalog">📦 Katalogu</button>
-      <button class="tab" data-tab="orders" data-t="tabOrders">🧾 Porositë</button>
-      <button class="tab" data-tab="reports" data-t="tabReports">📈 Raporte</button>
-      <button class="tab" data-tab="customers" data-t="tabCustomers">👤 Klientët</button>
-      <button class="tab" data-tab="activity" data-t="tabActivity">🔔 Aktiviteti</button>
-      <button class="tab" data-tab="settings" data-t="tabSettings">⚙️ Cilësime</button>
-    </nav>
-
-    <div class="tab-pane active" id="pane-general">
+    <div class="tab-pane" id="pane-general">
       <p class="pane-desc" data-t="generalDesc">Info-ja e kompanisë tënde — plotësoje gjithçka këtu, pastaj kliko Ruaj.</p>
       <div class="settings-block">
         <h3 class="set-h" data-t="setBizH">🏢 Biznesi</h3>
@@ -297,7 +305,7 @@
       <div class="block-list" id="blockList"></div>
     </div>
 
-    <div class="tab-pane" id="pane-stats">
+    <div class="tab-pane active" id="pane-stats">
       <div id="insightsBox"></div>
       <div class="stats-grid" id="statsGrid"></div>
     </div>
@@ -432,6 +440,8 @@
         </div>
       </div>
     </div>
+    </div><!-- /panel-content -->
+    </div><!-- /panel-body -->
   </div>
 </section>
 
