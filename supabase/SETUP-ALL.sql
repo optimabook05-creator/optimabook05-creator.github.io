@@ -211,7 +211,13 @@ create or replace function public.public_business(bid uuid)
 returns jsonb language sql security definer stable set search_path = public as $$
   select case when b.id is null then null else jsonb_build_object(
     'id', b.id, 'name', b.name, 'address', b.address, 'mode', b.mode,
-    'currency', b.currency, 'commerce_enabled', b.commerce_enabled, 'config', b.config,
+    'currency', b.currency, 'commerce_enabled', b.commerce_enabled,
+    -- Vetëm fushat publike të config-ut (default-deny): NUK ekspozohen kurrë fixedCosts/fixedMonthly/profitOn (të dhëna financiare private)
+    'config', jsonb_build_object(
+      'breaks', b.config->'breaks',
+      'catDesc', b.config->'catDesc', 'catUnit', b.config->'catUnit', 'catStock', b.config->'catStock', 'catSku', b.config->'catSku', 'catTiers', b.config->'catTiers',
+      'phone', b.config->'phone', 'email', b.config->'email', 'website', b.config->'website', 'instagram', b.config->'instagram', 'city', b.config->'city', 'about', b.config->'about'
+    ),
     'timezone', b.timezone, 'lang', b.lang,
     'services', coalesce((select jsonb_agg(jsonb_build_object(
         'id', s.id, 'name', s.name, 'price', s.price, 'kind', s.kind, 'bookable', s.bookable,
