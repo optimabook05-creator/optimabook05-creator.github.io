@@ -79,7 +79,7 @@ const T = {
     modeLbl: "⚙️ Mënyra e biznesit (ndize/fike kurdo)",
     tabSettings: "⚙️ Cilësime", settingsDesc: "Ndrysho gjithçka kurdo — pa rifilluar.",
     setBizH: "Biznesi", setNameLbl: "Emri & adresa", setSvcH: "Shërbimet / Produktet",
-    setHoursH: "Orari i punës", setAiH: "AI & Vlerësime", breakLbl: "Pushim", clearBreak: "Hiq pushimin",
+    setHoursH: "Orari i punës", setAiH: "AI & Vlerësime", breakLbl: "Pushime", clearBreak: "Hiq pushimin", addBreak: "Shto pushim",
     saveServicesBtn: "Ruaj shërbimet", saveHoursBtn: "Ruaj orarin", deliveryPh: "p.sh. 13 ditë",
     aiActive: "AI aktiv · 24/7",
     tabActivity: "🔔 Aktiviteti", activityDesc: "Çdo gjë që bën AI: rezervime, anulime, kujtesa, kërkesa — live.", emptyActivity: "Ende pa aktivitet.",
@@ -253,7 +253,7 @@ const T = {
     modeLbl: "⚙️ Business mode (turn on/off anytime)",
     tabSettings: "⚙️ Settings", settingsDesc: "Change anything anytime — no need to restart.",
     setBizH: "Business", setNameLbl: "Name & address", setSvcH: "Services / Products",
-    setHoursH: "Working hours", setAiH: "AI & Reviews", breakLbl: "Break", clearBreak: "Clear break",
+    setHoursH: "Working hours", setAiH: "AI & Reviews", breakLbl: "Breaks", clearBreak: "Remove break", addBreak: "Add break",
     saveServicesBtn: "Save services", saveHoursBtn: "Save hours", deliveryPh: "e.g. 13 days",
     aiActive: "AI active · 24/7",
     tabActivity: "🔔 Activity", activityDesc: "Everything the AI does: bookings, cancellations, reminders, requests — live.", emptyActivity: "No activity yet.",
@@ -887,7 +887,7 @@ function aiHoursText() {
   for (let i = 1; i <= 7; i++) {
     const dow = i % 7; const h = hours[dow];
     let line = T[lang].dayNames[dow] + ": " + (h ? h.open + "–" + h.close : tr("aiAnsClosed"));
-    if (h) { const b = rawBreaksFor(dow)[0]; if (b) line += " (☕ " + b.start + "–" + b.end + ")"; }
+    if (h) { const bs = rawBreaksFor(dow); if (bs.length) line += " (☕ " + bs.map((b) => b.start + "–" + b.end).join(", ") + ")"; }
     out += "\n• " + line;
   }
   return out;
@@ -1549,6 +1549,19 @@ function rawBreaksFor(dow) {
 function breaksFor(dow) {
   return rawBreaksFor(dow).map((x) => [toMin(x.start), toMin(x.end)]).filter(([s, e]) => e > s);
 }
+// Shton një rresht pushimi (mund të ketë disa në ditë)
+function addBreakRow(listEl, start, end) {
+  const r = document.createElement("div");
+  r.className = "hr-break";
+  r.innerHTML = `
+    <span class="hr-break-lbl">☕</span>
+    <input type="time" class="h-bstart" value="${start || ""}">
+    <span>–</span>
+    <input type="time" class="h-bend" value="${end || ""}">
+    <button type="button" class="btn-round sm danger hr-bdel" aria-label="${tr("clearBreak")}"><span>×</span></button>`;
+  r.querySelector(".hr-bdel").onclick = () => r.remove();
+  listEl.appendChild(r);
+}
 function renderSettingsHours() {
   const hb = $("#setHours"); if (!hb) return;
   hb.innerHTML = "";
@@ -1556,7 +1569,7 @@ function renderSettingsHours() {
     const dow = i % 7;
     const h = hours[dow];
     const closed = !h;
-    const brk = rawBreaksFor(dow)[0] || null;
+    const brks = rawBreaksFor(dow);
     const row = document.createElement("div");
     row.className = "hours-row"; row.dataset.dow = dow;
     row.innerHTML = `
@@ -1567,20 +1580,20 @@ function renderSettingsHours() {
         <input type="time" class="h-close" value="${h ? h.close : "19:00"}" ${closed ? "disabled" : ""}>
         <label class="closed-toggle"><input type="checkbox" class="h-closed" ${closed ? "checked" : ""}> ${tr("closed")}</label>
       </div>
-      <div class="hr-break" ${closed ? "hidden" : ""}>
-        <span class="hr-break-lbl">☕ ${tr("breakLbl")}</span>
-        <input type="time" class="h-bstart" value="${brk ? brk.start : ""}">
-        <span>–</span>
-        <input type="time" class="h-bend" value="${brk ? brk.end : ""}">
-        <button type="button" class="btn-round sm danger hr-bclear" aria-label="${tr("clearBreak")}"><span>×</span></button>
+      <div class="hr-breaks" ${closed ? "hidden" : ""}>
+        <span class="hr-breaks-lbl">☕ ${tr("breakLbl")}</span>
+        <div class="hr-break-list"></div>
+        <button type="button" class="hr-addbreak" data-t="addBreak">+ ${tr("addBreak")}</button>
       </div>`;
+    const list = row.querySelector(".hr-break-list");
+    brks.forEach((b) => addBreakRow(list, b.start, b.end));
+    row.querySelector(".hr-addbreak").onclick = () => addBreakRow(list, "", "");
     row.querySelector(".h-closed").addEventListener("change", (e) => {
       const off = e.target.checked;
       row.querySelector(".h-open").disabled = off;
       row.querySelector(".h-close").disabled = off;
-      const brkLine = row.querySelector(".hr-break"); if (brkLine) brkLine.hidden = off;
+      const brkArea = row.querySelector(".hr-breaks"); if (brkArea) brkArea.hidden = off;
     });
-    row.querySelector(".hr-bclear").onclick = () => { row.querySelector(".h-bstart").value = ""; row.querySelector(".h-bend").value = ""; };
     hb.appendChild(row);
   }
 }
@@ -1734,9 +1747,16 @@ async function saveHoursEdit() {
       open_time: closed ? null : r.querySelector(".h-open").value,
       close_time: closed ? null : r.querySelector(".h-close").value,
     }, { onConflict: "business_id,weekday" });
-    const bs = r.querySelector(".h-bstart") ? r.querySelector(".h-bstart").value : "";
-    const be = r.querySelector(".h-bend") ? r.querySelector(".h-bend").value : "";
-    if (!closed && bs && be && be > bs) breaks[dow] = [{ start: bs, end: be }];
+    if (!closed) {
+      const dayBreaks = [];
+      r.querySelectorAll(".hr-break-list .hr-break").forEach((br) => {
+        const bs = br.querySelector(".h-bstart").value;
+        const be = br.querySelector(".h-bend").value;
+        if (bs && be && be > bs) dayBreaks.push({ start: bs, end: be });
+      });
+      dayBreaks.sort((a, b) => a.start.localeCompare(b.start));
+      if (dayBreaks.length) breaks[dow] = dayBreaks;
+    }
   }
   // Pushimet ruhen te businesses.config (pa ndryshim skeme në bazë)
   const cfg = Object.assign({}, biz.config || {}); cfg.breaks = breaks;

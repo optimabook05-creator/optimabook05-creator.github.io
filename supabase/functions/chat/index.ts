@@ -364,8 +364,8 @@ function hoursListText(hours: any[], sq: boolean, cfg?: any) {
   return days.map((n, i) => {
     if (!map[i] || map[i].is_closed) return `${n}: ${sq ? "pushim" : "closed"}`;
     let line = `${n}: ${hm(map[i].open_time)}–${hm(map[i].close_time)}`;
-    const br = (map[i].breaks || [])[0];
-    if (br) line += ` (☕ ${toHM(br[0])}–${toHM(br[1])})`;
+    const brs = (map[i].breaks || []);
+    if (brs.length) line += ` (☕ ${brs.map((b: [number, number]) => `${toHM(b[0])}–${toHM(b[1])}`).join(", ")})`;
     return line;
   }).join("\n");
 }

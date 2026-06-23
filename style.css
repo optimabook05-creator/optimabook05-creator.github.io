@@ -1609,13 +1609,19 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 .hours-row:last-child { border-bottom: 0; }
 .hr-main { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
 .hr-main .day { min-width: 78px; font-weight: 700; }
-.hr-break { display: flex; align-items: center; gap: 8px; padding-left: 87px; }
-.hr-break-lbl { font-size: 12.5px; color: var(--ink-faint); font-weight: 700; min-width: 64px; }
+.hr-breaks { display: flex; flex-direction: column; gap: 7px; padding-left: 87px; }
+.hr-breaks-lbl { font-size: 12.5px; color: var(--ink-faint); font-weight: 700; }
+.hr-break-list { display: flex; flex-direction: column; gap: 7px; }
+.hr-break { display: flex; align-items: center; gap: 8px; }
+.hr-break-lbl { font-size: 14px; }
 .hr-break input[type="time"] { padding: 5px 8px; font-size: 13px; }
+.hr-addbreak { align-self: flex-start; background: none; border: 1px dashed var(--accent); color: var(--accent-deep); border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font-body); transition: background .15s ease; }
+.hr-addbreak:hover { background: var(--accent-soft); }
 .slot.break { background: repeating-linear-gradient(45deg, var(--gold-soft), var(--gold-soft) 9px, transparent 9px, transparent 18px); color: var(--ink-soft); }
 .slot.break .label { font-weight: 700; }
-@media (max-width: 560px) { .hr-break { padding-left: 0; flex-wrap: wrap; } }
+@media (max-width: 560px) { .hr-breaks { padding-left: 0; } .hr-break { flex-wrap: wrap; } }
 :root[data-theme="dark"] .slot.break { color: var(--ink); }
+:root[data-theme="dark"] .hr-addbreak { color: var(--accent-bright); }
 
 /* ===================================================================
    QENDRA E KONFIGURIMIT — hub i udhëhequr
