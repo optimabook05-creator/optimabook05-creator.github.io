@@ -148,8 +148,8 @@
       <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
       <button class="tab" data-tab="blocks" data-t="tabBlock">⛔ Bllokime</button>
       <div class="nav-group" data-t="grpBiz">Biznesi</div>
-      <button class="tab" data-tab="general" data-t="tabGeneral">🏢 General</button>
-      <button class="tab" data-tab="catalog" data-t="tabCatalog">📦 Katalogu</button>
+      <button class="tab" data-tab="catalog" data-t="tabCatalog">📦 Çfarë ofroj</button>
+      <button class="tab" data-tab="general" data-t="tabGeneral">🏢 Profili & orari</button>
       <button class="tab" data-tab="customers" data-t="tabCustomers">👤 Klientët</button>
       <button class="tab" data-tab="reports" data-t="tabReports">📈 Raporte</button>
       <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
@@ -235,39 +235,10 @@
         <div style="margin-top:4px"><button class="btn primary" id="saveGeneral" data-t="saveAllBtn">💾 Ruaj gjithçka</button></div>
       </div>
 
-      <div class="settings-block" id="servicesBlock">
-        <h3 class="set-h" data-t="setSvcH">🧾 Shërbimet / Produktet</h3>
-        <p class="pane-desc" data-t="svcDesc">Shto çdo shërbim ose produkt — me lloj, përshkrim, çmim dhe prenotim opsional.</p>
-        <div id="setServices"></div>
-        <div class="settings-input" style="margin-top:8px">
-          <button class="btn ghost small" id="setAddService" type="button" data-t="addService">+ Shto shërbim</button>
-          <button class="btn primary small" id="saveServices" data-t="saveServicesBtn">Ruaj shërbimet</button>
-        </div>
-      </div>
-
-      <div class="settings-block" id="catalogPointer" hidden>
-        <h3 class="set-h" data-t="setSvcH">🧾 Shërbimet / Produktet</h3>
-        <p class="pane-desc" data-t="catalogPointerTxt">Produktet & shërbimet me përshkrim, çmim, stok dhe çmime shumice menaxhohen te skeda <b>📦 Catalog</b> lart.</p>
-        <button class="btn primary small" id="goCatalog" type="button" data-t="goCatalogBtn">📦 Hap Katalogun</button>
-      </div>
-
       <div class="settings-block" id="setHoursBlock">
         <h3 class="set-h" data-t="setHoursH">⏰ Orari i punës</h3>
         <div class="hours-grid" id="setHours"></div>
         <button class="btn primary small" id="saveHours" data-t="saveHoursBtn" style="margin-top:10px">Ruaj orarin</button>
-      </div>
-
-      <div class="settings-block" id="catFieldsBlock" hidden>
-        <h3 class="set-h" data-t="setFieldsH">🧩 Fushat e katalogut (fik ato që s'të duhen)</h3>
-        <p class="pane-desc" data-t="fieldsDesc">Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.</p>
-        <div class="field-toggles">
-          <label class="commerce-toggle"><input type="checkbox" id="cfgDesc" checked> <span data-t="cfgDescLbl">Përshkrimi</span></label>
-          <label class="commerce-toggle"><input type="checkbox" id="cfgUnit" checked> <span data-t="cfgUnitLbl">Njësia</span></label>
-          <label class="commerce-toggle"><input type="checkbox" id="cfgStock" checked> <span data-t="cfgStockLbl">Stoku</span></label>
-          <label class="commerce-toggle"><input type="checkbox" id="cfgSku" checked> <span data-t="cfgSkuLbl">Kodi (SKU)</span></label>
-          <label class="commerce-toggle"><input type="checkbox" id="cfgTiers" checked> <span data-t="cfgTiersLbl">Çmime shumice</span></label>
-        </div>
-        <button class="btn small primary" id="saveFields" data-t="save" style="margin-top:12px">Ruaj</button>
       </div>
 
       <div class="settings-block danger-zone" id="dangerZone" hidden>
@@ -346,9 +317,22 @@
     </div>
 
     <div class="tab-pane" id="pane-catalog">
-      <p class="pane-desc" data-t="catalogDesc">Produktet dhe shërbimet e tua — çmim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).</p>
+      <p class="pane-desc" data-t="catalogDesc">Vendi i vetëm për gjithçka që ofron — shërbime & produkte: çmim, kosto, kohëzgjatje, prenotim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).</p>
       <div class="pane-toolbar"><button class="btn primary small" id="btnAddItem" data-t="addItem">+ Shto artikull</button></div>
       <div class="block-list" id="catalogList"></div>
+
+      <div class="settings-block" id="catFieldsBlock" style="margin-top:20px">
+        <h3 class="set-h" data-t="setFieldsH">🧩 Fushat e katalogut (fik ato që s'të duhen)</h3>
+        <p class="pane-desc" data-t="fieldsDesc">Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.</p>
+        <div class="field-toggles">
+          <label class="commerce-toggle"><input type="checkbox" id="cfgDesc" checked> <span data-t="cfgDescLbl">Përshkrimi</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgUnit" checked> <span data-t="cfgUnitLbl">Njësia</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgStock" checked> <span data-t="cfgStockLbl">Stoku</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgSku" checked> <span data-t="cfgSkuLbl">Kodi (SKU)</span></label>
+          <label class="commerce-toggle"><input type="checkbox" id="cfgTiers" checked> <span data-t="cfgTiersLbl">Çmime shumice</span></label>
+        </div>
+        <button class="btn small primary" id="saveFields" data-t="save" style="margin-top:12px">Ruaj</button>
+      </div>
     </div>
 
     <div class="tab-pane" id="pane-orders">
@@ -484,6 +468,11 @@
       </select>
     </label>
     <label class="field" id="fldDesc"><span data-t="itemDesc">Përshkrimi (detaje për klientin & AI-në)</span><textarea id="itemDesc" rows="2" maxlength="400" data-t-ph="itemDescPh" placeholder="p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako"></textarea></label>
+    <div class="field-row" id="fldDur">
+      <label class="field"><span data-t="itemDur">Kohëzgjatja</span><input type="number" id="itemDur" min="0" step="1" value="30"></label>
+      <label class="field"><span data-t="itemDurUnit">Njësia e kohës</span><select id="itemDurUnit"></select></label>
+    </div>
+    <label class="commerce-toggle" id="fldBook" style="margin-bottom:14px"><input type="checkbox" id="itemBook" checked> <span data-t="bookableLbl">📅 Prenotohet me kalendar</span></label>
     <div class="field-row">
       <label class="field"><span data-t="itemPrice">Çmimi për 1 (bazë)</span><input type="number" id="itemPrice" min="0" step="0.01" value="0"></label>
       <label class="field" id="fldCost" hidden><span data-t="itemCost">Kosto (për ty)</span><input type="number" id="itemCost" min="0" step="0.01" placeholder="—"></label>

@@ -100,9 +100,10 @@ const T = {
     emptyCustomersHint: "AI i ndërton vetë profilet e klientëve nga bisedat — vizita, shpenzime, kanal.",
     emptyActivityHint: "Çdo veprim i AI-së (rezervime, anulime, kujtesa) shfaqet këtu në kohë reale.",
     emptyBlockHint: "Blloko orare kur s'punon (pushime, dreka) që AI të mos rezervojë atëherë.",
-    tabCatalog: "📦 Katalogu", catalogDesc: "Produktet dhe shërbimet e tua — çmim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).",
-    addItem: "+ Shto artikull", emptyCatalog: "Ende pa artikuj.", emptyCatalogHint: "Shembull: 'Parfum 199ml' → Produkt, çmimi 45, dhe çmime shumice: nga 2 → 40, nga 100 → 12.",
+    tabCatalog: "📦 Çfarë ofroj", catalogDesc: "Vendi i vetëm për gjithçka që ofron — shërbime & produkte: çmim, kosto, kohëzgjatje, prenotim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).",
+    addItem: "+ Shto artikull", emptyCatalog: "Ende pa artikuj.", emptyCatalogHint: "Shembull: 'Qethje' → Shërbim, 30 min, çmimi 10. Ose 'Parfum 199ml' → Produkt, çmimi 45, çmime shumice: nga 2 → 40, nga 100 → 12.",
     itemNew: "Artikull i ri", itemEdit: "Ndrysho artikullin", itemName: "Emri", itemNamePh: "p.sh. Parfum 'Tobako Mix'", itemKind: "Lloji",
+    itemDur: "Kohëzgjatja", itemDurUnit: "Njësia e kohës", bookableLbl: "📅 Prenotohet me kalendar",
     itemDesc: "Përshkrimi (detaje për klientin & AI-në)", itemDescPh: "p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako",
     kindService: "Shërbim", kindProduct: "Produkt / mall", itemPrice: "Çmimi për 1 (bazë)", itemUnit: "Njësia", itemUnitPh: "copë, shishe, kg, m…",
     itemTrack: "Ndiq stokun", itemStock: "Sasia në stok", itemSku: "Kodi (SKU, opsional)",
@@ -110,7 +111,7 @@ const T = {
     addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
     commerceLbl: "🛒 Tregti (produkte, porosi, raporte) & monedha", commerceOnLbl: "Aktivizo katalogun, porositë & raportet",
     delete: "Fshi", confirmDelete: "Ta fshij këtë? S'kthehet mbrapsht.",
-    tabGeneral: "🏢 General", generalDesc: "Info-ja e kompanisë tënde — plotësoje gjithçka këtu, pastaj kliko Ruaj.", phoneLbl: "Telefoni / kontakti",
+    tabGeneral: "🏢 Profili & orari", generalDesc: "Info-ja e kompanisë tënde + orari — plotësoje këtu, pastaj kliko Ruaj. (Shërbimet & produktet i menaxhon te 📦 Çfarë ofroj.)", phoneLbl: "Telefoni / kontakti",
     genName: "Emri i biznesit", genAddr: "Adresa / Lokacioni", emailLbl: "Email", websiteLbl: "Website", instaLbl: "Instagram", cityLbl: "Qyteti",
     genMode: "Mënyra e biznesit", genCurrency: "Monedha", aboutLbl: "Përshkrimi i biznesit (çfarë ofron — e përdor edhe AI)",
     secIdentity: "👤 Identiteti & kontakti", secConfig: "⚙️ Konfigurimi", secDesc: "📝 Përshkrimi",
@@ -249,9 +250,10 @@ const T = {
     emptyCustomersHint: "The AI builds customer profiles automatically from chats — visits, spend, channel.",
     emptyActivityHint: "Every AI action (bookings, cancellations, reminders) appears here in real time.",
     emptyBlockHint: "Block off times when you're closed (holidays, lunch) so the AI won't book then.",
-    tabCatalog: "📦 Catalog", catalogDesc: "Your products and services — price, stock, unit and quantity pricing (wholesale/retail).",
-    addItem: "+ Add item", emptyCatalog: "No items yet.", emptyCatalogHint: "Example: 'Perfume 199ml' → Product, price 45, plus wholesale tiers: from 2 → 40, from 100 → 12.",
+    tabCatalog: "📦 What I offer", catalogDesc: "The single place for everything you offer — services & products: price, cost, duration, booking, stock, unit and quantity pricing (wholesale/retail).",
+    addItem: "+ Add item", emptyCatalog: "No items yet.", emptyCatalogHint: "Example: 'Haircut' → Service, 30 min, price 10. Or 'Perfume 199ml' → Product, price 45, wholesale tiers: from 2 → 40, from 100 → 12.",
     itemNew: "New item", itemEdit: "Edit item", itemName: "Name", itemNamePh: "e.g. Perfume 'Tobacco Mix'", itemKind: "Type",
+    itemDur: "Duration", itemDurUnit: "Time unit", bookableLbl: "📅 Bookable on calendar",
     itemDesc: "Description (details for customer & AI)", itemDescPh: "e.g. 199 ml · strong scent · cinnamon–lemon–tobacco mix",
     kindService: "Service", kindProduct: "Product / goods", itemPrice: "Price for 1 (base)", itemUnit: "Unit", itemUnitPh: "pc, bottle, kg, m…",
     itemTrack: "Track stock", itemStock: "Stock quantity", itemSku: "Code (SKU, optional)",
@@ -259,7 +261,7 @@ const T = {
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
     commerceLbl: "🛒 Commerce (products, orders, reports) & currency", commerceOnLbl: "Enable catalog, orders & reports",
     delete: "Delete", confirmDelete: "Delete this? This cannot be undone.",
-    tabGeneral: "🏢 General", generalDesc: "Your company info — fill everything here, then click Save.", phoneLbl: "Phone / contact",
+    tabGeneral: "🏢 Profile & hours", generalDesc: "Your company info + hours — fill it here, then click Save. (Manage services & products in 📦 What I offer.)", phoneLbl: "Phone / contact",
     genName: "Business name", genAddr: "Address / Location", emailLbl: "Email", websiteLbl: "Website", instaLbl: "Instagram", cityLbl: "City",
     genMode: "Business mode", genCurrency: "Currency", aboutLbl: "Business description (what you offer — used by the AI too)",
     secIdentity: "👤 Identity & contact", secConfig: "⚙️ Configuration", secDesc: "📝 Description",
@@ -624,9 +626,8 @@ async function renderQuickStart() {
   } catch (e) {}
 
   const items = [];
-  // Shërbimet/produktet: kur tregtia është ON menaxhohen te Catalog; përndryshe te General
-  const svcCommerce = commerceOn();
-  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: svcCommerce ? "catalog" : "general", el: svcCommerce ? null : "servicesBlock" });
+  // Shërbimet & produktet: gjithmonë te Katalogu (vendi i vetëm)
+  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: "catalog", el: null });
   if (!inquiry) items.push({ key: "hrs", done: Object.values(hours).some((h) => h), label: tr("qsHrs"), tab: "general", el: "setHoursBlock" });
   items.push({ key: "chan", done: !!biz.telegram_token, label: tr("qsChan"), tab: "settings", el: "channelBlock" });
   items.push({ key: "msg", done: gotMsg, label: tr("qsMsg"), tab: "settings", el: "channelBlock" });
@@ -677,6 +678,11 @@ function renderCatalog() {
     const kind = s.kind === "product" ? "product" : "service";
     const tiers = priceTiers.filter((t) => t.service_id === s.id);
     const meta = [`<span class="kind-badge ${kind}">${kind === "product" ? tr("kindProduct") : tr("kindService")}</span>`];
+    if (kind === "service") {
+      if (s.duration_value != null && s.duration_unit) meta.push(`⏱ ${plainNum(s.duration_value)} ${tr(UNIT_KEY[s.duration_unit] || "unitMin")}`);
+      else if (s.duration_min) meta.push(`⏱ ${plainNum(s.duration_min)} ${tr("unitMin")}`);
+      if (s.bookable !== false) meta.push("📅");
+    }
     if (showField("catUnit") && s.unit_label) meta.push(esc(s.unit_label));
     if (showField("catStock") && s.track_stock) {
       const low = Number(s.stock) <= 3;
@@ -705,6 +711,10 @@ function openItem(s) {
   $("#itemTrack").checked = !!(s && s.track_stock);
   $("#itemStock").value = s && s.stock != null ? s.stock : "";
   $("#itemSku").value = s && s.sku ? s.sku : "";
+  // Kohëzgjatja + prenotimi (për shërbime)
+  if ($("#itemDurUnit")) $("#itemDurUnit").innerHTML = unitOptions(s && s.duration_unit ? s.duration_unit : "min");
+  if ($("#itemDur")) $("#itemDur").value = s && s.duration_value != null ? s.duration_value : (s && s.duration_min != null ? s.duration_min : 30);
+  if ($("#itemBook")) $("#itemBook").checked = s ? (s.bookable !== false) : true;
   $("#itemTiers").innerHTML = "";
   (s ? priceTiers.filter((t) => t.service_id === s.id) : []).forEach((t) => addTierRow(t.min_qty, t.unit_price));
   // Fsheh fushat që pronari ka fikur
@@ -713,9 +723,18 @@ function openItem(s) {
   if ($("#stockRow")) $("#stockRow").hidden = !showField("catStock");
   if ($("#fldSku")) $("#fldSku").hidden = !showField("catSku");
   if ($("#fldTiers")) $("#fldTiers").hidden = !showField("catTiers");
+  $("#itemKind").onchange = applyItemKindUI;
+  applyItemKindUI();
   $("#itemDelete").hidden = !s;
   $("#itemModal").hidden = false;
   setTimeout(() => $("#itemName").focus(), 60);
+}
+
+// Shërbim → trego kohëzgjatjen + prenotimin; Produkt → fshehi (produktet nuk prenotohen)
+function applyItemKindUI() {
+  const isService = $("#itemKind") && $("#itemKind").value !== "product";
+  if ($("#fldDur")) $("#fldDur").hidden = !isService;
+  if ($("#fldBook")) $("#fldBook").hidden = !isService;
 }
 
 function addTierRow(minQty, unitPrice) {
@@ -737,23 +756,30 @@ async function saveItem() {
   const name = $("#itemName").value.trim();
   if (!name) { $("#itemName").focus(); return; }
   const track = $("#itemTrack").checked;
+  const isService = $("#itemKind").value !== "product";
+  const durUnit = $("#itemDurUnit") ? $("#itemDurUnit").value : "min";
+  const durVal = $("#itemDur") ? Math.max(0, +$("#itemDur").value || 0) : 30;
   const payload = {
     business_id: biz.id, name,
     price: Number($("#itemPrice").value) || 0,
-    kind: $("#itemKind").value === "product" ? "product" : "service",
+    kind: isService ? "service" : "product",
     description: $("#itemDesc").value.trim() || null,
     cost: ($("#itemCost") && $("#itemCost").value !== "") ? (Number($("#itemCost").value) || 0) : null,
     sku: $("#itemSku").value.trim() || null,
     unit_label: $("#itemUnit").value.trim() || null,
     track_stock: track,
     stock: track ? (Number($("#itemStock").value) || 0) : null,
+    bookable: isService ? ($("#itemBook") ? $("#itemBook").checked : true) : false,
+    duration_value: isService ? durVal : null,
+    duration_unit: isService ? durUnit : null,
+    duration_min: durToMin(durVal, durUnit),
   };
   try {
     let itemId = editingItemId;
     if (itemId) {
       await sb.from("services").update(payload).eq("id", itemId);
     } else {
-      payload.duration_min = 30; payload.active = true;
+      payload.active = true;
       const { data, error } = await sb.from("services").insert(payload).select("id").single();
       if (error) throw error;
       itemId = data.id;
@@ -1158,7 +1184,7 @@ function applyModeUI() {
   const showLeads = mode === "inquiry" || mode === "both"; // porosi OSE të dyja → kërkesa
   const commerce = commerceOn();
   const apptTabs = ["calendar", "appointments", "blocks", "waitlist", "staff"]; // "customers" = universal (takime + porosi)
-  const commerceTabs = ["catalog", "orders", "reports"];
+  const commerceTabs = ["orders", "reports"]; // Katalogu = gjithmonë i dukshëm (vendi i vetëm për shërbime + produkte)
   document.querySelectorAll(".tabs .tab").forEach((t) => {
     const tab = t.dataset.tab;
     if (apptTabs.includes(tab)) t.hidden = !showAppt;
@@ -1277,11 +1303,7 @@ function renderSettings() {
   const tb = $("#teamBlock"); if (tb) tb.hidden = !owner;
   const dz = $("#dangerZone"); if (dz) dz.hidden = !owner;
   if (owner) renderTeam();
-  // Kur tregtia është aktive, Katalogu (me përshkrim/stok/çmime) është vendi i vetëm → fshehim editorin e thjeshtë që të mos ngatërrohet
-  const svb = $("#servicesBlock"); if (svb) svb.hidden = commerceOn();
-  const cph = $("#catalogPointer"); if (cph) cph.hidden = !commerceOn();
-  // Toggle-t e fushave të katalogut
-  const cfb = $("#catFieldsBlock"); if (cfb) cfb.hidden = !commerceOn();
+  // Toggle-t e fushave të katalogut (Katalogu = vendi i vetëm; gjithmonë i dukshëm)
   if ($("#cfgDesc")) $("#cfgDesc").checked = showField("catDesc");
   if ($("#cfgUnit")) $("#cfgUnit").checked = showField("catUnit");
   if ($("#cfgStock")) $("#cfgStock").checked = showField("catStock");
