@@ -167,17 +167,28 @@ function renderSlots() {
   const h = (DATA.hours || []).find((x) => x.weekday === dow);
   if (!h || h.is_closed || !h.open_time) { box.innerHTML = `<div style="color:var(--ink-soft);font-weight:600;font-size:13px">${tr("closed")}</div>`; return; }
   const svc = svcById($("#bSvc").value);
-  const step = Math.min(120, Math.max(15, (svc && svc.duration_min) || 30));
-  const toMin = (t) => { const [a, b] = t.split(":"); return +a * 60 + +b; };
+  const dur = Math.max(5, (svc && svc.duration_min) || 30);
+  const step = Math.min(120, Math.max(15, dur));
+  const toMin = (t) => { const [a, b] = String(t).split(":"); return +a * 60 + +b; };
   const open = toMin(h.open_time), close = toMin(h.close_time);
-  const busy = new Set((DATA.busy || []).filter((x) => x.d === selDate).map((x) => (x.t || "").slice(0, 5)));
+  // Intervalet e zëna: takimet (me kohëzgjatjen e tyre) + bllokimet + pushimet
+  const intervals = [];
+  (DATA.busy || []).filter((x) => x.d === selDate).forEach((x) => {
+    const s = toMin((x.t || "").slice(0, 5)); intervals.push([s, s + (Number(x.dur) || 30)]);
+  });
+  (DATA.blocks || []).filter((x) => x.d === selDate).forEach((x) => {
+    intervals.push([toMin((x.f || "").slice(0, 5)), toMin((x.t || "").slice(0, 5))]);
+  });
+  const cfg = DATA.config || {};
+  const brks = (cfg.breaks && (cfg.breaks[dow] != null ? cfg.breaks[dow] : cfg.breaks[String(dow)])) || [];
+  (Array.isArray(brks) ? brks : [brks]).forEach((b) => { if (b && b.start && b.end) intervals.push([toMin(b.start), toMin(b.end)]); });
   const now = new Date(); const isToday = selDate === now.toISOString().slice(0, 10);
   const nowMin = now.getHours() * 60 + now.getMinutes();
   let html = "";
-  for (let m = open; m + step <= close; m += step) {
-    const hm = pad(Math.floor(m / 60)) + ":" + pad(m % 60);
-    if (busy.has(hm)) continue;
+  for (let m = open; m + dur <= close; m += step) {
     if (isToday && m <= nowMin) continue;
+    if (intervals.some(([s, e]) => m < e && m + dur > s)) continue; // mbivendosje me të zënat/pushim
+    const hm = pad(Math.floor(m / 60)) + ":" + pad(m % 60);
     html += `<button type="button" class="slot-btn" data-t="${hm}">${hm}</button>`;
   }
   box.innerHTML = html || `<div style="color:var(--ink-soft);font-weight:600;font-size:13px">${tr("noSlots")}</div>`;

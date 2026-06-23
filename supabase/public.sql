@@ -23,8 +23,11 @@ returns jsonb language sql security definer stable set search_path = public as $
         from price_tiers t where t.business_id = b.id), '[]'::jsonb),
     'hours', coalesce((select jsonb_agg(jsonb_build_object('weekday', w.weekday, 'open_time', w.open_time, 'close_time', w.close_time, 'is_closed', w.is_closed))
         from working_hours w where w.business_id = b.id), '[]'::jsonb),
-    'busy', coalesce((select jsonb_agg(jsonb_build_object('d', a.appt_date, 't', a.appt_time))
-        from appointments a where a.business_id = b.id and a.status <> 'cancelled' and a.appt_date >= current_date), '[]'::jsonb)
+    'busy', coalesce((select jsonb_agg(jsonb_build_object('d', a.appt_date, 't', a.appt_time, 'dur', coalesce(s.duration_min, 30)))
+        from appointments a left join services s on s.id = a.service_id
+        where a.business_id = b.id and a.status <> 'cancelled' and a.appt_date >= current_date), '[]'::jsonb),
+    'blocks', coalesce((select jsonb_agg(jsonb_build_object('d', tb.block_date, 'f', tb.from_time, 't', tb.to_time))
+        from time_blocks tb where tb.business_id = b.id and tb.block_date >= current_date), '[]'::jsonb)
   ) end
   from businesses b where b.id = bid;
 $$;
