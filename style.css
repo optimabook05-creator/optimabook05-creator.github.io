@@ -1512,3 +1512,107 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 :root[data-theme="dark"] .ai-bubble.user { background: #0b3a2c; color: #d9fdd3; }
 :root[data-theme="dark"] .ai-chip { background: rgba(255,255,255,.06); color: var(--accent-bright); }
 :root[data-theme="dark"] .ai-inputbar input { background: rgba(255,255,255,.08); color: #e7ece9; border-color: rgba(255,255,255,.16); }
+
+/* ===================================================================
+   BUTONA PREMIUM — "Liquid Glass" (frymëzim iOS) + butoni rrethor +
+   shpenzimet fikse si listë e emërtuar
+   =================================================================== */
+/* Pass premium mbi butonat ekzistues (override në fund → ka përparësi) */
+.btn {
+  position: relative; isolation: isolate;
+  border-radius: 13px;
+  transition: transform .16s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease, background .2s ease, filter .2s ease;
+  -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4);
+}
+.btn:active { transform: scale(.96); }
+.btn.primary {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.45) inset,
+    0 -8px 14px rgba(8,127,91,.25) inset,
+    0 8px 20px rgba(12,166,120,.34),
+    0 1px 2px rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.18);
+  text-shadow: 0 1px 1px rgba(8,60,44,.28);
+}
+.btn.primary:hover {
+  transform: translateY(-1.5px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.55) inset,
+    0 -8px 16px rgba(8,127,91,.3) inset,
+    0 14px 30px rgba(12,166,120,.45),
+    0 2px 4px rgba(0,0,0,.2);
+  filter: saturate(1.08);
+}
+/* shkëlqim specular që rrëshqet sipër butonit primar */
+.btn.primary::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1;
+  background: radial-gradient(120% 80% at 30% -10%, rgba(255,255,255,.5), rgba(255,255,255,0) 55%);
+  opacity: .8; pointer-events: none;
+}
+.btn.ghost {
+  background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.2));
+  border: 1px solid var(--glass-line);
+  box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 4px 12px rgba(22,32,28,.06);
+}
+.btn.ghost:hover { transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,.7) inset, 0 8px 18px rgba(22,32,28,.1); }
+
+/* Butoni RRETHOR (liquid glass) — "+ shto" */
+.btn-round {
+  width: 40px; height: 40px; min-width: 40px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; padding: 0;
+  font-size: 22px; line-height: 1; font-weight: 400;
+  color: #fff; border: 1px solid rgba(255,255,255,.22);
+  background:
+    radial-gradient(120% 90% at 30% 12%, rgba(255,255,255,.55), rgba(255,255,255,0) 50%),
+    linear-gradient(180deg, var(--accent-bright), var(--accent) 58%, var(--accent-deep));
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.55) inset,
+    0 -6px 12px rgba(8,127,91,.28) inset,
+    0 8px 20px rgba(12,166,120,.4),
+    0 1px 2px rgba(0,0,0,.18);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  transition: transform .16s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease, filter .2s ease;
+}
+.btn-round > span { transform: translateY(-1px); text-shadow: 0 1px 2px rgba(8,60,44,.3); }
+.btn-round:hover { transform: translateY(-2px) scale(1.05); filter: saturate(1.1); box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 -6px 14px rgba(8,127,91,.32) inset, 0 14px 28px rgba(12,166,120,.5), 0 2px 4px rgba(0,0,0,.2); }
+.btn-round:active { transform: scale(.92); }
+.btn-round.sm { width: 30px; height: 30px; min-width: 30px; font-size: 17px; }
+.btn-round.danger {
+  background:
+    radial-gradient(120% 90% at 30% 12%, rgba(255,255,255,.5), rgba(255,255,255,0) 50%),
+    linear-gradient(180deg, #ff6b6b, var(--red) 60%, #b02525);
+  box-shadow: 0 1px 0 rgba(255,255,255,.45) inset, 0 6px 14px rgba(224,49,49,.35), 0 1px 2px rgba(0,0,0,.18);
+}
+
+/* Shpenzimet fikse — listë e emërtuar */
+.exp-field { display: flex; flex-direction: column; }
+.exp-hint { font-size: 12.5px; color: var(--ink-faint); margin: 2px 0 10px; line-height: 1.4; }
+.exp-list { display: flex; flex-direction: column; gap: 9px; }
+.exp-row { display: flex; align-items: center; gap: 9px; }
+.exp-row .exp-name { flex: 1 1 auto; }
+.exp-row .exp-amt { width: 110px; flex: 0 0 auto; text-align: right; }
+.exp-row .exp-cur { color: var(--ink-soft); font-weight: 700; font-size: 14px; min-width: 22px; }
+.exp-foot { display: flex; align-items: center; gap: 11px; margin-top: 14px; }
+.exp-add-lbl { font-weight: 700; color: var(--accent-deep); font-size: 14px; }
+.exp-total { margin-left: auto; font-weight: 800; font-family: var(--font-display); color: var(--ink); }
+:root[data-theme="dark"] .btn.ghost { background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.03)); border-color: rgba(255,255,255,.14); box-shadow: 0 1px 0 rgba(255,255,255,.1) inset, 0 4px 12px rgba(0,0,0,.25); }
+:root[data-theme="dark"] .exp-add-lbl { color: var(--accent-bright); }
+
+/* ===================================================================
+   ORARI me PUSHIME (split shift) — rresht me dy nivele
+   =================================================================== */
+.hours-row { display: flex; flex-direction: column; gap: 7px; padding: 10px 0; border-bottom: 1px solid var(--glass-line); }
+.hours-row:last-child { border-bottom: 0; }
+.hr-main { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.hr-main .day { min-width: 78px; font-weight: 700; }
+.hr-break { display: flex; align-items: center; gap: 8px; padding-left: 87px; }
+.hr-break-lbl { font-size: 12.5px; color: var(--ink-faint); font-weight: 700; min-width: 64px; }
+.hr-break input[type="time"] { padding: 5px 8px; font-size: 13px; }
+.slot.break { background: repeating-linear-gradient(45deg, var(--gold-soft), var(--gold-soft) 9px, transparent 9px, transparent 18px); color: var(--ink-soft); }
+.slot.break .label { font-weight: 700; }
+@media (max-width: 560px) { .hr-break { padding-left: 0; flex-wrap: wrap; } }
+:root[data-theme="dark"] .slot.break { color: var(--ink); }

@@ -102,8 +102,10 @@ function freeSlots(dateStr: string, durMin: number, hoursRow: any, appts: any[],
   if (!hoursRow || hoursRow.is_closed || !hoursRow.open_time || !hoursRow.close_time) return [];
   const open = toMin(hm(hoursRow.open_time));
   const close = toMin(hm(hoursRow.close_time));
+  const breaks: Array<[number, number]> = (hoursRow.breaks || []);
   const busy = appts.map((a) => [toMin(hm(a.appt_time)), toMin(hm(a.appt_time)) + a.dur])
-    .concat(blocks.map((b) => [toMin(hm(b.from_time)), toMin(hm(b.to_time))]));
+    .concat(blocks.map((b) => [toMin(hm(b.from_time)), toMin(hm(b.to_time))]))
+    .concat(breaks); // pushimet gjatë ditës (config.breaks)
   const isToday = dateStr === (now?.todayStr || fmtDate(new Date()));
   const nowM = now?.nowMin != null ? now.nowMin : (new Date().getHours() * 60 + new Date().getMinutes());
   const out: string[] = [];
@@ -158,9 +160,20 @@ async function clearState(businessId: string, channel?: string, chat_id?: string
   } catch (_e) { /* injoro */ }
 }
 
-function hoursByDow(hours: any[]) {
+function hoursByDow(hours: any[], cfg?: any) {
   const map: Record<number, any> = {};
   for (const h of hours) map[h.weekday] = h;
+  // Bashkëngjit pushimet nga businesses.config.breaks (pa ndryshim skeme)
+  const br = (cfg && cfg.breaks) || {};
+  for (const dow of [0, 1, 2, 3, 4, 5, 6]) {
+    const v = br[dow] != null ? br[dow] : br[String(dow)];
+    const arr = v ? (Array.isArray(v) ? v : [v]) : [];
+    const ranges: Array<[number, number]> = arr
+      .filter((x: any) => x && x.start && x.end)
+      .map((x: any) => [toMin(hm(x.start)), toMin(hm(x.end))] as [number, number])
+      .filter(([s, e]: [number, number]) => e > s);
+    if (map[dow]) map[dow].breaks = ranges;
+  }
   return map;
 }
 
@@ -345,10 +358,16 @@ function durHuman(s: any, sq: boolean): string {
 function svcListText(services: any[], sq = true) {
   return services.map((s) => { const d = durHuman(s, sq); return `• ${s.name}${d ? " — " + d : ""} — ${s.price}€`; }).join("\n");
 }
-function hoursListText(hours: any[], sq: boolean) {
-  const map = hoursByDow(hours);
+function hoursListText(hours: any[], sq: boolean, cfg?: any) {
+  const map = hoursByDow(hours, cfg);
   const days = sq ? SQ_DAYS : EN_DAYS;
-  return days.map((n, i) => `${n}: ${map[i] && !map[i].is_closed ? hm(map[i].open_time) + "–" + hm(map[i].close_time) : (sq ? "pushim" : "closed")}`).join("\n");
+  return days.map((n, i) => {
+    if (!map[i] || map[i].is_closed) return `${n}: ${sq ? "pushim" : "closed"}`;
+    let line = `${n}: ${hm(map[i].open_time)}–${hm(map[i].close_time)}`;
+    const br = (map[i].breaks || [])[0];
+    if (br) line += ` (☕ ${toHM(br[0])}–${toHM(br[1])})`;
+    return line;
+  }).join("\n");
 }
 
 async function tryRules(ctx: any): Promise<any | null> {
@@ -398,8 +417,8 @@ async function tryRules(ctx: any): Promise<any | null> {
   // Orari / adresa
   if (/(orari|kur (jeni )?hapur|sa hapeni|kur mbyllni|ku ndodheni|ku jeni|adresa|opening hours|working hours|when.*open|where are you|address|location)/.test(tx)) {
     const addr = biz.address ? (sq ? `📍 ${biz.name}, ${biz.address}\n\n` : `📍 ${biz.name}, ${biz.address}\n\n`) : "";
-    const r = sq ? `${addr}Orari ynë:\n${hoursListText(hours, true)}\n\nDo një rezervim? Më thuaj ditën!`
-                 : `${addr}Our hours:\n${hoursListText(hours, false)}\n\nWant to book? Tell me the day!`;
+    const r = sq ? `${addr}Orari ynë:\n${hoursListText(hours, true, biz.config)}\n\nDo një rezervim? Më thuaj ditën!`
+                 : `${addr}Our hours:\n${hoursListText(hours, false, biz.config)}\n\nWant to book? Tell me the day!`;
     return { reply: r, via: "rule" };
   }
 
@@ -678,7 +697,7 @@ Deno.serve(async (req) => {
     // por NUK shkruan asgjë në bazë (s'rezervon/anulon/ruan kërkesa) → testim i sigurt.
     const isPreview = preview === true || channel === "demo";
 
-    const hMap = hoursByDow(hours);
+    const hMap = hoursByDow(hours, biz.config);
     const svcDur: Record<string, number> = {};
     for (const s of services) svcDur[s.id] = s.duration_min;
     const now = nowInTz(biz.timezone || "Europe/Tirane");   // P0-2: data/ora në timezone-in e biznesit

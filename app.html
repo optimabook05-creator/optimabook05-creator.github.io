@@ -225,7 +225,16 @@
           </div>
           <label class="commerce-toggle" style="margin-top:10px"><input type="checkbox" id="commerceOn"> <span data-t="commerceOnLbl">Aktivizo katalogun, porositë & raportet (tregti)</span></label>
           <label class="commerce-toggle" style="margin-top:10px"><input type="checkbox" id="profitOnChk"> <span data-t="profitOnLbl">💰 Llogarit fitimin & marzhet (kërkon koston)</span></label>
-          <label class="gen-f" id="fixedCostField" style="margin-top:10px" hidden><span data-t="fixedLbl">Shpenzime mujore fikse (qira, rroga…) — opsionale</span><input type="number" id="bizFixed" min="0" step="1" placeholder="0"></label>
+          <div class="gen-f gen-full exp-field" id="fixedCostField" style="margin-top:10px" hidden>
+            <span data-t="fixedLbl">Shpenzime mujore fikse (qira, rroga…) — opsionale</span>
+            <p class="exp-hint" data-t="fixedHint">Shtoji një nga një: rroga e secilit punëtor, qira, drita, interneti… emërtoji si të duash. AI ua zbret nga fitimi.</p>
+            <div id="fixedCostList" class="exp-list"></div>
+            <div class="exp-foot">
+              <button type="button" class="btn-round" id="addFixedCost" aria-label="Shto shpenzim"><span>+</span></button>
+              <span class="exp-add-lbl" data-t="addExpense">Shto shpenzim</span>
+              <span class="exp-total" id="fixedCostTotal"></span>
+            </div>
+          </div>
         </div>
 
         <div class="gen-section">

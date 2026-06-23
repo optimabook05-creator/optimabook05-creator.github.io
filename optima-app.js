@@ -71,7 +71,7 @@ const T = {
     modeLbl: "⚙️ Mënyra e biznesit (ndize/fike kurdo)",
     tabSettings: "⚙️ Cilësime", settingsDesc: "Ndrysho gjithçka kurdo — pa rifilluar.",
     setBizH: "Biznesi", setNameLbl: "Emri & adresa", setSvcH: "Shërbimet / Produktet",
-    setHoursH: "Orari i punës", setAiH: "AI & Vlerësime",
+    setHoursH: "Orari i punës", setAiH: "AI & Vlerësime", breakLbl: "Pushim", clearBreak: "Hiq pushimin",
     saveServicesBtn: "Ruaj shërbimet", saveHoursBtn: "Ruaj orarin", deliveryPh: "p.sh. 13 ditë",
     aiActive: "AI aktiv · 24/7",
     tabActivity: "🔔 Aktiviteti", activityDesc: "Çdo gjë që bën AI: rezervime, anulime, kujtesa, kërkesa — live.", emptyActivity: "Ende pa aktivitet.",
@@ -165,6 +165,8 @@ const T = {
     catalogPointerTxt: "Produktet & shërbimet me përshkrim, çmim, stok dhe çmime shumice menaxhohen te skeda 📦 Catalog lart.", goCatalogBtn: "📦 Hap Katalogun",
     bookableLbl: "📅 Prenotohet me kalendar", svcDesc: "Shto çdo shërbim ose produkt — me lloj, përshkrim, çmim dhe prenotim opsional.",
     itemCost: "Kosto (për ty)", profitOnLbl: "💰 Llogarit fitimin & marzhet (kërkon koston)", fixedLbl: "Shpenzime mujore fikse (qira, rroga…) — opsionale",
+    fixedHint: "Shtoji një nga një: rroga e secilit punëtor, qira, drita, interneti… emërtoji si të duash. AI ua zbret nga fitimi.",
+    addExpense: "Shto shpenzim", expNamePh: "p.sh. Rroga – Ana, Qira, Drita…", expTotal: "Gjithsej:", perMonth: "muaj", fixedDefaultName: "Shpenzim fiks",
     repCogs: "Kosto e mallit", repGross: "Fitim bruto", repMargin: "Marzhi", repNet: "Fitim neto", repNetHint: "(pas shpenzimeve fikse)",
     manRepeat: "Përsërit", repNone: "Pa përsëritje", repWeekly: "Çdo javë", repBiweekly: "Çdo 2 javë", repMonthly: "Çdo muaj",
     manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
@@ -235,7 +237,7 @@ const T = {
     modeLbl: "⚙️ Business mode (turn on/off anytime)",
     tabSettings: "⚙️ Settings", settingsDesc: "Change anything anytime — no need to restart.",
     setBizH: "Business", setNameLbl: "Name & address", setSvcH: "Services / Products",
-    setHoursH: "Working hours", setAiH: "AI & Reviews",
+    setHoursH: "Working hours", setAiH: "AI & Reviews", breakLbl: "Break", clearBreak: "Clear break",
     saveServicesBtn: "Save services", saveHoursBtn: "Save hours", deliveryPh: "e.g. 13 days",
     aiActive: "AI active · 24/7",
     tabActivity: "🔔 Activity", activityDesc: "Everything the AI does: bookings, cancellations, reminders, requests — live.", emptyActivity: "No activity yet.",
@@ -329,6 +331,8 @@ const T = {
     catalogPointerTxt: "Products & services with description, price, stock and wholesale pricing are managed in the 📦 Catalog tab above.", goCatalogBtn: "📦 Open Catalog",
     bookableLbl: "📅 Bookable on calendar", svcDesc: "Add any service or product — with type, description, price and optional booking.",
     itemCost: "Cost (your cost)", profitOnLbl: "💰 Calculate profit & margins (needs cost)", fixedLbl: "Fixed monthly expenses (rent, salaries…) — optional",
+    fixedHint: "Add them one by one: each worker's salary, rent, electricity, internet… name them however you like. The AI subtracts them from profit.",
+    addExpense: "Add expense", expNamePh: "e.g. Salary – Ana, Rent, Electricity…", expTotal: "Total:", perMonth: "month", fixedDefaultName: "Fixed expense",
     repCogs: "Cost of goods", repGross: "Gross profit", repMargin: "Margin", repNet: "Net profit", repNetHint: "(after fixed expenses)",
     manRepeat: "Repeat", repNone: "No repeat", repWeekly: "Weekly", repBiweekly: "Every 2 weeks", repMonthly: "Monthly",
     manTimes: "How many", recurDone: "✅ Created {n} appointments",
@@ -440,6 +444,52 @@ function showField(key) { return !(biz && biz.config && biz.config[key] === fals
 
 // A është ndezur moduli i fitimit? (opsional — kërkon kosto)
 function profitOn() { return !!(biz && biz.config && biz.config.profitOn); }
+
+// Shpenzimet fikse mujore si LISTË e emërtuar (rroga, qira…). Përputhshmëri me versionin e vjetër (numër i vetëm).
+function fixedCostsList() {
+  const cfg = (biz && biz.config) || {};
+  if (Array.isArray(cfg.fixedCosts)) return cfg.fixedCosts.filter((x) => x && (x.name || Number(x.amount)));
+  if (Number(cfg.fixedMonthly)) return [{ name: tr("fixedDefaultName"), amount: Number(cfg.fixedMonthly) }];
+  return [];
+}
+function fixedMonthlyTotal() { return fixedCostsList().reduce((a, x) => a + (Number(x.amount) || 0), 0); }
+function addFixedCostRow(name, amount) {
+  const list = $("#fixedCostList"); if (!list) return;
+  const row = document.createElement("div");
+  row.className = "exp-row";
+  const n = document.createElement("input");
+  n.type = "text"; n.className = "exp-name"; n.maxLength = 40; n.placeholder = tr("expNamePh"); n.value = name || "";
+  const a = document.createElement("input");
+  a.type = "number"; a.className = "exp-amt"; a.min = 0; a.step = 1; a.placeholder = "0"; a.value = amount != null ? amount : "";
+  const sym = document.createElement("span"); sym.className = "exp-cur"; sym.textContent = curSym();
+  const del = document.createElement("button");
+  del.type = "button"; del.className = "btn-round sm danger"; del.setAttribute("aria-label", tr("delete")); del.innerHTML = "<span>×</span>";
+  del.onclick = () => { row.remove(); updateFixedTotal(); };
+  a.oninput = updateFixedTotal;
+  row.appendChild(n); row.appendChild(a); row.appendChild(sym); row.appendChild(del);
+  list.appendChild(row);
+}
+function updateFixedTotal() {
+  const el = $("#fixedCostTotal"); if (!el) return;
+  let sum = 0;
+  document.querySelectorAll("#fixedCostList .exp-row .exp-amt").forEach((i) => { sum += Number(i.value) || 0; });
+  el.textContent = sum > 0 ? tr("expTotal") + " " + money(sum) + "/" + tr("perMonth") : "";
+}
+function renderFixedCosts() {
+  const list = $("#fixedCostList"); if (!list) return;
+  list.innerHTML = "";
+  fixedCostsList().forEach((x) => addFixedCostRow(x.name, x.amount));
+  updateFixedTotal();
+}
+function collectFixedCosts() {
+  const out = [];
+  document.querySelectorAll("#fixedCostList .exp-row").forEach((r) => {
+    const name = r.querySelector(".exp-name").value.trim();
+    const amount = Number(r.querySelector(".exp-amt").value) || 0;
+    if (name || amount) out.push({ name: name || tr("fixedDefaultName"), amount });
+  });
+  return out;
+}
 
 // Çmimi/njësi sipas sasisë: zgjedh shkallën më të mirë (min_qty më e madhe <= qty), përndryshe çmimi bazë
 function unitPriceFor(item, qty) {
@@ -781,7 +831,12 @@ function aiFindItem(q) {
 function aiHoursText() {
   if (!Object.values(hours).some((h) => h)) return tr("aiAnsNoHours");
   let out = tr("aiAnsHoursHead");
-  for (let i = 1; i <= 7; i++) { const dow = i % 7; const h = hours[dow]; out += "\n• " + T[lang].dayNames[dow] + ": " + (h ? h.open + "–" + h.close : tr("aiAnsClosed")); }
+  for (let i = 1; i <= 7; i++) {
+    const dow = i % 7; const h = hours[dow];
+    let line = T[lang].dayNames[dow] + ": " + (h ? h.open + "–" + h.close : tr("aiAnsClosed"));
+    if (h) { const b = rawBreaksFor(dow)[0]; if (b) line += " (☕ " + b.start + "–" + b.end + ")"; }
+    out += "\n• " + line;
+  }
   return out;
 }
 // Truri: pyetje klienti → përgjigje me të dhënat reale të biznesit
@@ -1294,7 +1349,7 @@ async function renderReports() {
     const gross = revenue - cogs;
     const margin = revenue > 0 ? Math.round((gross / revenue) * 100) : 0;
     const days = Math.max(1, Math.round((to - from) / 86400000) + 1);
-    const fixed = (biz.config && Number(biz.config.fixedMonthly)) ? Number(biz.config.fixedMonthly) * days / 30 : 0;
+    const fixed = fixedMonthlyTotal() * days / 30;
     const net = gross - fixed;
     profitHtml = `<div class="bi-h" style="margin-top:20px">💰 ${tr("repGross")}</div>
       <div class="stats-grid">
@@ -1431,6 +1486,16 @@ function setServiceRow(s) {
   $("#setServices").appendChild(card);
 }
 
+// Pushimet gjatë ditës (p.sh. dreka) — ruhen te config.breaks[dow] = [{start,end}]
+function rawBreaksFor(dow) {
+  const b = (biz && biz.config && biz.config.breaks) || {};
+  const v = b[dow] != null ? b[dow] : b[String(dow)];
+  if (!v) return [];
+  return (Array.isArray(v) ? v : [v]).filter((x) => x && x.start && x.end);
+}
+function breaksFor(dow) {
+  return rawBreaksFor(dow).map((x) => [toMin(x.start), toMin(x.end)]).filter(([s, e]) => e > s);
+}
 function renderSettingsHours() {
   const hb = $("#setHours"); if (!hb) return;
   hb.innerHTML = "";
@@ -1438,18 +1503,31 @@ function renderSettingsHours() {
     const dow = i % 7;
     const h = hours[dow];
     const closed = !h;
+    const brk = rawBreaksFor(dow)[0] || null;
     const row = document.createElement("div");
     row.className = "hours-row"; row.dataset.dow = dow;
     row.innerHTML = `
-      <span class="day">${T[lang].dayNames[dow]}</span>
-      <input type="time" class="h-open" value="${h ? h.open : "09:00"}" ${closed ? "disabled" : ""}>
-      <span>–</span>
-      <input type="time" class="h-close" value="${h ? h.close : "19:00"}" ${closed ? "disabled" : ""}>
-      <label class="closed-toggle"><input type="checkbox" class="h-closed" ${closed ? "checked" : ""}> ${tr("closed")}</label>`;
+      <div class="hr-main">
+        <span class="day">${T[lang].dayNames[dow]}</span>
+        <input type="time" class="h-open" value="${h ? h.open : "09:00"}" ${closed ? "disabled" : ""}>
+        <span>–</span>
+        <input type="time" class="h-close" value="${h ? h.close : "19:00"}" ${closed ? "disabled" : ""}>
+        <label class="closed-toggle"><input type="checkbox" class="h-closed" ${closed ? "checked" : ""}> ${tr("closed")}</label>
+      </div>
+      <div class="hr-break" ${closed ? "hidden" : ""}>
+        <span class="hr-break-lbl">☕ ${tr("breakLbl")}</span>
+        <input type="time" class="h-bstart" value="${brk ? brk.start : ""}">
+        <span>–</span>
+        <input type="time" class="h-bend" value="${brk ? brk.end : ""}">
+        <button type="button" class="btn-round sm danger hr-bclear" aria-label="${tr("clearBreak")}"><span>×</span></button>
+      </div>`;
     row.querySelector(".h-closed").addEventListener("change", (e) => {
-      row.querySelector(".h-open").disabled = e.target.checked;
-      row.querySelector(".h-close").disabled = e.target.checked;
+      const off = e.target.checked;
+      row.querySelector(".h-open").disabled = off;
+      row.querySelector(".h-close").disabled = off;
+      const brkLine = row.querySelector(".hr-break"); if (brkLine) brkLine.hidden = off;
     });
+    row.querySelector(".hr-bclear").onclick = () => { row.querySelector(".h-bstart").value = ""; row.querySelector(".h-bend").value = ""; };
     hb.appendChild(row);
   }
 }
@@ -1471,8 +1549,8 @@ function renderSettings() {
   setCfg("#bizPhone", "phone"); setCfg("#bizEmail", "email"); setCfg("#bizWebsite", "website");
   setCfg("#bizInstagram", "instagram"); setCfg("#bizCity", "city"); setCfg("#bizAbout", "about");
   const pc = $("#profitOnChk"); if (pc) pc.checked = !!cfg.profitOn;
-  const fx = $("#bizFixed"); if (fx) fx.value = cfg.fixedMonthly != null ? cfg.fixedMonthly : "";
   const fxf = $("#fixedCostField"); if (fxf) fxf.hidden = !cfg.profitOn;
+  renderFixedCosts();
   // Ekipi: vetëm pronari menaxhon qasjen
   const owner = !!(myUserId && biz.owner_id === myUserId);
   const tb = $("#teamBlock"); if (tb) tb.hidden = !owner;
@@ -1594,6 +1672,7 @@ async function saveServicesEdit() {
 
 async function saveHoursEdit() {
   const rows = [...document.querySelectorAll("#setHours .hours-row")];
+  const breaks = {};
   for (const r of rows) {
     const dow = +r.dataset.dow;
     const closed = r.querySelector(".h-closed").checked;
@@ -1602,7 +1681,13 @@ async function saveHoursEdit() {
       open_time: closed ? null : r.querySelector(".h-open").value,
       close_time: closed ? null : r.querySelector(".h-close").value,
     }, { onConflict: "business_id,weekday" });
+    const bs = r.querySelector(".h-bstart") ? r.querySelector(".h-bstart").value : "";
+    const be = r.querySelector(".h-bend") ? r.querySelector(".h-bend").value : "";
+    if (!closed && bs && be && be > bs) breaks[dow] = [{ start: bs, end: be }];
   }
+  // Pushimet ruhen te businesses.config (pa ndryshim skeme në bazë)
+  const cfg = Object.assign({}, biz.config || {}); cfg.breaks = breaks;
+  try { await sb.from("businesses").update({ config: cfg }).eq("id", biz.id); biz.config = cfg; } catch (e) {}
   await loadHours();
   renderSettingsHours();
   await renderAll();
@@ -1640,7 +1725,8 @@ async function freeSlots(ds, durMin, includePast = false, staffId = null) {
   const busy = appts.map((a) => {
     const s = svcById(a.service_id);
     return [toMin(hm(a.appt_time)), toMin(hm(a.appt_time)) + (s ? s.duration_min : SLOT_STEP)];
-  }).concat(blocks.map((b) => [toMin(hm(b.from_time)), toMin(hm(b.to_time))]));
+  }).concat(blocks.map((b) => [toMin(hm(b.from_time)), toMin(hm(b.to_time))]))
+    .concat(breaksFor(d.getDay())); // pushimet gjatë ditës bllokohen si "të zëna"
   const isToday = ds === fmtDate(new Date());
   const nowM = new Date().getHours() * 60 + new Date().getMinutes();
   const out = [];
@@ -1950,6 +2036,7 @@ async function renderCalendar() {
     appts = appts.filter((a) => a.staff_id === calStaff);
     blocks = blocks.filter((b) => !b.staff_id || b.staff_id === calStaff);
   }
+  const brks = breaksFor(d.getDay());
   for (let t = open; t < close; t += SLOT_STEP) {
     const row = document.createElement("div");
     const appt = appts.find((a) => {
@@ -1957,6 +2044,12 @@ async function renderCalendar() {
       return t >= st && t < st + (s ? s.duration_min : SLOT_STEP);
     });
     const block = blocks.find((b) => t >= toMin(hm(b.from_time)) && t < toMin(hm(b.to_time)));
+    const inBreak = brks.some(([s, e]) => t >= s && t < e);
+    if (!appt && inBreak) {
+      row.className = "slot break";
+      row.innerHTML = `<span class="time">${toHM(t)}</span><span class="label">☕ ${tr("breakLbl")}</span>`;
+      tl.appendChild(row); continue;
+    }
     if (appt) {
       const s = svcById(appt.service_id); const isStart = toMin(hm(appt.appt_time)) === t;
       const stf = staffName(appt.staff_id);
@@ -2367,6 +2460,7 @@ function wire() {
   };
   if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
   if ($("#profitOnChk")) $("#profitOnChk").onchange = (e) => { const f = $("#fixedCostField"); if (f) f.hidden = !e.target.checked; };
+  if ($("#addFixedCost")) $("#addFixedCost").onclick = () => { addFixedCostRow("", ""); const rows = document.querySelectorAll("#fixedCostList .exp-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".exp-name").focus(); };
   // General: ruaj GJITHÇKA me një buton
   if ($("#saveGeneral")) $("#saveGeneral").onclick = async () => {
     const cfg = Object.assign({}, biz.config || {});
@@ -2374,7 +2468,8 @@ function wire() {
     cfg.phone = g("#bizPhone"); cfg.email = g("#bizEmail"); cfg.website = g("#bizWebsite");
     cfg.instagram = g("#bizInstagram"); cfg.city = g("#bizCity"); cfg.about = g("#bizAbout");
     cfg.profitOn = $("#profitOnChk") ? $("#profitOnChk").checked : false;
-    cfg.fixedMonthly = ($("#bizFixed") && $("#bizFixed").value !== "") ? (Number($("#bizFixed").value) || 0) : null;
+    cfg.fixedCosts = collectFixedCosts();
+    cfg.fixedMonthly = cfg.fixedCosts.reduce((a, x) => a + (Number(x.amount) || 0), 0) || null; // përputhshmëri
     const payload = {
       name: ($("#setName").value.trim() || biz.name),
       address: g("#setAddress"),
