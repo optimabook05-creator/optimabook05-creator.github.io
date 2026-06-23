@@ -138,25 +138,24 @@
     <div class="panel-body">
     <aside class="sidebar">
     <nav class="tabs">
-      <div class="nav-group" data-t="grpHome">Kreu</div>
+      <div class="nav-group" data-t="grpDaily">Përdor çdo ditë</div>
       <button class="tab active" data-tab="stats" data-t="tabStat">🏠 Përmbledhje</button>
       <button class="tab" data-tab="aidemo" data-t="tabAiDemo">🤖 Provo AI-në</button>
-      <div class="nav-group" data-t="grpWork">Puna</div>
       <button class="tab" data-tab="calendar" data-t="tabCal">📅 Kalendari</button>
       <button class="tab" data-tab="appointments" data-t="tabAppt">📋 Takimet</button>
       <button class="tab" data-tab="orders" data-t="tabOrders">🧾 Porositë</button>
       <button class="tab" data-tab="leads" data-t="tabLeads">📥 Kërkesa</button>
       <button class="tab" data-tab="waitlist" data-t="tabWait">⏳ Lista e pritjes</button>
       <button class="tab" data-tab="blocks" data-t="tabBlock">⛔ Bllokime</button>
-      <div class="nav-group" data-t="grpBiz">Biznesi</div>
-      <button class="tab" data-tab="catalog" data-t="tabCatalog">📦 Çfarë ofroj</button>
-      <button class="tab" data-tab="general" data-t="tabGeneral">🏢 Profili & orari</button>
       <button class="tab" data-tab="customers" data-t="tabCustomers">👤 Klientët</button>
       <button class="tab" data-tab="reports" data-t="tabReports">📈 Raporte</button>
+      <div class="nav-group" data-t="grpSetup">Rregullo një herë</div>
+      <button class="tab" data-tab="config" data-t="tabConfig">🚀 Konfigurimi</button>
+      <button class="tab" data-tab="catalog" data-t="tabCatalog">📦 Çfarë ofroj</button>
+      <button class="tab" data-tab="general" data-t="tabGeneral">🏢 Profili & orari</button>
       <button class="tab" data-tab="staff" data-t="tabStaff">👥 Stafi</button>
-      <div class="nav-group" data-t="grpOther">Tjera</div>
-      <button class="tab" data-tab="activity" data-t="tabActivity">🔔 Aktiviteti</button>
       <button class="tab" data-tab="settings" data-t="tabSettings">⚙️ Cilësime</button>
+      <button class="tab" data-tab="activity" data-t="tabActivity">🔔 Aktiviteti</button>
     </nav>
     </aside>
     <div class="panel-content">
@@ -284,6 +283,12 @@
         <button class="btn primary small" type="submit" data-t="blockBtn">Blloko</button>
       </form>
       <div class="block-list" id="blockList"></div>
+    </div>
+
+    <div class="tab-pane" id="pane-config">
+      <p class="pane-desc" data-t="configDesc">Vendi i vetëm për ta rregulluar biznesin — hapat kryesorë në një vend. Plotësoji një herë; pastaj OptimaBook merret me klientët.</p>
+      <div class="cfg-progress"><div class="cfg-bar" id="cfgBar"></div></div>
+      <div class="cfg-hub" id="cfgHub"></div>
     </div>
 
     <div class="tab-pane active" id="pane-stats">

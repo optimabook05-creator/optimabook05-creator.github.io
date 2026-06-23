@@ -40,6 +40,14 @@ const T = {
     logout: "Dil", panelPrefix: "Paneli — ",
     tabCal: "📅 Kalendari", tabAppt: "📋 Takimet", tabBlock: "⛔ Bllokime", tabStat: "🏠 Përmbledhje",
     grpHome: "Kreu", grpWork: "Puna", grpBiz: "Biznesi", grpOther: "Tjera",
+    grpDaily: "Përdor çdo ditë", grpSetup: "Rregullo një herë", tabConfig: "🚀 Konfigurimi", optional: "opsionale",
+    configDesc: "Vendi i vetëm për ta rregulluar biznesin — hapat kryesorë në një vend. Plotësoji një herë; pastaj OptimaBook merret me klientët.",
+    cfgStepProfile: "Profili i biznesit", cfgStepProfileD: "Emri, adresa, kontakti, monedha, përshkrimi.",
+    cfgStepOffer: "Çfarë ofron", cfgStepOfferD: "Shërbimet & produktet — çmim, kohëzgjatje, stok.",
+    cfgStepHours: "Orari & pushimet", cfgStepHoursD: "Kur je hapur dhe pushimet gjatë ditës.",
+    cfgStepStaff: "Stafi & lokacionet", cfgStepStaffD: "Shto punëtorë që presin klientë paralelisht.",
+    cfgStepExp: "Shpenzimet fikse", cfgStepExpD: "Rroga, qira… që AI t'i zbresë nga fitimi.",
+    cfgStepChan: "Lidh kanalin", cfgStepChanD: "WhatsApp/Telegram — ku AI u flet klientëve.",
     tabAiDemo: "🤖 Provo AI-në", aiBadge: "Demo · truri lokal", aiBadgeReal: "🟢 AI real (Gemini) · provë e sigurt", aiSend: "Dërgo",
     aiDemoDesc: "Provo recepsionistin tënd AI — përgjigjet me të dhënat reale të biznesit (çmime, orar, shërbime, rezervime). Kështu do t'u flasë klientëve 24/7.",
     aiPlaceholder: "Shkruaj si klient… p.sh. 'Sa kushton qethja?'",
@@ -206,6 +214,14 @@ const T = {
     logout: "Sign out", panelPrefix: "Panel — ",
     tabCal: "📅 Calendar", tabAppt: "📋 Appointments", tabBlock: "⛔ Blocks", tabStat: "🏠 Overview",
     grpHome: "Home", grpWork: "Work", grpBiz: "Business", grpOther: "More",
+    grpDaily: "Use daily", grpSetup: "Set up once", tabConfig: "🚀 Setup", optional: "optional",
+    configDesc: "The single place to set up your business — the key steps in one spot. Fill it once; then OptimaBook handles customers.",
+    cfgStepProfile: "Business profile", cfgStepProfileD: "Name, address, contact, currency, description.",
+    cfgStepOffer: "What you offer", cfgStepOfferD: "Services & products — price, duration, stock.",
+    cfgStepHours: "Hours & breaks", cfgStepHoursD: "When you're open and breaks during the day.",
+    cfgStepStaff: "Staff & locations", cfgStepStaffD: "Add workers who serve customers in parallel.",
+    cfgStepExp: "Fixed expenses", cfgStepExpD: "Salaries, rent… so the AI subtracts them from profit.",
+    cfgStepChan: "Connect channel", cfgStepChanD: "WhatsApp/Telegram — where AI talks to customers.",
     tabAiDemo: "🤖 Try the AI", aiBadge: "Demo · local brain", aiBadgeReal: "🟢 Real AI (Gemini) · safe preview", aiSend: "Send",
     aiDemoDesc: "Try your AI receptionist — it answers with your real business data (prices, hours, services, bookings). This is how it will talk to customers 24/7.",
     aiPlaceholder: "Type like a customer… e.g. 'How much is a haircut?'",
@@ -687,6 +703,7 @@ async function loadAll() {
   renderCatalog();
   if (commerceOn()) renderOrders();
   renderQuickStart();
+  renderConfigHub();
 }
 
 // Kartë "Fillimi i shpejtë" — udhëheq pronarin, zbulon vetë çfarë është bërë
@@ -744,6 +761,42 @@ async function renderQuickStart() {
     box.hidden = true;
   };
   box.hidden = false;
+}
+
+/* ---------------- Qendra e konfigurimit (hub i udhëhequr "rregullo një herë") ---------------- */
+function renderConfigHub() {
+  const hub = $("#cfgHub"); if (!hub || !biz) return;
+  const cfg = biz.config || {};
+  const apptMode = (biz.mode || "appointments") !== "inquiry";
+  const steps = [
+    { ic: "🏢", title: tr("cfgStepProfile"), desc: tr("cfgStepProfileD"), done: !!(biz.name && (biz.address || cfg.phone || cfg.city || cfg.email)), tab: "general", el: null, req: true },
+    { ic: "📦", title: tr("cfgStepOffer"), desc: tr("cfgStepOfferD"), done: services.length > 0, tab: "catalog", el: null, req: true },
+  ];
+  if (apptMode) steps.push({ ic: "⏰", title: tr("cfgStepHours"), desc: tr("cfgStepHoursD"), done: Object.values(hours).some((h) => h), tab: "general", el: "setHoursBlock", req: true });
+  steps.push({ ic: "👥", title: tr("cfgStepStaff"), desc: tr("cfgStepStaffD"), done: staff.length > 0, tab: "staff", el: null, req: false });
+  if (profitOn()) steps.push({ ic: "💰", title: tr("cfgStepExp"), desc: tr("cfgStepExpD"), done: fixedCostsList().length > 0, tab: "general", el: "fixedCostField", req: false });
+  steps.push({ ic: "🔗", title: tr("cfgStepChan"), desc: tr("cfgStepChanD"), done: !!biz.telegram_token, tab: "settings", el: "channelBlock", req: true });
+
+  const reqs = steps.filter((s) => s.req);
+  const doneN = reqs.filter((s) => s.done).length;
+  const bar = $("#cfgBar"); if (bar) bar.style.width = Math.round(doneN / Math.max(1, reqs.length) * 100) + "%";
+  hub.innerHTML = "";
+  steps.forEach((s) => {
+    const card = document.createElement("div");
+    card.className = "cfg-card" + (s.done ? " done" : "");
+    const tag = s.done ? `<span class="cfg-chk">✓</span>` : (s.req ? "" : `<span class="cfg-opt">${tr("optional")}</span>`);
+    const btn = document.createElement("button");
+    btn.className = "btn small cfg-go " + (s.done ? "ghost" : "primary");
+    btn.textContent = s.done ? tr("qsEdit") : tr("qsDo");
+    btn.onclick = () => {
+      const t = document.querySelector('.tab[data-tab="' + s.tab + '"]'); if (t) t.click();
+      if (s.el) setTimeout(() => { const e = $("#" + s.el); if (e) { e.scrollIntoView({ behavior: "smooth", block: "center" }); e.classList.add("flash"); setTimeout(() => e.classList.remove("flash"), 1200); } }, 90);
+    };
+    const txt = document.createElement("div"); txt.className = "cfg-txt";
+    txt.innerHTML = `<div class="cfg-t">${s.ic} ${esc(s.title)} ${tag}</div><div class="cfg-d">${esc(s.desc)}</div>`;
+    card.appendChild(txt); card.appendChild(btn);
+    hub.appendChild(card);
+  });
 }
 
 /* ---------------- Katalogu (produkte/shërbime + stok + çmime sipas sasisë) ---------------- */
@@ -2582,6 +2635,7 @@ function wire() {
       else if (tab.dataset.tab === "reports") renderReports();
       else if (tab.dataset.tab === "catalog") renderCatalog();
       else if (tab.dataset.tab === "aidemo") renderAiDemo();
+      else if (tab.dataset.tab === "config") renderConfigHub();
     };
   });
   if ($("#aiForm")) $("#aiForm").addEventListener("submit", (e) => { e.preventDefault(); aiSend(); });
