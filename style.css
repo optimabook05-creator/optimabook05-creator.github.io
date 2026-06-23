@@ -1397,3 +1397,39 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
   .sidebar .tab { width: auto; }
   .nav-group { display: none; }
 }
+
+/* ============================================================
+   📝 INPUTE TË QARTA — duket qartë ku të shkruash + grupe të dallueshme
+   ============================================================ */
+/* Çdo grup fushash = kuti e butë e veçantë (klustër vizual) */
+.gen-section { background: var(--glass-soft); border: 1px solid var(--glass-line); border-radius: var(--r-md); padding: 16px 16px 18px; margin-bottom: 14px; }
+:root[data-theme="dark"] .gen-section { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.07); }
+.gen-h { margin-bottom: 14px; }
+
+/* Fushat — sfond i fortë + kufi i dukshëm (kontrast me kartën) */
+.gen-f input, .gen-f select, .gen-f textarea,
+.settings-input input, .settings-input select,
+.service-card input, .service-card select,
+.order-line input, .order-line select, .tier-row input {
+  background: rgba(255,255,255,.96);
+  border: 1.5px solid rgba(22,32,28,.16);
+  box-shadow: inset 0 1px 2px rgba(22,32,28,.05);
+  color: var(--ink);
+}
+.gen-f input::placeholder, .gen-f textarea::placeholder,
+.settings-input input::placeholder, .service-card input::placeholder { color: var(--ink-faint); opacity: 1; }
+.gen-f input:focus, .gen-f select:focus, .gen-f textarea:focus,
+.settings-input input:focus, .settings-input select:focus,
+.service-card input:focus, .service-card select:focus {
+  background: #fff; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); outline: none;
+}
+:root[data-theme="dark"] .gen-f input, :root[data-theme="dark"] .gen-f select, :root[data-theme="dark"] .gen-f textarea,
+:root[data-theme="dark"] .settings-input input, :root[data-theme="dark"] .settings-input select,
+:root[data-theme="dark"] .service-card input, :root[data-theme="dark"] .service-card select,
+:root[data-theme="dark"] .order-line input, :root[data-theme="dark"] .order-line select, :root[data-theme="dark"] .tier-row input {
+  background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.2); box-shadow: none;
+}
+:root[data-theme="dark"] .gen-f input:focus, :root[data-theme="dark"] .gen-f select:focus, :root[data-theme="dark"] .gen-f textarea:focus,
+:root[data-theme="dark"] .settings-input input:focus, :root[data-theme="dark"] .settings-input select:focus {
+  background: rgba(255,255,255,.11); border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft);
+}
