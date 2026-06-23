@@ -148,6 +148,8 @@ const T = {
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
     catalogPointerTxt: "Produktet & shërbimet me përshkrim, çmim, stok dhe çmime shumice menaxhohen te skeda 📦 Catalog lart.", goCatalogBtn: "📦 Hap Katalogun",
     bookableLbl: "📅 Prenotohet me kalendar", svcDesc: "Shto çdo shërbim ose produkt — me lloj, përshkrim, çmim dhe prenotim opsional.",
+    itemCost: "Kosto (për ty)", profitOnLbl: "💰 Llogarit fitimin & marzhet (kërkon koston)", fixedLbl: "Shpenzime mujore fikse (qira, rroga…) — opsionale",
+    repCogs: "Kosto e mallit", repGross: "Fitim bruto", repMargin: "Marzhi", repNet: "Fitim neto", repNetHint: "(pas shpenzimeve fikse)",
     manRepeat: "Përsërit", repNone: "Pa përsëritje", repWeekly: "Çdo javë", repBiweekly: "Çdo 2 javë", repMonthly: "Çdo muaj",
     manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
     setPubH: "🌐 Faqe vetë-shërbimi (OPSIONALE)", pubDesc: "S'të duhet detyrimisht. Klientët thjesht të shkruajnë normalisht në WhatsApp/Instagram/Telegram dhe AI u përgjigjet aty. Ky link është vetëm një shtesë — nëse do, vendose në bio që klientët të rezervojnë edhe vetë (si Calendly).",
@@ -294,6 +296,8 @@ const T = {
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
     catalogPointerTxt: "Products & services with description, price, stock and wholesale pricing are managed in the 📦 Catalog tab above.", goCatalogBtn: "📦 Open Catalog",
     bookableLbl: "📅 Bookable on calendar", svcDesc: "Add any service or product — with type, description, price and optional booking.",
+    itemCost: "Cost (your cost)", profitOnLbl: "💰 Calculate profit & margins (needs cost)", fixedLbl: "Fixed monthly expenses (rent, salaries…) — optional",
+    repCogs: "Cost of goods", repGross: "Gross profit", repMargin: "Margin", repNet: "Net profit", repNetHint: "(after fixed expenses)",
     manRepeat: "Repeat", repNone: "No repeat", repWeekly: "Weekly", repBiweekly: "Every 2 weeks", repMonthly: "Monthly",
     manTimes: "How many", recurDone: "✅ Created {n} appointments",
     setPubH: "🌐 Self-service page (OPTIONAL)", pubDesc: "Not required. Customers just message you normally on WhatsApp/Instagram/Telegram and the AI replies there. This link is only an extra — if you want, put it in your bio so customers can also book themselves (like Calendly).",
@@ -401,6 +405,9 @@ function commerceOn() { return !!(biz && (biz.commerce_enabled || biz.mode === "
 
 // A shfaqet një fushë e katalogut? (pronari mund të fikë çdo fushë; default = shfaqet)
 function showField(key) { return !(biz && biz.config && biz.config[key] === false); }
+
+// A është ndezur moduli i fitimit? (opsional — kërkon kosto)
+function profitOn() { return !!(biz && biz.config && biz.config.profitOn); }
 
 // Çmimi/njësi sipas sasisë: zgjedh shkallën më të mirë (min_qty më e madhe <= qty), përndryshe çmimi bazë
 function unitPriceFor(item, qty) {
@@ -690,6 +697,8 @@ function openItem(s) {
   $("#itemKind").value = s && s.kind === "product" ? "product" : "service";
   $("#itemDesc").value = s && s.description ? s.description : "";
   $("#itemPrice").value = s ? s.price : 0;
+  if ($("#itemCost")) $("#itemCost").value = s && s.cost != null ? s.cost : "";
+  if ($("#fldCost")) $("#fldCost").hidden = !profitOn();
   $("#itemUnit").value = s && s.unit_label ? s.unit_label : "";
   $("#itemTrack").checked = !!(s && s.track_stock);
   $("#itemStock").value = s && s.stock != null ? s.stock : "";
@@ -731,6 +740,7 @@ async function saveItem() {
     price: Number($("#itemPrice").value) || 0,
     kind: $("#itemKind").value === "product" ? "product" : "service",
     description: $("#itemDesc").value.trim() || null,
+    cost: ($("#itemCost") && $("#itemCost").value !== "") ? (Number($("#itemCost").value) || 0) : null,
     sku: $("#itemSku").value.trim() || null,
     unit_label: $("#itemUnit").value.trim() || null,
     track_stock: track,
@@ -888,7 +898,7 @@ async function saveOrder() {
     const sid = r.querySelector(".ol-item").value;
     const qv = Number(r.querySelector(".ol-qty").value) || 0;
     const pv = Number(r.querySelector(".ol-price").value) || 0;
-    if (sid && qv > 0) lines.push({ service_id: sid, name: (svcById(sid) || {}).name || "", qty: qv, unit_price: pv, line_total: qv * pv });
+    if (sid && qv > 0) { const it = svcById(sid) || {}; lines.push({ service_id: sid, name: it.name || "", qty: qv, unit_price: pv, line_total: qv * pv, cost: it.cost != null ? Number(it.cost) : null }); }
   });
   if (!lines.length) { toast(tr("orderNeedItem")); return; }
   const sub = lines.reduce((a, l) => a + l.line_total, 0);
@@ -916,8 +926,9 @@ async function saveOrder() {
       const { data, error } = await sb.from("orders").insert(order).select("id").single();
       if (error) throw error; oid = data.id;
     }
-    const items = lines.map((l) => ({ order_id: oid, business_id: biz.id, service_id: l.service_id, name: l.name, qty: l.qty, unit_price: l.unit_price, line_total: l.line_total }));
-    await sb.from("order_items").insert(items);
+    const items = lines.map((l) => ({ order_id: oid, business_id: biz.id, service_id: l.service_id, name: l.name, qty: l.qty, unit_price: l.unit_price, line_total: l.line_total, cost: l.cost }));
+    try { await sb.from("order_items").insert(items); }
+    catch (e) { await sb.from("order_items").insert(items.map(({ cost, ...x }) => x)); } // fallback pa kolonën cost
     $("#orderModal").hidden = true;
     toast(tr("toastSaved"));
     await renderOrders();
@@ -1073,6 +1084,24 @@ async function renderReports() {
   const retailRev = orders.filter((o) => o.order_type !== "wholesale").reduce((a, o) => a + (Number(o.total) || 0), 0);
   const wholeRev = Math.max(0, revenue - retailRev);
 
+  // Fitimi (opsional) — kosto e mallit, bruto, marzh, neto (pas shpenzimeve fikse të prorratuara)
+  let profitHtml = "";
+  if (profitOn()) {
+    const cogs = items.reduce((a, i) => a + ((i.cost != null ? Number(i.cost) : 0) * (Number(i.qty) || 0)), 0);
+    const gross = revenue - cogs;
+    const margin = revenue > 0 ? Math.round((gross / revenue) * 100) : 0;
+    const days = Math.max(1, Math.round((to - from) / 86400000) + 1);
+    const fixed = (biz.config && Number(biz.config.fixedMonthly)) ? Number(biz.config.fixedMonthly) * days / 30 : 0;
+    const net = gross - fixed;
+    profitHtml = `<div class="bi-h" style="margin-top:20px">💰 ${tr("repGross")}</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="num">${money(cogs)}</div><div class="lbl">${tr("repCogs")}</div></div>
+        <div class="stat-card ${gross >= 0 ? "" : "warn"}"><div class="num">${money(gross)}</div><div class="lbl">${tr("repGross")}</div></div>
+        <div class="stat-card"><div class="num">${margin}%</div><div class="lbl">${tr("repMargin")}</div></div>
+        <div class="stat-card ${net >= 0 ? "highlight" : "warn"}"><div class="num">${money(net)}</div><div class="lbl">${tr("repNet")} ${fixed > 0 ? `<small style="font-weight:600;color:var(--ink-faint)">${tr("repNetHint")}</small>` : ""}</div></div>
+      </div>`;
+  }
+
   const prod = {};
   items.forEach((i) => { const k = i.name || "—"; prod[k] = prod[k] || { qty: 0, rev: 0 }; prod[k].qty += Number(i.qty) || 0; prod[k].rev += Number(i.line_total) || 0; });
   const topProd = Object.entries(prod).sort((a, b) => b[1].rev - a[1].rev).slice(0, 6);
@@ -1094,6 +1123,7 @@ async function renderReports() {
       <div class="stat-card"><div class="num">${money(retailRev)}</div><div class="lbl">${tr("repRetail")}</div></div>
       <div class="stat-card"><div class="num">${money(wholeRev)}</div><div class="lbl">${tr("repWholesale")}</div></div>
     </div>
+    ${profitHtml}
     <div class="bi-cols">
       <div class="bi-box"><h4 class="bi-h">${tr("repTopProducts")}</h4>
         ${topProd.map(([n, d]) => `<div class="bi-bar-row"><span class="bi-bar-lbl">${esc(n)} <small style="color:var(--ink-faint)">×${plainNum(d.qty)}</small></span><span class="bi-bar"><span class="bi-bar-fill" style="width:${Math.round((d.rev / maxRev) * 100)}%"></span></span><span class="bi-bar-num">${money(d.rev)}</span></div>`).join("")}
@@ -1175,6 +1205,14 @@ function setServiceRow(s) {
   const cur = document.createElement("span"); cur.className = "sc-cur"; cur.textContent = curSym();
   priceWrap.append(priceI, cur);
   bottom.append(durWrap, priceWrap);
+  // Kosto (vetëm kur moduli i fitimit është ndezur)
+  const costI = document.createElement("input");
+  costI.className = "s-cost"; costI.type = "number"; costI.min = 0; costI.step = "0.01"; costI.placeholder = tr("itemCost");
+  costI.value = s && s.cost != null ? s.cost : "";
+  const costWrap = document.createElement("div"); costWrap.className = "sc-price"; costWrap.hidden = !profitOn();
+  const curC = document.createElement("span"); curC.className = "sc-cur"; curC.textContent = curSym();
+  costWrap.append(costI, curC);
+  bottom.append(costWrap);
 
   const bookWrap = document.createElement("label"); bookWrap.className = "sc-book";
   const bookC = document.createElement("input"); bookC.type = "checkbox"; bookC.className = "s-book";
@@ -1229,6 +1267,9 @@ function renderSettings() {
   const setCfg = (id, key) => { const el = $(id); if (el) el.value = cfg[key] || ""; };
   setCfg("#bizPhone", "phone"); setCfg("#bizEmail", "email"); setCfg("#bizWebsite", "website");
   setCfg("#bizInstagram", "instagram"); setCfg("#bizCity", "city"); setCfg("#bizAbout", "about");
+  const pc = $("#profitOnChk"); if (pc) pc.checked = !!cfg.profitOn;
+  const fx = $("#bizFixed"); if (fx) fx.value = cfg.fixedMonthly != null ? cfg.fixedMonthly : "";
+  const fxf = $("#fixedCostField"); if (fxf) fxf.hidden = !cfg.profitOn;
   // Ekipi: vetëm pronari menaxhon qasjen
   const owner = !!(myUserId && biz.owner_id === myUserId);
   const tb = $("#teamBlock"); if (tb) tb.hidden = !owner;
@@ -1318,7 +1359,7 @@ async function upsertService(id, data) {
     if (id) { const { error } = await sb.from("services").update(data).eq("id", id); if (error) throw error; }
     else { const { error } = await sb.from("services").insert({ business_id: biz.id, ...data }); if (error) throw error; }
   } catch (e) {
-    const { kind, description, bookable, ...base } = data; // hiq kolonat e reja dhe riprovo
+    const { kind, description, bookable, cost, ...base } = data; // hiq kolonat e reja dhe riprovo
     if (id) await sb.from("services").update(base).eq("id", id);
     else await sb.from("services").insert({ business_id: biz.id, ...base });
   }
@@ -1338,7 +1379,9 @@ async function saveServicesEdit() {
     const kind = r.querySelector(".s-kind") ? r.querySelector(".s-kind").value : "service";
     const description = r.querySelector(".s-desc") ? (r.querySelector(".s-desc").value.trim() || null) : null;
     const bookable = r.querySelector(".s-book") ? r.querySelector(".s-book").checked : true;
-    const rowData = { name, kind, description, bookable, duration_min, duration_value: value, duration_unit: unit, price, sort_order: i, active: true };
+    const costEl = r.querySelector(".s-cost");
+    const cost = (costEl && costEl.value !== "") ? (Number(costEl.value) || 0) : null;
+    const rowData = { name, kind, description, bookable, cost, duration_min, duration_value: value, duration_unit: unit, price, sort_order: i, active: true };
     await upsertService(r.dataset.id || null, rowData);
     if (r.dataset.id) seen.add(r.dataset.id);
     i++;
@@ -2124,12 +2167,15 @@ function wire() {
     } catch (ex) { alert(ex.message || String(ex)); }
   };
   if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
+  if ($("#profitOnChk")) $("#profitOnChk").onchange = (e) => { const f = $("#fixedCostField"); if (f) f.hidden = !e.target.checked; };
   // General: ruaj GJITHÇKA me një buton
   if ($("#saveGeneral")) $("#saveGeneral").onclick = async () => {
     const cfg = Object.assign({}, biz.config || {});
     const g = (id) => ($(id) ? $(id).value.trim() || null : null);
     cfg.phone = g("#bizPhone"); cfg.email = g("#bizEmail"); cfg.website = g("#bizWebsite");
     cfg.instagram = g("#bizInstagram"); cfg.city = g("#bizCity"); cfg.about = g("#bizAbout");
+    cfg.profitOn = $("#profitOnChk") ? $("#profitOnChk").checked : false;
+    cfg.fixedMonthly = ($("#bizFixed") && $("#bizFixed").value !== "") ? (Number($("#bizFixed").value) || 0) : null;
     const payload = {
       name: ($("#setName").value.trim() || biz.name),
       address: g("#setAddress"),

@@ -215,6 +215,8 @@
             </label>
           </div>
           <label class="commerce-toggle" style="margin-top:10px"><input type="checkbox" id="commerceOn"> <span data-t="commerceOnLbl">Aktivizo katalogun, porositë & raportet (tregti)</span></label>
+          <label class="commerce-toggle" style="margin-top:10px"><input type="checkbox" id="profitOnChk"> <span data-t="profitOnLbl">💰 Llogarit fitimin & marzhet (kërkon koston)</span></label>
+          <label class="gen-f" id="fixedCostField" style="margin-top:10px" hidden><span data-t="fixedLbl">Shpenzime mujore fikse (qira, rroga…) — opsionale</span><input type="number" id="bizFixed" min="0" step="1" placeholder="0"></label>
         </div>
 
         <div class="gen-section">
@@ -474,6 +476,7 @@
     <label class="field" id="fldDesc"><span data-t="itemDesc">Përshkrimi (detaje për klientin & AI-në)</span><textarea id="itemDesc" rows="2" maxlength="400" data-t-ph="itemDescPh" placeholder="p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako"></textarea></label>
     <div class="field-row">
       <label class="field"><span data-t="itemPrice">Çmimi për 1 (bazë)</span><input type="number" id="itemPrice" min="0" step="0.01" value="0"></label>
+      <label class="field" id="fldCost" hidden><span data-t="itemCost">Kosto (për ty)</span><input type="number" id="itemCost" min="0" step="0.01" placeholder="—"></label>
       <label class="field" id="fldUnit"><span data-t="itemUnit">Njësia</span><input type="text" id="itemUnit" maxlength="14" data-t-ph="itemUnitPh" placeholder="copë, shishe, kg, m…"></label>
     </div>
     <div class="field-row" id="stockRow">

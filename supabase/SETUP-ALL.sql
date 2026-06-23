@@ -155,6 +155,7 @@ alter table public.services add column if not exists track_stock boolean not nul
 alter table public.services add column if not exists stock       numeric;
 alter table public.services add column if not exists unit_label  text;
 alter table public.services add column if not exists bookable    boolean not null default true;
+alter table public.services add column if not exists cost        numeric;
 
 create table if not exists public.price_tiers (
   id uuid primary key default gen_random_uuid(),
@@ -189,8 +190,9 @@ create table if not exists public.order_items (
   business_id uuid not null references public.businesses(id) on delete cascade,
   service_id uuid references public.services(id) on delete set null,
   name text not null, qty numeric(12,2) not null default 1,
-  unit_price numeric(12,2) not null default 0, line_total numeric(12,2) not null default 0
+  unit_price numeric(12,2) not null default 0, line_total numeric(12,2) not null default 0, cost numeric(12,2)
 );
+alter table public.order_items add column if not exists cost numeric(12,2);
 create index if not exists order_items_order_idx on public.order_items (order_id);
 create index if not exists order_items_business_idx on public.order_items (business_id, service_id);
 

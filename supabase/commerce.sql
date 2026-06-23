@@ -21,6 +21,7 @@ alter table public.services add column if not exists track_stock boolean not nul
 alter table public.services add column if not exists stock       numeric;         -- null = i pakufizuar
 alter table public.services add column if not exists unit_label  text;            -- p.sh. 'copë','kg','m','litër'
 alter table public.services add column if not exists bookable    boolean not null default true;  -- a prenotohet me kalendar (per-artikull)
+alter table public.services add column if not exists cost        numeric;         -- kosto për njësi (opsionale, për fitim/marzh)
 
 -- ---------- Çmime sipas sasisë (pronari përcakton shkallët) ----------
 -- Shembull: 1 copë = 10€, ≥10 = 8€, ≥100 = 6€  → shumica ndryshon çmimin vetë.
@@ -70,7 +71,8 @@ create table if not exists public.order_items (
   name        text not null,                        -- foto e emrit në momentin e shitjes
   qty         numeric(12,2) not null default 1,
   unit_price  numeric(12,2) not null default 0,
-  line_total  numeric(12,2) not null default 0
+  line_total  numeric(12,2) not null default 0,
+  cost        numeric(12,2)                         -- kosto për njësi (snapshot në shitje, për fitim)
 );
 create index if not exists order_items_order_idx    on public.order_items (order_id);
 create index if not exists order_items_business_idx on public.order_items (business_id, service_id);
