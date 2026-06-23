@@ -40,7 +40,7 @@ const T = {
     logout: "Dil", panelPrefix: "Paneli — ",
     tabCal: "📅 Kalendari", tabAppt: "📋 Takimet", tabBlock: "⛔ Bllokime", tabStat: "🏠 Përmbledhje",
     grpHome: "Kreu", grpWork: "Puna", grpBiz: "Biznesi", grpOther: "Tjera",
-    tabAiDemo: "🤖 Provo AI-në", aiBadge: "Demo · truri lokal", aiSend: "Dërgo",
+    tabAiDemo: "🤖 Provo AI-në", aiBadge: "Demo · truri lokal", aiBadgeReal: "🟢 AI real (Gemini) · provë e sigurt", aiSend: "Dërgo",
     aiDemoDesc: "Provo recepsionistin tënd AI — përgjigjet me të dhënat reale të biznesit (çmime, orar, shërbime, rezervime). Kështu do t'u flasë klientëve 24/7.",
     aiPlaceholder: "Shkruaj si klient… p.sh. 'Sa kushton qethja?'",
     aiGreet: "Përshëndetje! 👋 Mirë se vjen te {x}. Si mund të të ndihmoj — çmime, orar, shërbime apo një rezervim?",
@@ -204,7 +204,7 @@ const T = {
     logout: "Sign out", panelPrefix: "Panel — ",
     tabCal: "📅 Calendar", tabAppt: "📋 Appointments", tabBlock: "⛔ Blocks", tabStat: "🏠 Overview",
     grpHome: "Home", grpWork: "Work", grpBiz: "Business", grpOther: "More",
-    tabAiDemo: "🤖 Try the AI", aiBadge: "Demo · local brain", aiSend: "Send",
+    tabAiDemo: "🤖 Try the AI", aiBadge: "Demo · local brain", aiBadgeReal: "🟢 Real AI (Gemini) · safe preview", aiSend: "Send",
     aiDemoDesc: "Try your AI receptionist — it answers with your real business data (prices, hours, services, bookings). This is how it will talk to customers 24/7.",
     aiPlaceholder: "Type like a customer… e.g. 'How much is a haircut?'",
     aiGreet: "Hi! 👋 Welcome to {x}. How can I help — prices, hours, services or a booking?",
@@ -817,17 +817,45 @@ function aiPush(role, text) {
   b.innerHTML = esc(text).replace(/\n/g, "<br>");
   m.appendChild(b); m.scrollTop = m.scrollHeight;
 }
-function aiSend(text) {
+// Kur bëhet true (pasi useri ri-deploy-on funksionin chat me modin PREVIEW),
+// demo-ja përdor trurin REAL (Gemini hibrid) pa shkruar asgjë në bazë.
+const AI_DEMO_LIVE = false;
+let aiSessionId = "demo-" + Math.random().toString(36).slice(2, 10);
+function aiHistory() {
+  const out = [];
+  document.querySelectorAll("#aiMsgs .ai-bubble").forEach((b) => {
+    if (b.classList.contains("typing")) return;
+    out.push({ role: b.classList.contains("user") ? "user" : "bot", text: b.textContent });
+  });
+  return out.slice(-10);
+}
+async function aiSend(text) {
   const inp = $("#aiInput"); if (!inp) return;
   const q = (text != null ? text : inp.value).trim();
   if (!q) return;
   inp.value = "";
+  const hist = aiHistory();
   aiPush("user", q);
   const m = $("#aiMsgs");
   const t = document.createElement("div");
   t.className = "ai-bubble ai typing"; t.innerHTML = "<span></span><span></span><span></span>";
   m.appendChild(t); m.scrollTop = m.scrollHeight;
-  setTimeout(() => { t.remove(); aiPush("ai", aiAnswer(q)); }, 480 + Math.random() * 380);
+  let reply = null, real = false;
+  if (AI_DEMO_LIVE && biz && sb) {
+    try {
+      const { data, error } = await sb.functions.invoke("chat", { body: {
+        business_id: biz.id, text: q, channel: "demo", chat_id: aiSessionId,
+        client_name: "Vizitor (demo)", history: hist, preview: true,
+      }});
+      // Pranojmë vetëm versionin e ri (echo preview:true) → kurrë s'rrezikon rezervim real
+      if (!error && data && data.reply && data.preview === true) { reply = data.reply; real = true; }
+    } catch (_e) { /* bie te truri lokal */ }
+  }
+  if (reply == null) { await new Promise((r) => setTimeout(r, 360 + Math.random() * 300)); reply = aiAnswer(q); }
+  t.remove();
+  aiPush("ai", reply);
+  const badge = document.querySelector(".ai-badge");
+  if (badge) badge.textContent = real ? tr("aiBadgeReal") : tr("aiBadge");
 }
 function renderAiDemo() {
   const m = $("#aiMsgs"); if (!m || !biz) return;

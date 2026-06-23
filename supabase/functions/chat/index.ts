@@ -286,6 +286,8 @@ async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: 
   if (!free.includes(time)) {
     return { booked: false, reply: null, alternatives: free.slice(0, 3) };
   }
+  // PREVIEW: orari u verifikua si i lirë → kthe konfirmimin, por mos shkruaj në kalendar
+  if (ctx.preview) return { booked: true, reply: buildConfirmation(svc, dateStr, time, biz, lang) };
   // Zgjedh një staf të lirë (null nëse biznes me një person)
   const staffId = pickStaffFor(dateStr, svc.duration_min, hoursRow, appts, blocks, staff, time, ctx.now);
   const st = staffId ? (staff || []).find((x: any) => x.id === staffId) : null;
@@ -311,6 +313,7 @@ async function doCancel(ctx: any, lang?: string) {
     .eq("business_id", businessId).eq("chat_id", chat_id).neq("status", "cancelled")
     .gte("appt_date", today).order("appt_date").order("appt_time").limit(1).maybeSingle();
   if (!up) return { cancelled: false, reply: null };
+  if (ctx.preview) return { cancelled: true, reply: buildCancellation(up.appt_date, hm(up.appt_time), biz, lang) };
   await supabase.from("appointments").update({ status: "cancelled" }).eq("id", up.id);
   await supabase.from("notifications").insert({ business_id: businessId, text: `❌ ${up.client_name} anuloi — ${up.appt_date} ${hm(up.appt_time)}` });
   return { cancelled: true, reply: buildCancellation(up.appt_date, hm(up.appt_time), biz, lang) };
@@ -319,6 +322,7 @@ async function doCancel(ctx: any, lang?: string) {
 // Shton klientin në listën e pritjes (mbushja automatike e orareve bosh).
 async function addWaitlist(ctx: any, svc: any, dateStr: string, period: string | null) {
   const { businessId, channel, chat_id, client_name } = ctx;
+  if (ctx.preview) return;
   await supabase.from("waitlist").insert({
     business_id: businessId, service_id: svc?.id || null,
     client_name: client_name || "Klient", channel: channel || null, chat_id: chat_id || null,
@@ -613,6 +617,7 @@ async function runAI(ctx: any) {
 /* ---------------- Mënyra INQUIRY (biznese pa takime: porosi/kërkesa) ---------------- */
 async function saveLead(ctx: any, summary: string) {
   const { businessId, channel, chat_id, client_name } = ctx;
+  if (ctx.preview) return;
   try {
     await supabase.from("leads").insert({
       business_id: businessId, channel: channel || null, chat_id: chat_id || null,
@@ -662,39 +667,51 @@ async function runInquiry(ctx: any) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const { business_id, text, client_name, client_phone, history, channel, chat_id } = await req.json();
+    const { business_id, text, client_name, client_phone, history, channel, chat_id, preview } = await req.json();
     if (!business_id || !text) return json({ error: "business_id and text are required" }, 400);
 
     const { biz, services, hours, staff } = await loadContext(business_id);
     if (!biz) return json({ error: "business not found" }, 404);
     if (!services.length) return json({ reply: "Booking is not set up yet." });
 
+    // Modi PREVIEW (panel → "Provo AI-në"): llogarit përgjigjen REALE me të dhënat e biznesit,
+    // por NUK shkruan asgjë në bazë (s'rezervon/anulon/ruan kërkesa) → testim i sigurt.
+    const isPreview = preview === true || channel === "demo";
+
     const hMap = hoursByDow(hours);
     const svcDur: Record<string, number> = {};
     for (const s of services) svcDur[s.id] = s.duration_min;
     const now = nowInTz(biz.timezone || "Europe/Tirane");   // P0-2: data/ora në timezone-in e biznesit
-    const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history, now, todayStr: now.todayStr };
+    const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history, now, todayStr: now.todayStr, preview: isPreview };
 
+    let result: any;
     // Mënyra INQUIRY (biznese pa takime): AI informon + merr kërkesën, pa kalendar
-    if (biz.mode === "inquiry") return json(await runInquiry(ctx));
-
-    ctx.state = await loadState(business_id, channel, chat_id); // kujtesa e strukturuar
-
-    // Shtresa 1: rregullat falas
-    const ruled = await tryRules(ctx);
-    if (ruled) return json(ruled);
-
-    // Shtresa 2: AI (me mesazh të sjellshëm nëse s'është i disponueshëm)
-    try {
-      const out = await runAI(ctx);
-      return json(out);
-    } catch (_aiErr) {
-      const sq = isSqLang(biz);
-      const reply = sq
-        ? "Më fal, pata një vështirësi të vogël teknike. Mund të më shkruash ditën dhe orën që dëshiron (p.sh. \"nesër në 15:00\") dhe ta rezervoj? 🙏"
-        : "Sorry, I had a small technical hiccup. Could you tell me the day and time you'd like (e.g. \"tomorrow at 3pm\") and I'll book it? 🙏";
-      return json({ reply, via: "fallback" });
+    if (biz.mode === "inquiry") {
+      result = await runInquiry(ctx);
+    } else {
+      ctx.state = await loadState(business_id, channel, chat_id); // kujtesa e strukturuar
+      // Shtresa 1: rregullat falas
+      const ruled = await tryRules(ctx);
+      if (ruled) {
+        result = ruled;
+      } else {
+        // Shtresa 2: AI (me mesazh të sjellshëm nëse s'është i disponueshëm)
+        try {
+          result = await runAI(ctx);
+        } catch (_aiErr) {
+          const sq = isSqLang(biz);
+          result = {
+            reply: sq
+              ? "Më fal, pata një vështirësi të vogël teknike. Mund të më shkruash ditën dhe orën që dëshiron (p.sh. \"nesër në 15:00\") dhe ta rezervoj? 🙏"
+              : "Sorry, I had a small technical hiccup. Could you tell me the day and time you'd like (e.g. \"tomorrow at 3pm\") and I'll book it? 🙏",
+            via: "fallback",
+          };
+        }
+      }
     }
+    // Shenjë që ky funksion e mbështet modin e sigurt PREVIEW (paneli e përdor për ta dalluar)
+    if (isPreview && result && typeof result === "object") result.preview = true;
+    return json(result);
   } catch (e) {
     return json({ error: String((e as any)?.message || e) }, 500);
   }
