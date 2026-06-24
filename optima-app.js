@@ -459,7 +459,7 @@ let myUserId = null, myEmail = "";  // përdoruesi aktual (për pronar vs anëta
 // Monedha (global) — simboli sipas biznesit
 const CUR_SYM = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
 function curSym() { return CUR_SYM[(biz && biz.currency) || "EUR"] || ((biz && biz.currency) || "€"); }
-function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; } // shmang gabimet e presjes dhjetore (float)
+function round2(n) { return OB.round2(n); } // logjikë e testuar te core.js
 function money(n) { const v = round2(n); const s = curSym(); return s.length === 1 ? `${v}${s}` : `${v} ${s}`; }
 // Tregtia është aktive kur pronari e ka ndezur OSE biznesi merr porosi (inquiry) → Katalogu/Porositë/Raportet dalin vetë
 function commerceOn() { return !!(biz && (biz.commerce_enabled || biz.mode === "inquiry" || biz.mode === "both")); }
@@ -518,14 +518,8 @@ function collectFixedCosts() {
 
 // Çmimi/njësi sipas sasisë: zgjedh shkallën më të mirë (min_qty më e madhe <= qty), përndryshe çmimi bazë
 function unitPriceFor(item, qty) {
-  let best = Number(item.price) || 0;
-  let bestQ = -1;
-  for (const t of priceTiers) {
-    if (t.service_id === item.id && Number(t.min_qty) <= qty && Number(t.min_qty) > bestQ) {
-      best = Number(t.unit_price) || 0; bestQ = Number(t.min_qty);
-    }
-  }
-  return best;
+  // logjikë e testuar te core.js (bestUnitPrice)
+  return OB.bestUnitPrice(item.price, priceTiers.filter((t) => t.service_id === item.id), qty);
 }
 
 /* =====================================================================
@@ -1846,12 +1840,8 @@ async function freeSlots(ds, durMin, includePast = false, staffId = null) {
     .concat(breaksFor(d.getDay())); // pushimet gjatë ditës bllokohen si "të zëna"
   const isToday = ds === fmtDate(new Date());
   const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-  const out = [];
-  for (let t = open; t + durMin <= close; t += SLOT_STEP) {
-    if (!includePast && isToday && t <= nowM) continue;
-    if (!busy.some(([s, e]) => t < e && t + durMin > s)) out.push(toHM(t));
-  }
-  return out;
+  // Gjenerimi i sloteve = logjikë e testuar te core.js (e njëjta për panel + faqe publike)
+  return OB.computeSlots({ openMin: open, closeMin: close, durMin, stepMin: SLOT_STEP, busy, nowMin: isToday ? nowM : null, includePast });
 }
 
 /* =====================================================================
@@ -1867,13 +1857,8 @@ const UNIT_KEY = { min: "unitMin", hour: "unitHour", day: "unitDay", week: "unit
 function unitOptions(sel) {
   return SVC_UNITS.map((u) => `<option value="${u}"${u === sel ? " selected" : ""}>${tr(UNIT_KEY[u])}</option>`).join("");
 }
-// Kthen kohëzgjatjen në minuta për motorin e kalendarit (vetëm min/orë janë slote reale)
-function durToMin(value, unit) {
-  const v = Math.max(0, +value || 0);
-  if (unit === "min") return Math.max(5, v || 30);
-  if (unit === "hour") return Math.max(5, v * 60 || 30);
-  return 30; // ditë/javë/muaj/vit/none → s'janë slote; default për motorin
-}
+// Kthen kohëzgjatjen në minuta (logjikë e testuar te core.js)
+function durToMin(value, unit) { return OB.durToMin(value, unit); }
 
 function addServiceRow(s) {
   const row = document.createElement("div");
@@ -2517,7 +2502,34 @@ function applyLang() {
   renderAuthMode();
 }
 
+// Aksesueshmëri për modalet: bllokon fokusin brenda + Escape mbyll + kthen fokusin
+let _modalReturnFocus = null;
+function setupModalA11y() {
+  document.addEventListener("focusin", (e) => {
+    if (!document.querySelector(".modal-backdrop:not([hidden])") && e.target) _modalReturnFocus = e.target;
+  });
+  document.addEventListener("keydown", (e) => {
+    const modal = [...document.querySelectorAll(".modal-backdrop")].find((m) => !m.hidden);
+    if (!modal) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      const cancel = modal.querySelector('[id$="Cancel"], .modal-cancel, [data-t="cancel"]');
+      if (cancel) cancel.click(); else modal.hidden = true;
+      if (_modalReturnFocus && _modalReturnFocus.focus) setTimeout(() => _modalReturnFocus.focus(), 0);
+      return;
+    }
+    if (e.key === "Tab") {
+      const list = [...modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter((el) => el.offsetParent !== null);
+      if (!list.length) return;
+      const first = list[0], last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+}
+
 function wire() {
+  setupModalA11y();
   document.querySelectorAll("#langSwitch button").forEach((b) => {
     b.onclick = () => { lang = b.dataset.l; localStorage.setItem(LANG_KEY, lang); applyLang();
       if (!$("#onboardView").hidden) openOnboard();

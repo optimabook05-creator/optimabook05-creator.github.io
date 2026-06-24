@@ -645,6 +645,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   if (window.caches) caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
 }
 </script>
+<script src="core.js"></script>
 <script type="module" src="optima-app.js"></script>
 </body>
 </html>

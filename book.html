@@ -64,6 +64,7 @@
   <div class="pub-foot">⚡ <span id="poweredTxt">Mundësuar nga</span> <a href="index.html">OptimaBook</a></div>
 </div>
 
+<script src="core.js"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
@@ -191,13 +192,10 @@ function renderSlots() {
   (Array.isArray(brks) ? brks : [brks]).forEach((b) => { if (b && b.start && b.end) intervals.push([toMin(b.start), toMin(b.end)]); });
   const now = new Date(); const isToday = selDate === now.toISOString().slice(0, 10);
   const nowMin = now.getHours() * 60 + now.getMinutes();
+  // Gjenerimi i sloteve = i njëjti motor i testuar (core.js) si te paneli
+  const slots = OB.computeSlots({ openMin: open, closeMin: close, durMin: dur, stepMin: step, busy: intervals, nowMin: isToday ? nowMin : null });
   let html = "";
-  for (let m = open; m + dur <= close; m += step) {
-    if (isToday && m <= nowMin) continue;
-    if (intervals.some(([s, e]) => m < e && m + dur > s)) continue; // mbivendosje me të zënat/pushim
-    const hm = pad(Math.floor(m / 60)) + ":" + pad(m % 60);
-    html += `<button type="button" class="slot-btn" data-t="${hm}">${hm}</button>`;
-  }
+  for (const hmv of slots) html += `<button type="button" class="slot-btn" data-t="${hmv}">${hmv}</button>`;
   box.innerHTML = html || `<div style="color:var(--ink-soft);font-weight:600;font-size:13px">${tr("noSlots")}</div>`;
   box.querySelectorAll(".slot-btn").forEach((b) => b.onclick = () => {
     box.querySelectorAll(".slot-btn").forEach((x) => x.classList.remove("sel"));

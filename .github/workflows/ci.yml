@@ -1,0 +1,26 @@
+name: CI
+
+# Kontrolle automatike para se kodi të arrijë te përdoruesit:
+# - sintaksa e skedarëve JS
+# - testet e logjikës bazë (core.js) me node:test (pa varësi)
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntax check (JS)
+        run: |
+          node --check core.js
+          node --check optima-app.js
+          node --check v.js
+      - name: Run tests
+        run: node --test
