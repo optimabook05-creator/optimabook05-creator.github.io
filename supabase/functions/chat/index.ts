@@ -356,7 +356,13 @@ function durHuman(s: any, sq: boolean): string {
   return s.duration_min ? `${s.duration_min} min` : "";
 }
 function svcListText(services: any[], sq = true) {
-  return services.map((s) => { const d = durHuman(s, sq); return `• ${s.name}${d ? " — " + d : ""} — ${s.price}€`; }).join("\n");
+  return services.map((s) => {
+    const d = durHuman(s, sq);
+    let line = `• ${s.name}${d ? " — " + d : ""} — ${s.price}€`;
+    const adds = Array.isArray(s.addons) ? s.addons : [];
+    for (const a of adds) if (a && a.name) line += `\n   + ${a.name} ${a.price}€${a.required ? (sq ? " (e detyrueshme)" : " (required)") : (sq ? " (opsionale)" : " (optional)")}`;
+    return line;
+  }).join("\n");
 }
 function hoursListText(hours: any[], sq: boolean, cfg?: any) {
   const map = hoursByDow(hours, cfg);

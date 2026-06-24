@@ -22,6 +22,7 @@ alter table public.services add column if not exists stock       numeric;       
 alter table public.services add column if not exists unit_label  text;            -- p.sh. 'copë','kg','m','litër'
 alter table public.services add column if not exists bookable    boolean not null default true;  -- a prenotohet me kalendar (per-artikull)
 alter table public.services add column if not exists cost        numeric;         -- kosto për njësi (opsionale, për fitim/marzh)
+alter table public.services add column if not exists addons      jsonb;           -- shtesa: [{name,price,cost,required}] (montim/postë/garanci…)
 
 -- ---------- Çmime sipas sasisë (pronari përcakton shkallët) ----------
 -- Shembull: 1 copë = 10€, ≥10 = 8€, ≥100 = 6€  → shumica ndryshon çmimin vetë.

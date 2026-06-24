@@ -131,6 +131,10 @@ const T = {
     itemTrack: "Ndiq stokun", itemStock: "Sasia në stok", itemSku: "Kodi (SKU, opsional)",
     itemTiers: "Çmime sipas sasisë (shumicë) — opsionale", tiersHint: "Shkruaj nga sa copë dhe çmimin. P.sh. nga 2 → 40, nga 100 → 12. Aplikohet vetë sipas sasisë.",
     addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
+    secBasics: "📝 Bazat", secTime: "⏱ Koha & prenotimi", secPricing: "💶 Çmimi", secStock: "📦 Stoku & kodi",
+    itemAddons: "➕ Shtesa (montim, postë, garanci…)", addAddon: "+ Shto shtesë", addonNamePh: "p.sh. Montim, Postë, Garanci…", addonRequired: "E detyrueshme",
+    addonsHint: "Gjëra që shiten BASHKË me këtë artikull. Secila 'e detyrueshme' (shtohet vetë) ose 'opsionale' (klienti zgjedh). E përdor kush i duhet, si çmimet me shumicë.",
+    addonReq: "e detyrueshme", addonOpt: "opsionale", addonOne: "shtesë", addonMany: "shtesa", addonsTitle: "Shto me të:",
     commerceLbl: "🛒 Tregti (produkte, porosi, raporte) & monedha", commerceOnLbl: "Aktivizo katalogun, porositë & raportet",
     delete: "Fshi", confirmDelete: "Ta fshij këtë? S'kthehet mbrapsht.",
     tabGeneral: "🏢 Profili & orari", generalDesc: "Info-ja e kompanisë tënde + orari — plotësoje këtu, pastaj kliko Ruaj. (Shërbimet & produktet i menaxhon te 📦 Çfarë ofroj.)", phoneLbl: "Telefoni / kontakti",
@@ -305,6 +309,10 @@ const T = {
     itemTrack: "Track stock", itemStock: "Stock quantity", itemSku: "Code (SKU, optional)",
     itemTiers: "Quantity pricing (wholesale) — optional", tiersHint: "Enter from how many and the price. E.g. from 2 → 40, from 100 → 12. Applied automatically by quantity.",
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
+    secBasics: "📝 Basics", secTime: "⏱ Time & booking", secPricing: "💶 Price", secStock: "📦 Stock & code",
+    itemAddons: "➕ Add-ons (installation, shipping, warranty…)", addAddon: "+ Add add-on", addonNamePh: "e.g. Installation, Shipping, Warranty…", addonRequired: "Required",
+    addonsHint: "Things sold TOGETHER with this item. Each 'required' (added automatically) or 'optional' (customer chooses). Use it if you need it, like wholesale pricing.",
+    addonReq: "required", addonOpt: "optional", addonOne: "add-on", addonMany: "add-ons", addonsTitle: "Add with it:",
     commerceLbl: "🛒 Commerce (products, orders, reports) & currency", commerceOnLbl: "Enable catalog, orders & reports",
     delete: "Delete", confirmDelete: "Delete this? This cannot be undone.",
     tabGeneral: "🏢 Profile & hours", generalDesc: "Your company info + hours — fill it here, then click Save. (Manage services & products in 📦 What I offer.)", phoneLbl: "Phone / contact",
@@ -820,6 +828,7 @@ function renderCatalog() {
       meta.push(`<span class="stock-badge ${low ? "low" : ""}">${tr("stockLbl")}: ${s.stock != null ? s.stock : 0}</span>`);
     }
     if (showField("catTiers") && tiers.length) meta.push(`💹 ${tiers.map((t) => `${plainNum(t.min_qty)}+ → ${money(t.unit_price)}`).join(", ")}`);
+    if (Array.isArray(s.addons) && s.addons.length) meta.push(`➕ ${s.addons.length} ${tr(s.addons.length === 1 ? "addonOne" : "addonMany")}`);
     const desc = (showField("catDesc") && s.description) ? `<div class="cat-desc">${esc(s.description)}</div>` : "";
     const item = document.createElement("div");
     item.className = "cat-item";
@@ -867,6 +876,8 @@ function aiItemLine(s, full) {
   if (full) {
     const tiers = priceTiers.filter((x) => x.service_id === s.id);
     if (tiers.length) t += " · " + tr("aiWholesale") + ": " + tiers.map((x) => plainNum(x.min_qty) + "+ → " + money(x.unit_price)).join(", ");
+    const adds = Array.isArray(s.addons) ? s.addons : [];
+    adds.forEach((a) => { if (a && a.name) t += "\n  + " + a.name + " " + money(a.price) + (a.required ? " (" + tr("addonReq") + ")" : " (" + tr("addonOpt") + ")"); });
     if (s.description) t += "\n  " + s.description;
   }
   return t;
@@ -1000,11 +1011,14 @@ function openItem(s) {
   if ($("#itemBook")) $("#itemBook").checked = s ? (s.bookable !== false) : true;
   $("#itemTiers").innerHTML = "";
   (s ? priceTiers.filter((t) => t.service_id === s.id) : []).forEach((t) => addTierRow(t.min_qty, t.unit_price));
+  // Shtesat (montim, postë, garanci…)
+  if ($("#itemAddons")) { $("#itemAddons").innerHTML = ""; ((s && Array.isArray(s.addons)) ? s.addons : []).forEach((a) => addAddonRow(a.name, a.price, a.cost, a.required)); }
   // Fsheh fushat që pronari ka fikur
   if ($("#fldDesc")) $("#fldDesc").hidden = !showField("catDesc");
   if ($("#fldUnit")) $("#fldUnit").hidden = !showField("catUnit");
   if ($("#stockRow")) $("#stockRow").hidden = !showField("catStock");
   if ($("#fldSku")) $("#fldSku").hidden = !showField("catSku");
+  if ($("#secStock")) $("#secStock").hidden = !showField("catStock") && !showField("catSku");
   if ($("#fldTiers")) $("#fldTiers").hidden = !showField("catTiers");
   $("#itemKind").onchange = applyItemKindUI;
   applyItemKindUI();
@@ -1016,8 +1030,28 @@ function openItem(s) {
 // Shërbim → trego kohëzgjatjen + prenotimin; Produkt → fshehi (produktet nuk prenotohen)
 function applyItemKindUI() {
   const isService = $("#itemKind") && $("#itemKind").value !== "product";
+  if ($("#secTime")) $("#secTime").hidden = !isService;
   if ($("#fldDur")) $("#fldDur").hidden = !isService;
   if ($("#fldBook")) $("#fldBook").hidden = !isService;
+}
+// Një rresht shtese (emër + çmim + kosto opsionale + e detyrueshme?)
+function addAddonRow(name, price, cost, required) {
+  const row = document.createElement("div");
+  row.className = "addon-row";
+  const n = document.createElement("input");
+  n.type = "text"; n.className = "a-name"; n.maxLength = 50; n.placeholder = tr("addonNamePh"); n.value = name || "";
+  const p = document.createElement("input");
+  p.type = "number"; p.min = 0; p.step = 0.01; p.className = "a-price"; p.placeholder = tr("tierPrice"); p.value = price != null ? price : "";
+  const c = document.createElement("input");
+  c.type = "number"; c.min = 0; c.step = 0.01; c.className = "a-cost"; c.placeholder = tr("itemCost"); c.value = cost != null ? cost : ""; c.hidden = !profitOn();
+  const reqWrap = document.createElement("label"); reqWrap.className = "a-req commerce-toggle";
+  const reqC = document.createElement("input"); reqC.type = "checkbox"; reqC.className = "a-required"; reqC.checked = !!required;
+  const reqT = document.createElement("span"); reqT.textContent = tr("addonRequired");
+  reqWrap.append(reqC, reqT);
+  const del = document.createElement("button");
+  del.type = "button"; del.className = "t-del"; del.textContent = "✕"; del.onclick = () => row.remove();
+  row.append(n, p, c, reqWrap, del);
+  $("#itemAddons").appendChild(row);
 }
 
 function addTierRow(minQty, unitPrice) {
@@ -1057,16 +1091,25 @@ async function saveItem() {
     duration_unit: isService ? durUnit : null,
     duration_min: durToMin(durVal, durUnit),
   };
+  // Shtesat (montim/postë/garanci…)
+  const addons = [];
+  document.querySelectorAll("#itemAddons .addon-row").forEach((r) => {
+    const an = r.querySelector(".a-name").value.trim(); if (!an) return;
+    const ap = Number(r.querySelector(".a-price").value) || 0;
+    const acEl = r.querySelector(".a-cost");
+    const ac = (acEl && acEl.value !== "") ? (Number(acEl.value) || 0) : null;
+    addons.push({ name: an, price: ap, cost: ac, required: r.querySelector(".a-required").checked });
+  });
+  payload.addons = addons.length ? addons : null;
+  // Shkrim me fallback nëse kolona 'addons' s'ekziston ende (para SETUP-ALL.sql)
+  const writeItem = async (pl) => {
+    if (editingItemId) { const { error } = await sb.from("services").update(pl).eq("id", editingItemId); if (error) throw error; return editingItemId; }
+    const { data, error } = await sb.from("services").insert({ ...pl, active: true }).select("id").single(); if (error) throw error; return data.id;
+  };
   try {
-    let itemId = editingItemId;
-    if (itemId) {
-      await sb.from("services").update(payload).eq("id", itemId);
-    } else {
-      payload.active = true;
-      const { data, error } = await sb.from("services").insert(payload).select("id").single();
-      if (error) throw error;
-      itemId = data.id;
-    }
+    let itemId;
+    try { itemId = await writeItem(payload); }
+    catch (e1) { const { addons: _a, ...base } = payload; itemId = await writeItem(base); } // pa addons
     // Shkallët e çmimit: fshi të vjetrat + rivendos
     await sb.from("price_tiers").delete().eq("service_id", itemId);
     const rows = [];
@@ -2603,6 +2646,7 @@ function wire() {
   // Katalogu: editori i artikullit
   if ($("#btnAddItem")) $("#btnAddItem").onclick = () => openItem(null);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
+  if ($("#addAddon")) $("#addAddon").onclick = () => { addAddonRow("", "", "", false); const rows = document.querySelectorAll("#itemAddons .addon-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".a-name").focus(); };
   if ($("#itemSave")) $("#itemSave").onclick = saveItem;
   if ($("#itemDelete")) $("#itemDelete").onclick = deleteItem;
   if ($("#itemCancel")) $("#itemCancel").onclick = () => { $("#itemModal").hidden = true; };

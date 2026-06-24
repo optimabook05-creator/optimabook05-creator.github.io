@@ -155,6 +155,7 @@ alter table public.services add column if not exists track_stock boolean not nul
 alter table public.services add column if not exists stock       numeric;
 alter table public.services add column if not exists unit_label  text;
 alter table public.services add column if not exists bookable    boolean not null default true;
+alter table public.services add column if not exists addons      jsonb;   -- shtesa: [{name,price,cost,required}] (montim/postë/garanci…)
 alter table public.services add column if not exists cost        numeric;
 
 create table if not exists public.price_tiers (
@@ -221,7 +222,7 @@ returns jsonb language sql security definer stable set search_path = public as $
     'timezone', b.timezone, 'lang', b.lang,
     'services', coalesce((select jsonb_agg(jsonb_build_object(
         'id', s.id, 'name', s.name, 'price', s.price, 'kind', s.kind, 'bookable', s.bookable,
-        'description', s.description, 'unit_label', s.unit_label,
+        'description', s.description, 'unit_label', s.unit_label, 'addons', s.addons,
         'duration_min', s.duration_min, 'duration_value', s.duration_value, 'duration_unit', s.duration_unit
       ) order by s.sort_order) from services s where s.business_id = b.id and s.active), '[]'::jsonb),
     'tiers', coalesce((select jsonb_agg(jsonb_build_object('service_id', t.service_id, 'min_qty', t.min_qty, 'unit_price', t.unit_price))
@@ -255,7 +256,7 @@ end; $$;
 
 create or replace function public.public_order(bid uuid, p_name text, p_contact text, p_items jsonb, p_notes text)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare oid uuid; sub numeric := 0; cur text; r record; sid uuid; q numeric; up numeric;
+declare oid uuid; sub numeric := 0; cur text; r record; sid uuid; q numeric; up numeric; ar record; ap numeric;
 begin
   if bid is null then return jsonb_build_object('ok', false, 'error', 'missing'); end if;
   select currency into cur from businesses where id = bid;
@@ -272,6 +273,15 @@ begin
     insert into order_items (order_id, business_id, service_id, name, qty, unit_price, line_total)
     values (oid, bid, sid, coalesce((select name from services where id = sid), '-'), q, up, q * up);
     sub := sub + q * up;
+    -- Shtesat: të detyrueshme gjithmonë + opsionalet e zgjedhura nga klienti (çmimi merret nga baza, jo nga klienti)
+    for ar in select value as av from jsonb_array_elements(coalesce((select addons from services where id = sid), '[]'::jsonb)) loop
+      if (ar.av->>'required')::boolean is true or (coalesce(r.v->'addons','[]'::jsonb) ? (ar.av->>'name')) then
+        ap := coalesce((ar.av->>'price')::numeric, 0);
+        insert into order_items (order_id, business_id, service_id, name, qty, unit_price, line_total)
+        values (oid, bid, sid, left('+ ' || (ar.av->>'name'), 60), q, ap, q * ap);
+        sub := sub + q * ap;
+      end if;
+    end loop;
   end loop;
   if sub = 0 then delete from orders where id = oid; return jsonb_build_object('ok', false, 'error', 'no_items'); end if;
   update orders set subtotal = sub, total = sub where id = oid;

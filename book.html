@@ -41,6 +41,10 @@
   .qty button { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--glass-edge); background: var(--glass-strong);
     color: var(--ink); font-size: 17px; font-weight: 800; cursor: pointer; line-height: 1; }
   .qty span { min-width: 22px; text-align: center; font-weight: 800; }
+  .pi-addons { margin-top: 7px; display: flex; flex-direction: column; gap: 5px; }
+  .pi-addon { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-soft); font-weight: 600; cursor: pointer; }
+  .pi-addon input { width: auto; }
+  .pi-addon.req { color: var(--accent-deep); cursor: default; }
   .cart-total { display: flex; justify-content: space-between; align-items: center; margin: 18px 0 4px; font-family: var(--font-display); font-weight: 800; font-size: 18px; }
   .cart-total b { color: var(--accent-deep); }
   .pub-msg { text-align: center; padding: 30px 16px; }
@@ -77,12 +81,12 @@ const T = {
     service:"Shërbimi", date:"Data", pickSlot:"Zgjedh orarin", noSlots:"S'ka orare të lira këtë ditë.", closed:"Mbyllur këtë ditë.",
     name:"Emri yt", phone:"Telefoni", contact:"Telefon / email", notes:"Shënime (opsionale)", total:"Totali", send:"Dërgo",
     okBook:"U rezervua! 🎉", okBookP:"Pronari do ta konfirmojë së shpejti.", okOrder:"Porosia u dërgua! 🎉", okOrderP:"Pronari do të kontaktojë së shpejti.",
-    needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", another:"Bëj një tjetër", track:"📦 Gjurmo statusin" },
+    needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", another:"Bëj një tjetër", track:"📦 Gjurmo statusin", addonInc:"përfshihet" },
   en: { loading:"Loading…", notfound:"Business not found.", powered:"Powered by", book:"Book an appointment", order:"Place your order",
     service:"Service", date:"Date", pickSlot:"Pick a time", noSlots:"No free times this day.", closed:"Closed this day.",
     name:"Your name", phone:"Phone", contact:"Phone / email", notes:"Notes (optional)", total:"Total", send:"Send",
     okBook:"Booked! 🎉", okBookP:"The owner will confirm shortly.", okOrder:"Order sent! 🎉", okOrderP:"The owner will contact you shortly.",
-    needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", another:"Make another", track:"📦 Track status" },
+    needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", another:"Make another", track:"📦 Track status", addonInc:"included" },
 };
 const tr = (k) => (SQ ? T.sq : T.en)[k];
 
@@ -237,11 +241,17 @@ function orderUI() {
 }
 function itemRow(s) {
   const showDesc = !(DATA.config && DATA.config.catDesc === false);
+  const adds = Array.isArray(s.addons) ? s.addons : [];
+  const addHtml = adds.length ? `<div class="pi-addons">${adds.map((a, i) => a.required
+    ? `<div class="pi-addon req">+ ${esc(a.name)} ${money(a.price)} · ${tr("addonInc")}</div>`
+    : `<label class="pi-addon"><input type="checkbox" data-addon="${s.id}" data-i="${i}"> + ${esc(a.name)} ${money(a.price)}</label>`
+  ).join("")}</div>` : "";
   return `<div class="pub-item">
     <div class="pi-grow">
       <div class="pi-name">${esc(s.name)}</div>
       ${showDesc && s.description ? `<div class="pi-desc">${esc(s.description)}</div>` : ""}
       <div class="pi-price">${money(s.price)}${s.unit_label ? " / " + esc(s.unit_label) : ""}</div>
+      ${addHtml}
     </div>
     <div class="qty">
       <button type="button" data-m="${s.id}">−</button>
@@ -252,14 +262,30 @@ function itemRow(s) {
 }
 function recompute() {
   let total = 0;
-  for (const id in cart) { const it = svcById(id); if (it) total += unitPrice(it, cart[id]) * cart[id]; }
+  for (const id in cart) {
+    const it = svcById(id); if (!it) continue;
+    const qty = cart[id];
+    total += unitPrice(it, qty) * qty;
+    const adds = Array.isArray(it.addons) ? it.addons : [];
+    adds.forEach((a, i) => { if (a.required || (cartAddons[id] && cartAddons[id].has(i))) total += (Number(a.price) || 0) * qty; });
+  }
   $("#oTotal").textContent = money(total);
 }
 function wireOrder() {
   $("#oItems").querySelectorAll("button[data-p]").forEach((b) => b.onclick = () => { const id = b.dataset.p; cart[id] = (cart[id] || 0) + 1; $("#q-" + id).textContent = cart[id]; recompute(); });
   $("#oItems").querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => { const id = b.dataset.m; cart[id] = Math.max(0, (cart[id] || 0) - 1); $("#q-" + id).textContent = cart[id]; if (!cart[id]) delete cart[id]; recompute(); });
+  $("#oItems").querySelectorAll("input[data-addon]").forEach((c) => c.onchange = () => {
+    const id = c.dataset.addon, i = +c.dataset.i;
+    (cartAddons[id] = cartAddons[id] || new Set());
+    if (c.checked) cartAddons[id].add(i); else cartAddons[id].delete(i);
+    recompute();
+  });
   $("#oGo").onclick = async () => {
-    const items = Object.keys(cart).map((id) => ({ service_id: id, qty: cart[id] }));
+    const items = Object.keys(cart).map((id) => {
+      const it = svcById(id); const adds = (it && Array.isArray(it.addons)) ? it.addons : [];
+      const sel = cartAddons[id] ? [...cartAddons[id]].map((i) => adds[i] && adds[i].name).filter(Boolean) : [];
+      return { service_id: id, qty: cart[id], addons: sel };
+    });
     if (!items.length) { $("#oErr").textContent = tr("needItems"); return; }
     const name = $("#oName").value.trim();
     if (!name) { $("#oErr").textContent = tr("needName"); return; }
