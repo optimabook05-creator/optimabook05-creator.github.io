@@ -240,9 +240,22 @@ $$;
 
 create or replace function public.public_book(bid uuid, p_service uuid, p_name text, p_phone text, p_date date, p_time time)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare new_id uuid;
+declare new_id uuid; ndur int; cap int; noverlap int; recent int;
 begin
   if bid is null or p_date is null or p_time is null then return jsonb_build_object('ok', false, 'error', 'missing'); end if;
+  -- Rate limit: maks 20 rezervime web/min për biznes (mbrojtje nga spam/kosto)
+  select count(*) into recent from appointments where business_id = bid and channel = 'web' and created_at > now() - interval '1 minute';
+  if recent >= 20 then return jsonb_build_object('ok', false, 'error', 'rate'); end if;
+  -- Kohëzgjatja e shërbimit + kapaciteti paralel (numri i stafit, min 1)
+  select coalesce(duration_min, 30) into ndur from services where id = p_service;
+  ndur := coalesce(ndur, 30);
+  select greatest(1, count(*)) into cap from staff where business_id = bid and active;
+  -- Mbrojtje serveri kundër MBIVENDOSJES (jo vetëm ora identike) — respekton kapacitetin paralel
+  select count(*) into noverlap from appointments a left join services s on s.id = a.service_id
+   where a.business_id = bid and a.appt_date = p_date and a.status <> 'cancelled'
+     and a.appt_time < (p_time + make_interval(mins => ndur))
+     and (a.appt_time + make_interval(mins => coalesce(s.duration_min, 30))) > p_time;
+  if noverlap >= cap then return jsonb_build_object('ok', false, 'error', 'slot_taken'); end if;
   insert into appointments (business_id, service_id, client_name, client_phone, appt_date, appt_time, status, source, channel)
   values (bid, p_service, left(coalesce(nullif(trim(p_name),''),'Web'),60), left(coalesce(p_phone,''),40), p_date, p_time, 'pending', 'manual', 'web')
   returning id into new_id;
@@ -254,14 +267,27 @@ exception
   when others then return jsonb_build_object('ok', false, 'error', 'failed');
 end; $$;
 
-create or replace function public.public_order(bid uuid, p_name text, p_contact text, p_items jsonb, p_notes text)
+-- Idempotencë për porositë e faqes publike (mbron nga dyfishimi në dy-klikim/retry)
+alter table public.orders add column if not exists idempotency_key uuid;
+create unique index if not exists orders_idem_uniq on public.orders (business_id, idempotency_key) where idempotency_key is not null;
+
+drop function if exists public.public_order(uuid, text, text, jsonb, text);
+create or replace function public.public_order(bid uuid, p_name text, p_contact text, p_items jsonb, p_notes text, p_idem uuid default null)
 returns jsonb language plpgsql security definer set search_path = public as $$
-declare oid uuid; sub numeric := 0; cur text; r record; sid uuid; q numeric; up numeric; ar record; ap numeric;
+declare oid uuid; sub numeric := 0; cur text; r record; sid uuid; q numeric; up numeric; ar record; ap numeric; recent int;
 begin
   if bid is null then return jsonb_build_object('ok', false, 'error', 'missing'); end if;
+  -- Idempotencë: nëse kjo porosi është dërguar tashmë me të njëjtin çelës, ktheje (pa dublikatë)
+  if p_idem is not null then
+    select id into oid from orders where business_id = bid and idempotency_key = p_idem limit 1;
+    if oid is not null then return jsonb_build_object('ok', true, 'id', oid); end if;
+  end if;
+  -- Rate limit: maks 30 porosi web/min për biznes
+  select count(*) into recent from orders where business_id = bid and channel = 'web' and created_at > now() - interval '1 minute';
+  if recent >= 30 then return jsonb_build_object('ok', false, 'error', 'rate'); end if;
   select currency into cur from businesses where id = bid;
-  insert into orders (business_id, customer_name, customer_contact, status, currency, created_by, channel, notes)
-  values (bid, left(coalesce(nullif(trim(p_name),''),'Web'),60), left(coalesce(p_contact,''),60), 'new', coalesce(cur,'EUR'), 'manual', 'web', left(coalesce(p_notes,''),200))
+  insert into orders (business_id, customer_name, customer_contact, status, currency, created_by, channel, notes, idempotency_key)
+  values (bid, left(coalesce(nullif(trim(p_name),''),'Web'),60), left(coalesce(p_contact,''),60), 'new', coalesce(cur,'EUR'), 'manual', 'web', left(coalesce(p_notes,''),200), p_idem)
   returning id into oid;
   for r in select value as v from jsonb_array_elements(p_items) loop
     sid := (r.v->>'service_id')::uuid;
@@ -287,7 +313,12 @@ begin
   update orders set subtotal = sub, total = sub where id = oid;
   insert into notifications (business_id, text) values (bid, '🌐 Porosi e re nga faqja online: ' || coalesce(p_name,'klient'));
   return jsonb_build_object('ok', true, 'id', oid);
-exception when others then return jsonb_build_object('ok', false, 'error', 'failed');
+exception
+  when unique_violation then  -- garë idempotence → ktheje porosinë ekzistuese
+    select id into oid from orders where business_id = bid and idempotency_key = p_idem limit 1;
+    if oid is not null then return jsonb_build_object('ok', true, 'id', oid); end if;
+    return jsonb_build_object('ok', false, 'error', 'failed');
+  when others then return jsonb_build_object('ok', false, 'error', 'failed');
 end; $$;
 
 create or replace function public.public_track(p_kind text, p_id uuid)
@@ -305,7 +336,7 @@ $$;
 
 grant execute on function public.public_business(uuid) to anon, authenticated;
 grant execute on function public.public_book(uuid, uuid, text, text, date, time) to anon, authenticated;
-grant execute on function public.public_order(uuid, text, text, jsonb, text) to anon, authenticated;
+grant execute on function public.public_order(uuid, text, text, jsonb, text, uuid) to anon, authenticated;
 grant execute on function public.public_track(text, uuid) to anon, authenticated;
 
 -- ---------- EKIPI (llogari të shumta për një biznes, me role) ----------

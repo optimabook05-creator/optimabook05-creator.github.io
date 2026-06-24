@@ -81,16 +81,19 @@ const T = {
     service:"Shërbimi", date:"Data", pickSlot:"Zgjedh orarin", noSlots:"S'ka orare të lira këtë ditë.", closed:"Mbyllur këtë ditë.",
     name:"Emri yt", phone:"Telefoni", contact:"Telefon / email", notes:"Shënime (opsionale)", total:"Totali", send:"Dërgo",
     okBook:"U rezervua! 🎉", okBookP:"Pronari do ta konfirmojë së shpejti.", okOrder:"Porosia u dërgua! 🎉", okOrderP:"Pronari do të kontaktojë së shpejti.",
-    needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", another:"Bëj një tjetër", track:"📦 Gjurmo statusin", addonInc:"përfshihet" },
+    needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", rate:"Shumë kërkesa njëherësh — prit pak dhe provo sërish.", another:"Bëj një tjetër", track:"📦 Gjurmo statusin", addonInc:"përfshihet" },
   en: { loading:"Loading…", notfound:"Business not found.", powered:"Powered by", book:"Book an appointment", order:"Place your order",
     service:"Service", date:"Date", pickSlot:"Pick a time", noSlots:"No free times this day.", closed:"Closed this day.",
     name:"Your name", phone:"Phone", contact:"Phone / email", notes:"Notes (optional)", total:"Total", send:"Send",
     okBook:"Booked! 🎉", okBookP:"The owner will confirm shortly.", okOrder:"Order sent! 🎉", okOrderP:"The owner will contact you shortly.",
-    needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", another:"Make another", track:"📦 Track status", addonInc:"included" },
+    needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", rate:"Too many requests at once — wait a moment and try again.", another:"Make another", track:"📦 Track status", addonInc:"included" },
 };
 const tr = (k) => (SQ ? T.sq : T.en)[k];
 
 const cart = {}; // service_id -> qty
+const cartAddons = {}; // service_id -> Set(indeksesh të shtesave opsionale të zgjedhura)
+let orderIdem = ""; // çelës idempotence për porosinë (rivendoset kur hapet forma)
+function uuid() { return (crypto && crypto.randomUUID) ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16); }); }
 let selDate = "", selTime = "";
 const BASE = location.href.split("?")[0].replace(/[^/]*$/, "");
 
@@ -214,7 +217,7 @@ function wireBook() {
       const { data, error } = await sb.rpc("public_book", { bid: DATA.id, p_service: $("#bSvc").value, p_name: name, p_phone: $("#bPhone").value.trim(), p_date: selDate, p_time: selTime });
       if (error || !data || !data.ok) {
         $("#bGo").disabled = false;
-        $("#bErr").textContent = data && data.error === "slot_taken" ? tr("slotTaken") : tr("failed");
+        $("#bErr").textContent = data && data.error === "slot_taken" ? tr("slotTaken") : (data && data.error === "rate" ? tr("rate") : tr("failed"));
         if (data && data.error === "slot_taken") { DATA.busy.push({ d: selDate, t: selTime }); renderSlots(); }
         return;
       }
@@ -225,6 +228,7 @@ function wireBook() {
 
 /* ---------- Orders / commerce ---------- */
 function orderUI() {
+  orderIdem = uuid(); // çelës i ri idempotence sa herë hapet forma e porosisë
   const items = DATA.services;
   return `
     <div class="pub-sec">${tr("order")}</div>
@@ -291,8 +295,8 @@ function wireOrder() {
     if (!name) { $("#oErr").textContent = tr("needName"); return; }
     $("#oErr").textContent = ""; $("#oGo").disabled = true;
     try {
-      const { data, error } = await sb.rpc("public_order", { bid: DATA.id, p_name: name, p_contact: $("#oContact").value.trim(), p_items: items, p_notes: $("#oNotes").value.trim() });
-      if (error || !data || !data.ok) { $("#oGo").disabled = false; $("#oErr").textContent = tr("failed"); return; }
+      const { data, error } = await sb.rpc("public_order", { bid: DATA.id, p_name: name, p_contact: $("#oContact").value.trim(), p_items: items, p_notes: $("#oNotes").value.trim(), p_idem: orderIdem });
+      if (error || !data || !data.ok) { $("#oGo").disabled = false; $("#oErr").textContent = (data && data.error === "rate") ? tr("rate") : tr("failed"); return; }
       done(tr("okOrder"), tr("okOrderP"), BASE + "track.html?o=" + data.id);
     } catch (e) { $("#oGo").disabled = false; $("#oErr").textContent = tr("failed"); }
   };

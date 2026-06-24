@@ -459,7 +459,8 @@ let myUserId = null, myEmail = "";  // përdoruesi aktual (për pronar vs anëta
 // Monedha (global) — simboli sipas biznesit
 const CUR_SYM = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
 function curSym() { return CUR_SYM[(biz && biz.currency) || "EUR"] || ((biz && biz.currency) || "€"); }
-function money(n) { const v = Math.round((Number(n) || 0) * 100) / 100; const s = curSym(); return s.length === 1 ? `${v}${s}` : `${v} ${s}`; }
+function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; } // shmang gabimet e presjes dhjetore (float)
+function money(n) { const v = round2(n); const s = curSym(); return s.length === 1 ? `${v}${s}` : `${v} ${s}`; }
 // Tregtia është aktive kur pronari e ka ndezur OSE biznesi merr porosi (inquiry) → Katalogu/Porositë/Raportet dalin vetë
 function commerceOn() { return !!(biz && (biz.commerce_enabled || biz.mode === "inquiry" || biz.mode === "both")); }
 
@@ -1237,9 +1238,9 @@ function recomputeOrder() {
   document.querySelectorAll("#orderLines .order-line").forEach((r) => {
     const qv = Number(r.querySelector(".ol-qty").value) || 0;
     const pv = Number(r.querySelector(".ol-price").value) || 0;
-    const lt = qv * pv;
+    const lt = round2(qv * pv);
     r.querySelector(".ol-total").textContent = money(lt);
-    sub += lt;
+    sub = round2(sub + lt);
   });
   const disc = Number($("#orderDiscount").value) || 0;
   $("#orderSubtotal").textContent = money(sub);
@@ -1252,10 +1253,10 @@ async function saveOrder() {
     const sid = r.querySelector(".ol-item").value;
     const qv = Number(r.querySelector(".ol-qty").value) || 0;
     const pv = Number(r.querySelector(".ol-price").value) || 0;
-    if (sid && qv > 0) { const it = svcById(sid) || {}; lines.push({ service_id: sid, name: it.name || "", qty: qv, unit_price: pv, line_total: qv * pv, cost: it.cost != null ? Number(it.cost) : null }); }
+    if (sid && qv > 0) { const it = svcById(sid) || {}; lines.push({ service_id: sid, name: it.name || "", qty: qv, unit_price: pv, line_total: round2(qv * pv), cost: it.cost != null ? Number(it.cost) : null }); }
   });
   if (!lines.length) { toast(tr("orderNeedItem")); return; }
-  const sub = lines.reduce((a, l) => a + l.line_total, 0);
+  const sub = round2(lines.reduce((a, l) => a + l.line_total, 0));
   const disc = Number($("#orderDiscount").value) || 0;
   const order = {
     business_id: biz.id,
@@ -1267,7 +1268,7 @@ async function saveOrder() {
     amount_paid: Number($("#orderAmountPaid").value) || 0,
     due_at: $("#orderDue").value || null,
     currency: biz.currency || "EUR",
-    subtotal: sub, discount: disc, total: Math.max(0, sub - disc),
+    subtotal: sub, discount: disc, total: round2(Math.max(0, sub - disc)),
     notes: $("#orderNotes").value.trim() || null,
   };
   try {
