@@ -1661,3 +1661,11 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 .addon-row .t-del { flex: 0 0 auto; }
 @media (max-width: 560px) { .addon-row { grid-template-columns: 1fr 1fr; } .addon-row .a-req { grid-column: 1 / -1; } }
 :root[data-theme="dark"] .item-sec { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border-color: rgba(255,255,255,.1); }
+
+/* Përshtatja e fushave për një artikull + njoftim gabimi */
+.item-customize-btn { background: none; border: 1px dashed var(--glass-line); border-radius: 10px; padding: 9px 13px; width: 100%; text-align: left; cursor: pointer; font-family: var(--font-body); font-weight: 700; font-size: 13.5px; color: var(--ink-soft); display: flex; justify-content: space-between; align-items: center; }
+.item-customize-btn:hover { border-color: var(--accent); color: var(--accent-deep); }
+.item-customize-btn .chev { font-size: 12px; }
+#itemFieldsBox { margin-top: 12px; }
+#toast.err { background: linear-gradient(180deg, #ef5350, var(--red)); color: #fff; border-color: rgba(255,255,255,.2); }
+:root[data-theme="dark"] .item-customize-btn { border-color: rgba(255,255,255,.14); }

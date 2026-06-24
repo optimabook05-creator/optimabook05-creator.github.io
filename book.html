@@ -242,8 +242,11 @@ function orderUI() {
     <button class="btn primary big" id="oGo" style="width:100%;margin-top:14px">${tr("send")}</button>`;
 }
 function itemRow(s) {
-  const showDesc = !(DATA.config && DATA.config.catDesc === false);
-  const adds = Array.isArray(s.addons) ? s.addons : [];
+  const cfg = DATA.config || {};
+  const showDesc = OB.fieldVisible("desc", s.hidden_fields, cfg.catDesc !== false);
+  const showUnit = OB.fieldVisible("unit", s.hidden_fields, cfg.catUnit !== false);
+  const showAddons = OB.fieldVisible("addons", s.hidden_fields, true);
+  const adds = (showAddons && Array.isArray(s.addons)) ? s.addons : [];
   const addHtml = adds.length ? `<div class="pi-addons">${adds.map((a, i) => a.required
     ? `<div class="pi-addon req">+ ${esc(a.name)} ${money(a.price)} · ${tr("addonInc")}</div>`
     : `<label class="pi-addon"><input type="checkbox" data-addon="${s.id}" data-i="${i}"> + ${esc(a.name)} ${money(a.price)}</label>`
@@ -252,7 +255,7 @@ function itemRow(s) {
     <div class="pi-grow">
       <div class="pi-name">${esc(s.name)}</div>
       ${showDesc && s.description ? `<div class="pi-desc">${esc(s.description)}</div>` : ""}
-      <div class="pi-price">${money(s.price)}${s.unit_label ? " / " + esc(s.unit_label) : ""}</div>
+      <div class="pi-price">${money(s.price)}${showUnit && s.unit_label ? " / " + esc(s.unit_label) : ""}</div>
       ${addHtml}
     </div>
     <div class="qty">

@@ -69,6 +69,14 @@ test("computeSlots — kohëzgjatje që s'futet para mbylljes përjashtohet", ()
   assert.deepStrictEqual(s, ["09:00"]); // 09:30+45=10:15 > 10:00
 });
 
+test("fieldVisible — override per-artikull mbi default-in global", () => {
+  assert.strictEqual(OB.fieldVisible("stock", ["stock", "sku"], true), false); // fshehur per-artikull
+  assert.strictEqual(OB.fieldVisible("tiers", ["stock"], true), true);         // jo në listë → dukshëm
+  assert.strictEqual(OB.fieldVisible("desc", null, true), true);              // pa override → default global on
+  assert.strictEqual(OB.fieldVisible("desc", null, false), false);           // pa override → default global off
+  assert.strictEqual(OB.fieldVisible("stock", [], true), true);              // listë bosh → asgjë e fshehur
+});
+
 test("overlaps", () => {
   assert.strictEqual(OB.overlaps(600, 30, [[600, 660]]), true);
   assert.strictEqual(OB.overlaps(570, 30, [[600, 660]]), false);

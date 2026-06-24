@@ -134,7 +134,9 @@ const T = {
     secBasics: "📝 Bazat", secTime: "⏱ Koha & prenotimi", secPricing: "💶 Çmimi", secStock: "📦 Stoku & kodi",
     itemAddons: "➕ Shtesa (montim, postë, garanci…)", addAddon: "+ Shto shtesë", addonNamePh: "p.sh. Montim, Postë, Garanci…", addonRequired: "E detyrueshme",
     addonsHint: "Gjëra që shiten BASHKË me këtë artikull. Secila 'e detyrueshme' (shtohet vetë) ose 'opsionale' (klienti zgjedh). E përdor kush i duhet, si çmimet me shumicë.",
-    addonReq: "e detyrueshme", addonOpt: "opsionale", addonOne: "shtesë", addonMany: "shtesa", addonsTitle: "Shto me të:",
+    addonReq: "e detyrueshme", addonOpt: "opsionale", addonOne: "shtesë", addonMany: "shtesa", addonsTitle: "Shto me të:", itemAddonsShort: "Shtesa",
+    customizeFields: "⚙ Përshtat fushat për këtë artikull", customizeHint: "Hiq ato që s'i duhen pikërisht këtij artikulli (p.sh. një shërbim s'ka stok). Ndikon vetëm këtë artikull.",
+    errGeneric: "Diçka shkoi keq. Provo sërish.",
     commerceLbl: "🛒 Tregti (produkte, porosi, raporte) & monedha", commerceOnLbl: "Aktivizo katalogun, porositë & raportet",
     delete: "Fshi", confirmDelete: "Ta fshij këtë? S'kthehet mbrapsht.",
     tabGeneral: "🏢 Profili & orari", generalDesc: "Info-ja e kompanisë tënde + orari — plotësoje këtu, pastaj kliko Ruaj. (Shërbimet & produktet i menaxhon te 📦 Çfarë ofroj.)", phoneLbl: "Telefoni / kontakti",
@@ -312,7 +314,9 @@ const T = {
     secBasics: "📝 Basics", secTime: "⏱ Time & booking", secPricing: "💶 Price", secStock: "📦 Stock & code",
     itemAddons: "➕ Add-ons (installation, shipping, warranty…)", addAddon: "+ Add add-on", addonNamePh: "e.g. Installation, Shipping, Warranty…", addonRequired: "Required",
     addonsHint: "Things sold TOGETHER with this item. Each 'required' (added automatically) or 'optional' (customer chooses). Use it if you need it, like wholesale pricing.",
-    addonReq: "required", addonOpt: "optional", addonOne: "add-on", addonMany: "add-ons", addonsTitle: "Add with it:",
+    addonReq: "required", addonOpt: "optional", addonOne: "add-on", addonMany: "add-ons", addonsTitle: "Add with it:", itemAddonsShort: "Add-ons",
+    customizeFields: "⚙ Customize fields for this item", customizeHint: "Turn off what this specific item doesn't need (e.g. a service has no stock). Affects only this item.",
+    errGeneric: "Something went wrong. Try again.",
     commerceLbl: "🛒 Commerce (products, orders, reports) & currency", commerceOnLbl: "Enable catalog, orders & reports",
     delete: "Delete", confirmDelete: "Delete this? This cannot be undone.",
     tabGeneral: "🏢 Profile & hours", generalDesc: "Your company info + hours — fill it here, then click Save. (Manage services & products in 📦 What I offer.)", phoneLbl: "Phone / contact",
@@ -427,11 +431,31 @@ const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getD
 const parseDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const SLOT_STEP = 30;
 let toastTimer;
-function toast(text) {
+function toast(text, kind) {
   const el = $("#toast"); if (!el) return;
-  el.textContent = text; el.classList.add("show");
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+  el.textContent = text;
+  el.classList.toggle("err", kind === "err");
+  el.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), kind === "err" ? 4200 : 2600);
 }
+// Njoftim gabimi i bukur (zëvendëson alert) + log i lehtë për diagnostikë
+function errToast(e) {
+  const msg = (e && e.message) ? e.message : (typeof e === "string" ? e : tr("errGeneric"));
+  logClientError("handled", msg, e);
+  toast(msg, "err");
+}
+// Observability-lite: log gabimesh në console + unazë në localStorage (pa llogari/varësi)
+function logClientError(type, msg, err) {
+  try {
+    console.error("[OptimaBook]", type, msg, err || "");
+    const ring = JSON.parse(localStorage.getItem("ob-errlog") || "[]");
+    ring.push({ t: new Date().toISOString(), type, msg: String(msg).slice(0, 300), v: (typeof OB_VERSION !== "undefined" ? OB_VERSION : ""), biz: (biz && biz.id) || null });
+    while (ring.length > 25) ring.shift();
+    localStorage.setItem("ob-errlog", JSON.stringify(ring));
+  } catch (_e) {}
+}
+window.addEventListener("error", (e) => logClientError("window.error", (e && e.message) || "error", e && e.error));
+window.addEventListener("unhandledrejection", (e) => logClientError("unhandledrejection", (e && e.reason && e.reason.message) || String(e && e.reason), e && e.reason));
 function humanDate(ds) {
   const d = parseDate(ds), today = fmtDate(new Date());
   const tom = fmtDate(new Date(Date.now() + 864e5));
@@ -817,14 +841,14 @@ function renderCatalog() {
       else if (s.duration_min) meta.push(`⏱ ${plainNum(s.duration_min)} ${tr("unitMin")}`);
       if (s.bookable !== false) meta.push("📅");
     }
-    if (showField("catUnit") && s.unit_label) meta.push(esc(s.unit_label));
-    if (showField("catStock") && s.track_stock) {
+    if (itemShowsField(s, "unit") && s.unit_label) meta.push(esc(s.unit_label));
+    if (itemShowsField(s, "stock") && s.track_stock) {
       const low = Number(s.stock) <= 3;
       meta.push(`<span class="stock-badge ${low ? "low" : ""}">${tr("stockLbl")}: ${s.stock != null ? s.stock : 0}</span>`);
     }
-    if (showField("catTiers") && tiers.length) meta.push(`💹 ${tiers.map((t) => `${plainNum(t.min_qty)}+ → ${money(t.unit_price)}`).join(", ")}`);
-    if (Array.isArray(s.addons) && s.addons.length) meta.push(`➕ ${s.addons.length} ${tr(s.addons.length === 1 ? "addonOne" : "addonMany")}`);
-    const desc = (showField("catDesc") && s.description) ? `<div class="cat-desc">${esc(s.description)}</div>` : "";
+    if (itemShowsField(s, "tiers") && tiers.length) meta.push(`💹 ${tiers.map((t) => `${plainNum(t.min_qty)}+ → ${money(t.unit_price)}`).join(", ")}`);
+    if (itemShowsField(s, "addons") && Array.isArray(s.addons) && s.addons.length) meta.push(`➕ ${s.addons.length} ${tr(s.addons.length === 1 ? "addonOne" : "addonMany")}`);
+    const desc = (itemShowsField(s, "desc") && s.description) ? `<div class="cat-desc">${esc(s.description)}</div>` : "";
     const item = document.createElement("div");
     item.className = "cat-item";
     item.innerHTML = `<span class="grow"><div class="cat-name">${esc(s.name)}</div>${desc}<div class="cat-meta">${meta.join(" ")}</div></span><span class="cat-price">${money(s.price)}</span>`;
@@ -1008,26 +1032,34 @@ function openItem(s) {
   (s ? priceTiers.filter((t) => t.service_id === s.id) : []).forEach((t) => addTierRow(t.min_qty, t.unit_price));
   // Shtesat (montim, postë, garanci…)
   if ($("#itemAddons")) { $("#itemAddons").innerHTML = ""; ((s && Array.isArray(s.addons)) ? s.addons : []).forEach((a) => addAddonRow(a.name, a.price, a.cost, a.required)); }
-  // Fsheh fushat që pronari ka fikur
-  if ($("#fldDesc")) $("#fldDesc").hidden = !showField("catDesc");
-  if ($("#fldUnit")) $("#fldUnit").hidden = !showField("catUnit");
-  if ($("#stockRow")) $("#stockRow").hidden = !showField("catStock");
-  if ($("#fldSku")) $("#fldSku").hidden = !showField("catSku");
-  if ($("#secStock")) $("#secStock").hidden = !showField("catStock") && !showField("catSku");
-  if ($("#fldTiers")) $("#fldTiers").hidden = !showField("catTiers");
-  $("#itemKind").onchange = applyItemKindUI;
-  applyItemKindUI();
+  // Fushat per-artikull: vendos checkbox-et nga override-i i artikullit (ose default-i global)
+  document.querySelectorAll("#itemFieldsBox .fit").forEach((c) => { c.checked = itemShowsField(s, c.dataset.f); c.onchange = applyItemFields; });
+  if ($("#itemFieldsBox")) $("#itemFieldsBox").hidden = true; // i mbledhur si parazgjedhje
+  $("#itemKind").onchange = applyItemFields;
+  applyItemFields();
   $("#itemDelete").hidden = !s;
   $("#itemModal").hidden = false;
   setTimeout(() => $("#itemName").focus(), 60);
 }
 
-// Shërbim → trego kohëzgjatjen + prenotimin; Produkt → fshehi (produktet nuk prenotohen)
-function applyItemKindUI() {
+// Default-i global për një fushë (toggle-t "Catalog fields") — për fushat pa toggle global → true
+const ITEM_FIELD_GLOBAL = { desc: "catDesc", unit: "catUnit", stock: "catStock", sku: "catSku", tiers: "catTiers" };
+function itemShowsField(item, key) {
+  const gk = ITEM_FIELD_GLOBAL[key];
+  return OB.fieldVisible(key, item && item.hidden_fields, gk ? showField(gk) : true);
+}
+// Zbaton dukshmërinë e seksioneve sipas checkbox-eve per-artikull + llojit (shërbim/produkt)
+function applyItemFields() {
+  const on = (f) => { const c = document.querySelector('.fit[data-f="' + f + '"]'); return c ? c.checked : true; };
   const isService = $("#itemKind") && $("#itemKind").value !== "product";
-  if ($("#secTime")) $("#secTime").hidden = !isService;
-  if ($("#fldDur")) $("#fldDur").hidden = !isService;
-  if ($("#fldBook")) $("#fldBook").hidden = !isService;
+  if ($("#fldDesc")) $("#fldDesc").hidden = !on("desc");
+  if ($("#secTime")) $("#secTime").hidden = !(isService && on("time"));
+  if ($("#fldUnit")) $("#fldUnit").hidden = !on("unit");
+  if ($("#stockRow")) $("#stockRow").hidden = !on("stock");
+  if ($("#fldSku")) $("#fldSku").hidden = !on("sku");
+  if ($("#secStock")) $("#secStock").hidden = !(on("stock") || on("sku"));
+  if ($("#fldTiers")) $("#fldTiers").hidden = !on("tiers");
+  if ($("#fldAddons")) $("#fldAddons").hidden = !on("addons");
 }
 // Një rresht shtese (emër + çmim + kosto opsionale + e detyrueshme?)
 function addAddonRow(name, price, cost, required) {
@@ -1096,7 +1128,11 @@ async function saveItem() {
     addons.push({ name: an, price: ap, cost: ac, required: r.querySelector(".a-required").checked });
   });
   payload.addons = addons.length ? addons : null;
-  // Shkrim me fallback nëse kolona 'addons' s'ekziston ende (para SETUP-ALL.sql)
+  // Fushat e fshehura për këtë artikull (override per-artikull)
+  const hidden = [];
+  document.querySelectorAll("#itemFieldsBox .fit").forEach((c) => { if (!c.checked) hidden.push(c.dataset.f); });
+  payload.hidden_fields = hidden.length ? hidden : null;
+  // Shkrim me fallback nëse kolonat e reja s'ekzistojnë ende (para SETUP-ALL.sql)
   const writeItem = async (pl) => {
     if (editingItemId) { const { error } = await sb.from("services").update(pl).eq("id", editingItemId); if (error) throw error; return editingItemId; }
     const { data, error } = await sb.from("services").insert({ ...pl, active: true }).select("id").single(); if (error) throw error; return data.id;
@@ -1104,7 +1140,7 @@ async function saveItem() {
   try {
     let itemId;
     try { itemId = await writeItem(payload); }
-    catch (e1) { const { addons: _a, ...base } = payload; itemId = await writeItem(base); } // pa addons
+    catch (e1) { const { addons: _a, hidden_fields: _h, ...base } = payload; itemId = await writeItem(base); } // pa kolonat e reja
     // Shkallët e çmimit: fshi të vjetrat + rivendos
     await sb.from("price_tiers").delete().eq("service_id", itemId);
     const rows = [];
@@ -1118,7 +1154,7 @@ async function saveItem() {
     await loadServices(); await loadTiers();
     renderCatalog();
     toast(tr("toastSaved"));
-  } catch (ex) { alert(ex.message || String(ex)); }
+  } catch (ex) { errToast(ex); }
 }
 
 async function deleteItem() {
@@ -1130,7 +1166,7 @@ async function deleteItem() {
     await loadServices(); await loadTiers();
     renderCatalog();
     toast(tr("toastSaved"));
-  } catch (ex) { alert(ex.message || String(ex)); }
+  } catch (ex) { errToast(ex); }
 }
 
 /* ---------------- Porositë (shitje të strukturuara: kush/çfarë/sa/çmim/status) ---------------- */
@@ -1281,7 +1317,7 @@ async function saveOrder() {
     $("#orderModal").hidden = true;
     toast(tr("toastSaved"));
     await renderOrders();
-  } catch (ex) { alert(ex.message || String(ex)); }
+  } catch (ex) { errToast(ex); }
 }
 
 async function deleteOrder() {
@@ -1292,7 +1328,7 @@ async function deleteOrder() {
     $("#orderModal").hidden = true;
     toast(tr("toastSaved"));
     await renderOrders();
-  } catch (ex) { alert(ex.message || String(ex)); }
+  } catch (ex) { errToast(ex); }
 }
 
 // Faturë / Ofertë e printueshme (PDF nëpërmjet "Print → Save as PDF") nga porosia e hapur
@@ -1700,7 +1736,7 @@ async function doDeleteBiz() {
     } else {
       biz = null; addingBiz = false; openOnboard(); showView("onboard");
     }
-  } catch (ex) { alert(ex.message || String(ex)); $("#delBizGo").disabled = false; }
+  } catch (ex) { errToast(ex); $("#delBizGo").disabled = false; }
 }
 
 // Ekipi: lista e anëtarëve (vetëm pronari)
@@ -1718,7 +1754,7 @@ async function renderTeam() {
     item.innerHTML = `<span class="grow">👤 <strong>${esc(m.email)}</strong> <small style="color:var(--ink-faint)">· ${m.role === "manager" ? tr("roleManager") : tr("roleStaff")}</small></span>`;
     const del = document.createElement("button");
     del.className = "btn small ghost danger"; del.textContent = tr("remove");
-    del.onclick = async () => { try { await sb.from("team_members").delete().eq("id", m.id); renderTeam(); toast(tr("toastSaved")); } catch (ex) { alert(ex.message || String(ex)); } };
+    del.onclick = async () => { try { await sb.from("team_members").delete().eq("id", m.id); renderTeam(); toast(tr("toastSaved")); } catch (ex) { errToast(ex); } };
     item.appendChild(del);
     list.appendChild(item);
   });
@@ -1967,7 +2003,7 @@ async function finishOnboard() {
     showView("app");
     toast(tr("toastSaved"));
   } catch (ex) {
-    alert(ex.message || String(ex));
+    errToast(ex);
   } finally {
     btn.disabled = false; btn.textContent = tr("obFinish");
   }
@@ -2564,7 +2600,7 @@ function wire() {
       await sb.from("businesses").update({ review_url: url || null }).eq("id", biz.id);
       biz.review_url = url || null;
       toast(tr("toastSaved"));
-    } catch (ex) { alert(ex.message || String(ex)); }
+    } catch (ex) { errToast(ex); }
   };
   const anBtn = $("#saveAiNotes");
   if (anBtn) anBtn.onclick = async () => {
@@ -2573,7 +2609,7 @@ function wire() {
       await sb.from("businesses").update({ ai_notes: v || null }).eq("id", biz.id);
       biz.ai_notes = v || null;
       toast(tr("toastSaved"));
-    } catch (ex) { alert(ex.message || String(ex)); }
+    } catch (ex) { errToast(ex); }
   };
   // (Mënyra, emri/adresa, tregtia ruhen tani me një buton të vetëm "Ruaj gjithçka" te General → #saveGeneral)
   if ($("#custSearch")) $("#custSearch").oninput = renderCustomers;
@@ -2585,7 +2621,7 @@ function wire() {
       biz.telegram_token = t || null;
       updateTgWebhookLink();
       toast(tr("toastSaved"));
-    } catch (ex) { alert(ex.message || String(ex)); }
+    } catch (ex) { errToast(ex); }
   };
   if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
   if ($("#profitOnChk")) $("#profitOnChk").onchange = (e) => { const f = $("#fixedCostField"); if (f) f.hidden = !e.target.checked; };
@@ -2615,7 +2651,7 @@ function wire() {
       applyModeUI(); renderCatalog(); if (commerceOn()) renderOrders();
       renderSettings(); await renderAll();
       toast(tr("toastSaved"));
-    } catch (ex) { alert(ex.message || String(ex)); }
+    } catch (ex) { errToast(ex); }
   };
   // Fshirja e biznesit (me verifikim: shkruaj emrin + konfirmim)
   if ($("#btnDeleteBiz")) $("#btnDeleteBiz").onclick = openDeleteBiz;
@@ -2630,7 +2666,7 @@ function wire() {
     try {
       await sb.from("team_members").insert({ business_id: biz.id, email, role: $("#teamRole").value });
       $("#teamEmail").value = ""; renderTeam(); toast(tr("toastSaved"));
-    } catch (ex) { alert(ex.message || String(ex)); }
+    } catch (ex) { errToast(ex); }
   };
   if ($("#copyPubLink")) $("#copyPubLink").onclick = async () => {
     const v = $("#pubLink").value;
@@ -2645,7 +2681,7 @@ function wire() {
     try {
       await sb.from("businesses").update({ config: cfg }).eq("id", biz.id);
       biz.config = cfg; renderCatalog(); toast(tr("toastSaved"));
-    } catch (ex) { alert(ex.message || String(ex)); }
+    } catch (ex) { errToast(ex); }
   };
   if ($("#goCatalog")) $("#goCatalog").onclick = () => { const t = document.querySelector('.tab[data-tab="catalog"]'); if (t) t.click(); };
   // AI Manager: modali i mesazhit të gatshëm
@@ -2660,6 +2696,7 @@ function wire() {
   if ($("#btnAddItem")) $("#btnAddItem").onclick = () => openItem(null);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
   if ($("#addAddon")) $("#addAddon").onclick = () => { addAddonRow("", "", "", false); const rows = document.querySelectorAll("#itemAddons .addon-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".a-name").focus(); };
+  if ($("#itemFieldsToggle")) $("#itemFieldsToggle").onclick = () => { const b = $("#itemFieldsBox"); if (b) b.hidden = !b.hidden; const c = $("#itemFieldsToggle").querySelector(".chev"); if (c) c.textContent = b.hidden ? "▾" : "▴"; };
   if ($("#itemSave")) $("#itemSave").onclick = saveItem;
   if ($("#itemDelete")) $("#itemDelete").onclick = deleteItem;
   if ($("#itemCancel")) $("#itemCancel").onclick = () => { $("#itemModal").hidden = true; };
@@ -2732,7 +2769,7 @@ function wire() {
     const { error } = await sb.from("locations").insert({
       business_id: biz.id, name, address: $("#locAddr").value.trim() || null, sort_order: locations.length,
     });
-    if (error) { alert(error.message); return; }
+    if (error) { errToast(error); return; }
     e.target.reset(); await loadLocations(); setupStaffUI(); renderStaffPane(); toast(tr("toastSaved"));
   });
   if ($("#staffForm")) $("#staffForm").addEventListener("submit", async (e) => {
@@ -2742,7 +2779,7 @@ function wire() {
       business_id: biz.id, name, role: $("#staffRole").value.trim() || "staff",
       location_id: $("#staffLoc").value || null, sort_order: staff.length,
     });
-    if (error) { alert(error.message); return; }
+    if (error) { errToast(error); return; }
     e.target.reset(); await loadStaff(); setupStaffUI(); await renderAll(); toast(tr("toastSaved"));
   });
 }

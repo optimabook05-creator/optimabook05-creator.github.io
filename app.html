@@ -545,6 +545,20 @@
       <button class="btn ghost small" id="addAddon" type="button" data-t="addAddon">+ Shto shtesë</button>
     </div>
 
+    <div class="item-sec" id="fldCustomize">
+      <button type="button" class="item-customize-btn" id="itemFieldsToggle"><span data-t="customizeFields">⚙ Përshtat fushat për këtë artikull</span> <span class="chev">▾</span></button>
+      <p class="tier-hint" data-t="customizeHint" style="margin-top:8px">Hiq ato që s'i duhen pikërisht këtij artikulli (p.sh. një shërbim s'ka stok). Ndikon vetëm këtë artikull.</p>
+      <div class="field-toggles" id="itemFieldsBox" hidden>
+        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="desc" checked> <span data-t="cfgDescLbl">Përshkrimi</span></label>
+        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="time" checked> <span data-t="secTime">Koha & prenotimi</span></label>
+        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="unit" checked> <span data-t="cfgUnitLbl">Njësia</span></label>
+        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="stock" checked> <span data-t="cfgStockLbl">Stoku</span></label>
+        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="sku" checked> <span data-t="cfgSkuLbl">Kodi (SKU)</span></label>
+        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="tiers" checked> <span data-t="cfgTiersLbl">Çmime shumice</span></label>
+        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="addons" checked> <span data-t="itemAddonsShort">Shtesa</span></label>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn ghost danger" id="itemDelete" data-t="delete" hidden>Fshi</button>
       <button class="btn ghost" id="itemCancel" data-t="cancel">Anulo</button>

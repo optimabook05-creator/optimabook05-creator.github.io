@@ -60,7 +60,13 @@
     return (intervals || []).some(([s, e]) => aStart < e && aStart + aDur > s);
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps };
+  // A shfaqet një fushë për një artikull? Override per-artikull (hidden_fields) > default global.
+  function fieldVisible(key, hiddenFields, globalDefault) {
+    if (Array.isArray(hiddenFields)) return !hiddenFields.includes(key);
+    return globalDefault !== false; // pa override → ndjek default-in global
+  }
+
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);
