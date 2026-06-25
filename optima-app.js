@@ -65,8 +65,9 @@ const T = {
     today: "Sot", dayOff: "Ditë pushimi.", free: "I lirë", cont: "↳ vazhdim", blocked: "⛔ Bllokuar",
     confirmed: "konfirmuar", pending: "në pritje",
     addManual: "+ Shto takim manual", emptyAppt: "Asnjë takim ende.",
-    bookedAi: "🤖 AI", manual: "✍ manual", confirmedW: "✓ konfirmuar", cancelledW: "anuluar",
-    remind: "🔔 Kujto", confirmBtn: "✓ Konfirmo", cancelBtn: "Anulo",
+    bookedAi: "🤖 AI", manual: "✍ manual", confirmedW: "✓ konfirmuar", cancelledW: "anuluar", attendedW: "✓ erdhi", noShowW: "✘ mungoi",
+    remind: "🔔 Kujto", confirmBtn: "✓ Konfirmo", cancelBtn: "Anulo", rescheduleBtn: "Ricakto", attendedBtn: "Erdhi", noShowBtn: "Mungoi",
+    toastRescheduled: "U ricaktua", toastNoShow: "Shënuar si mungesë", toastAttended: "Shënuar si i ardhur",
     blockDesc: "Blloko orare kur s'punon.", reasonPh: "Arsyeja (opsionale)", blockBtn: "Blloko",
     emptyBlock: "Asnjë bllokim.", remove: "Hiq",
     tabWait: "⏳ Lista e pritjes",
@@ -192,6 +193,7 @@ const T = {
     repCogs: "Kosto e mallit", repGross: "Fitim bruto", repMargin: "Marzhi", repNet: "Fitim neto", repNetHint: "(pas shpenzimeve fikse)",
     repBreakeven: "Pikë ekuilibri", repBeOk: "✓ e kalove", repBeUnder: "ende s'e ke mbuluar", repProfitOrder: "Fitim/porosi (mes.)",
     repCustEcon: "Ekonomia e klientit", repUniqCust: "Klientë unikë", repAvgCust: "Të ardhura/klient (mes.)", repRepeatRate: "Klientë që kthehen",
+    repWhatIf: "Simulo çmimin", repWhatIfHint: "Po të ndryshoja çmimet, sa do bëhej fitimi? (duke supozuar të njëjtën sasi)", repWhatIfRev: "Të ardhura",
     manRepeat: "Përsërit", repNone: "Pa përsëritje", repWeekly: "Çdo javë", repBiweekly: "Çdo 2 javë", repMonthly: "Çdo muaj",
     manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
     setPubH: "🌐 Faqe vetë-shërbimi (OPSIONALE)", pubDesc: "S'të duhet detyrimisht. Klientët thjesht të shkruajnë normalisht në WhatsApp/Instagram/Telegram dhe AI u përgjigjet aty. Ky link është vetëm një shtesë — nëse do, vendose në bio që klientët të rezervojnë edhe vetë (si Calendly).",
@@ -255,8 +257,9 @@ const T = {
     today: "Today", dayOff: "Day off.", free: "Free", cont: "↳ continues", blocked: "⛔ Blocked",
     confirmed: "confirmed", pending: "pending",
     addManual: "+ Add manual appointment", emptyAppt: "No appointments yet.",
-    bookedAi: "🤖 AI", manual: "✍ manual", confirmedW: "✓ confirmed", cancelledW: "cancelled",
-    remind: "🔔 Remind", confirmBtn: "✓ Confirm", cancelBtn: "Cancel",
+    bookedAi: "🤖 AI", manual: "✍ manual", confirmedW: "✓ confirmed", cancelledW: "cancelled", attendedW: "✓ attended", noShowW: "✘ no-show",
+    remind: "🔔 Remind", confirmBtn: "✓ Confirm", cancelBtn: "Cancel", rescheduleBtn: "Reschedule", attendedBtn: "Came", noShowBtn: "No-show",
+    toastRescheduled: "Rescheduled", toastNoShow: "Marked as no-show", toastAttended: "Marked as attended",
     blockDesc: "Block times when you're off.", reasonPh: "Reason (optional)", blockBtn: "Block",
     emptyBlock: "No blocks.", remove: "Remove",
     tabWait: "⏳ Waiting list",
@@ -382,6 +385,7 @@ const T = {
     repCogs: "Cost of goods", repGross: "Gross profit", repMargin: "Margin", repNet: "Net profit", repNetHint: "(after fixed expenses)",
     repBreakeven: "Break-even", repBeOk: "✓ passed", repBeUnder: "not covered yet", repProfitOrder: "Profit/order (avg)",
     repCustEcon: "Customer economics", repUniqCust: "Unique customers", repAvgCust: "Revenue/customer (avg)", repRepeatRate: "Returning customers",
+    repWhatIf: "Price simulator", repWhatIfHint: "If I changed prices, what would profit be? (assuming the same volume)", repWhatIfRev: "Revenue",
     manRepeat: "Repeat", repNone: "No repeat", repWeekly: "Weekly", repBiweekly: "Every 2 weeks", repMonthly: "Monthly",
     manTimes: "How many", recurDone: "✅ Created {n} appointments",
     setPubH: "🌐 Self-service page (OPTIONAL)", pubDesc: "Not required. Customers just message you normally on WhatsApp/Instagram/Telegram and the AI replies there. This link is only an extra — if you want, put it in your bio so customers can also book themselves (like Calendly).",
@@ -749,65 +753,7 @@ async function loadAll() {
   await renderAll();
   renderCatalog();
   if (commerceOn()) renderOrders();
-  renderQuickStart();
   renderConfigHub();
-}
-
-// Kartë "Fillimi i shpejtë" — udhëheq pronarin, zbulon vetë çfarë është bërë
-async function renderQuickStart() {
-  const box = $("#quickStart");
-  if (!box || !biz) return;
-  if (localStorage.getItem("ob-qs-dismissed-" + biz.id)) { box.hidden = true; return; }
-  const inquiry = biz.mode === "inquiry";
-
-  // A ka marrë mesazhin e parë? (sinjal real që kanali punon)
-  let gotMsg = false;
-  try {
-    const { count } = await sb.from("messages").select("id", { count: "exact", head: true }).eq("business_id", biz.id);
-    gotMsg = (count || 0) > 0;
-  } catch (e) {}
-
-  const items = [];
-  // Shërbimet & produktet: gjithmonë te Katalogu (vendi i vetëm)
-  items.push({ key: "svc", done: services.length > 0, label: tr("qsSvc"), tab: "catalog", el: null });
-  if (!inquiry) items.push({ key: "hrs", done: Object.values(hours).some((h) => h), label: tr("qsHrs"), tab: "general", el: "setHoursBlock" });
-  items.push({ key: "chan", done: !!biz.telegram_token, label: tr("qsChan"), tab: "settings", el: "channelBlock" });
-  items.push({ key: "msg", done: gotMsg, label: tr("qsMsg"), tab: "settings", el: "channelBlock" });
-
-  const doneN = items.filter((i) => i.done).length;
-  const allDone = doneN === items.length;
-  $("#qsFill").style.width = Math.round((doneN / items.length) * 100) + "%";
-  $("#qsTitleTxt").textContent = allDone ? tr("qsDoneTitle") : tr("qsTitle");
-  $("#qsSub").textContent = allDone ? tr("qsDoneSub") : tr("qsSub");
-
-  const list = $("#qsList");
-  list.innerHTML = "";
-  items.forEach((it) => {
-    const row = document.createElement("div");
-    row.className = "qs-item" + (it.done ? " done" : "");
-    const tick = document.createElement("span");
-    tick.className = "qs-tick"; tick.textContent = it.done ? "✓" : "";
-    const lab = document.createElement("span");
-    lab.className = "qs-lab"; lab.textContent = it.label;
-    row.appendChild(tick); row.appendChild(lab);
-    const act = document.createElement("button");
-    act.className = "btn small qs-go" + (it.done ? "" : " primary"); act.type = "button";
-    act.textContent = it.done ? tr("qsEdit") : (it.key === "msg" ? tr("qsHow") : tr("qsDo"));
-    act.onclick = () => {
-      const t = document.querySelector('.tab[data-tab="' + it.tab + '"]');
-      if (t) t.click();
-      if (it.key === "msg" && !it.done) toast(tr("qsMsgHelp"));
-      if (it.el) setTimeout(() => { const e = $("#" + it.el); if (e) { e.scrollIntoView({ behavior: "smooth", block: "center" }); e.classList.add("flash"); setTimeout(() => e.classList.remove("flash"), 1200); } }, 90);
-    };
-    row.appendChild(act);
-    list.appendChild(row);
-  });
-
-  $("#qsDismiss").onclick = () => {
-    try { localStorage.setItem("ob-qs-dismissed-" + biz.id, "1"); } catch (e) {}
-    box.hidden = true;
-  };
-  box.hidden = false;
 }
 
 /* ---------------- Qendra e konfigurimit (hub i udhëhequr "rregullo një herë") ---------------- */
@@ -1507,6 +1453,12 @@ async function renderReports() {
       <div class="stats-grid">
         ${breakeven != null && fixed > 0 ? `<div class="stat-card ${revenue >= breakeven ? "" : "warn"}"><div class="num">${money(breakeven)}</div><div class="lbl">${tr("repBreakeven")} <small style="font-weight:600;color:var(--ink-faint)">${revenue >= breakeven ? tr("repBeOk") : tr("repBeUnder")}</small></div></div>` : ""}
         <div class="stat-card"><div class="num">${money(profitPerOrder)}</div><div class="lbl">${tr("repProfitOrder")}</div></div>
+      </div>
+      <div class="whatif" id="whatIf" data-rev="${revenue}" data-cogs="${cogs}" data-fixed="${fixed}" data-net="${net}">
+        <div class="bi-h" style="margin-top:16px">🔮 ${tr("repWhatIf")}</div>
+        <p class="exp-hint" data-t="repWhatIfHint">Po të ndryshoja çmimet, sa do bëhej fitimi? (duke supozuar të njëjtën sasi)</p>
+        <div class="wi-row"><input type="range" id="wiRange" min="-30" max="30" step="5" value="0"><span class="wi-pct" id="wiPct">0%</span></div>
+        <div class="wi-out" id="wiOut"></div>
       </div>`;
   }
 
@@ -1556,6 +1508,22 @@ async function renderReports() {
         ${topCust.map(([n, v], i) => `<div class="bi-vip-row"><span class="bi-rank">${i + 1}</span><span class="bi-vip-name">${esc(n)}</span><span class="bi-vip-c">${money(v)}</span></div>`).join("")}
       </div>
     </div>`;
+
+  // Simulatori "po të ndryshoja çmimin" (interaktiv)
+  const wi = $("#whatIf");
+  if (wi) {
+    const rev = Number(wi.dataset.rev), cogs0 = Number(wi.dataset.cogs), fixed0 = Number(wi.dataset.fixed), net0 = Number(wi.dataset.net);
+    const r = $("#wiRange"), out = $("#wiOut"), pct = $("#wiPct");
+    const recompute = () => {
+      const p = Number(r.value);
+      const nr = rev * (1 + p / 100);          // sasia konstante → të ardhurat ndryshojnë me çmimin
+      const nn = round2(nr - cogs0 - fixed0);   // kosto e mallit + fiksat mbeten njësoj
+      const delta = round2(nn - net0);
+      pct.textContent = (p > 0 ? "+" : "") + p + "%";
+      out.innerHTML = `${tr("repWhatIfRev")}: <b>${money(nr)}</b> · ${tr("repNet")}: <b class="${nn >= 0 ? "" : "wi-neg"}">${money(nn)}</b> <small class="${delta >= 0 ? "wi-pos" : "wi-neg"}">(${delta >= 0 ? "+" : ""}${money(delta)})</small>`;
+    };
+    r.oninput = recompute; recompute();
+  }
 }
 
 // Përgatit selektorët e stafit (filtri i kalendarit + fusha te takimi manual)
@@ -2169,30 +2137,51 @@ async function renderAppointments() {
         <div class="who">${esc(a.client_name)}</div>
         <div class="what">${s ? esc(s.name) + " • " + money(s.price) : ""} • ${a.source === "ai" ? tr("bookedAi") : tr("manual")}${staffName(a.staff_id) ? " • 👤 " + esc(staffName(a.staff_id)) : ""}
           ${a.status === "confirmed" ? ` • <span style="color:var(--accent-deep)">${tr("confirmedW")}</span>` : ""}
+          ${a.status === "attended" ? ` • <span style="color:var(--accent-deep)">${tr("attendedW")}</span>` : ""}
+          ${a.status === "no_show" ? ` • <span style="color:var(--red)">${tr("noShowW")}</span>` : ""}
           ${a.status === "cancelled" ? ` • <span style="color:var(--red)">${tr("cancelledW")}</span>` : ""}
         </div>
       </div>
       <div class="appt-actions"></div>`;
     const act = card.querySelector(".appt-actions");
-    if (a.status !== "cancelled") {
-      if (a.status !== "confirmed") {
-        const c = document.createElement("button");
-        c.className = "btn small"; c.textContent = tr("confirmBtn");
-        c.onclick = () => setStatus(a.id, "confirmed");
-        act.appendChild(c);
+    const mkBtn = (cls, txt, fn) => { const b = document.createElement("button"); b.className = "btn small " + cls; b.textContent = txt; b.onclick = fn; act.appendChild(b); return b; };
+    if (a.status !== "cancelled" && a.status !== "no_show" && a.status !== "attended") {
+      if (a.status !== "confirmed") mkBtn("", tr("confirmBtn"), () => setStatus(a.id, "confirmed"));
+      mkBtn("ghost", "🔄 " + tr("rescheduleBtn"), () => rescheduleAppt(card, a));
+      if (a.appt_date <= today) {
+        mkBtn("ghost", "✓ " + tr("attendedBtn"), () => setStatus(a.id, "attended"));
+        mkBtn("ghost danger", "✘ " + tr("noShowBtn"), () => setStatus(a.id, "no_show"));
       }
-      const x = document.createElement("button");
-      x.className = "btn small ghost danger"; x.textContent = tr("cancelBtn");
-      x.onclick = () => setStatus(a.id, "cancelled");
-      act.appendChild(x);
+      mkBtn("ghost danger", tr("cancelBtn"), () => setStatus(a.id, "cancelled"));
     }
     list.appendChild(card);
   }
 }
 
+// Ricaktim i shpejtë (inline): zëvendëson veprimet me datë + orë + ruaj
+async function rescheduleAppt(card, a) {
+  const act = card.querySelector(".appt-actions");
+  act.innerHTML = "";
+  const dIn = document.createElement("input"); dIn.type = "date"; dIn.value = a.appt_date; dIn.className = "resched-d";
+  const tIn = document.createElement("input"); tIn.type = "time"; tIn.step = "1800"; tIn.value = hm(a.appt_time); tIn.className = "resched-t";
+  const ok = document.createElement("button"); ok.className = "btn small primary"; ok.textContent = "✓";
+  const no = document.createElement("button"); no.className = "btn small ghost"; no.textContent = "✕";
+  ok.onclick = async () => {
+    if (!dIn.value || !tIn.value) return;
+    try {
+      const { error } = await sb.from("appointments").update({ appt_date: dIn.value, appt_time: tIn.value, status: "pending" }).eq("id", a.id);
+      if (error) throw error;
+      toast(tr("toastRescheduled")); await renderAll();
+    } catch (ex) { errToast(ex); }
+  };
+  no.onclick = () => renderAppointments();
+  act.append(dIn, tIn, ok, no);
+}
+
 async function setStatus(id, status) {
   await sb.from("appointments").update({ status }).eq("id", id);
-  toast(status === "cancelled" ? tr("toastCancelled") : tr("toastConfirmed"));
+  const m = status === "cancelled" ? tr("toastCancelled") : status === "no_show" ? tr("toastNoShow") : status === "attended" ? tr("toastAttended") : tr("toastConfirmed");
+  toast(m);
   await renderAll();
 }
 

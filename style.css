@@ -1707,3 +1707,15 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 
 :root[data-theme="dark"] .opt-block { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border-color: rgba(255,255,255,.1); }
 :root[data-theme="dark"] .info-dot { background: rgba(32,201,151,.18); color: var(--accent-bright); }
+
+/* Simulatori i çmimit + ricaktimi inline */
+.whatif { border: 1px dashed var(--accent); border-radius: 14px; padding: 12px 15px; margin-top: 14px; background: var(--accent-soft); }
+.wi-row { display: flex; align-items: center; gap: 12px; margin: 6px 0; }
+.wi-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.wi-pct { font-family: var(--font-display); font-weight: 800; min-width: 48px; text-align: right; }
+.wi-out { font-size: 14.5px; }
+.wi-out b { font-family: var(--font-display); }
+.wi-neg { color: var(--red); }
+.wi-pos { color: var(--accent-deep); }
+.resched-d, .resched-t { padding: 6px 8px; font-size: 13px; border: 1px solid var(--glass-line); border-radius: 8px; }
+:root[data-theme="dark"] .wi-pos { color: var(--accent-bright); }
