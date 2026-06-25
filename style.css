@@ -1719,3 +1719,84 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 .wi-pos { color: var(--accent-deep); }
 .resched-d, .resched-t { padding: 6px 8px; font-size: 13px; border: 1px solid var(--glass-line); border-radius: 8px; }
 :root[data-theme="dark"] .wi-pos { color: var(--accent-bright); }
+
+/* ===================================================================
+   ✨ WOW PASS — kryevepër vizuale (desktop) + përvojë native (mobile)
+   =================================================================== */
+/* Hyrje madhështore e panelit */
+#appView:not([hidden]) { animation: wowIn .5s cubic-bezier(.2,.7,.3,1); }
+@keyframes wowIn { from { opacity: 0; transform: translateY(10px) scale(.992); } to { opacity: 1; transform: none; } }
+
+/* Kartat statistikore — hyrje me valë + shkëlqim specular në hover */
+.stats-grid-top .stat-card, .stats-grid .stat-card { animation: cardUp .52s cubic-bezier(.22,.61,.36,1) both; }
+.stats-grid-top .stat-card:nth-child(2) { animation-delay: .05s; }
+.stats-grid-top .stat-card:nth-child(3) { animation-delay: .10s; }
+.stats-grid-top .stat-card:nth-child(4) { animation-delay: .15s; }
+.stats-grid .stat-card:nth-child(2) { animation-delay: .05s; }
+.stats-grid .stat-card:nth-child(3) { animation-delay: .10s; }
+@keyframes cardUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.stat-card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
+  background: radial-gradient(130% 90% at 15% -10%, rgba(255,255,255,.6), transparent 50%);
+  opacity: 0; transition: opacity .3s ease;
+}
+.stat-card:hover::after { opacity: .9; }
+.stat-card:hover { transform: translateY(-4px) scale(1.012); box-shadow: 0 22px 44px -12px rgba(22,32,28,.22), inset 0 1px 0 #fff; }
+.stat-card > * { position: relative; z-index: 1; }
+.stat-card.highlight { box-shadow: 0 10px 30px -10px var(--accent-glow), inset 0 1px 0 #fff; }
+.stat-card.highlight .num { background: linear-gradient(110deg, var(--accent-deep), var(--accent-bright)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* Tituj seksioni me vijë theksuese (premium) */
+.bi-h { position: relative; }
+.bi-cols .bi-box > .bi-h::before, .stats-grid + .bi-h::before, .bi-insights + .bi-h::before {
+  content: ""; display: inline-block; width: 4px; height: 1em; border-radius: 3px; margin-right: 9px;
+  background: linear-gradient(var(--accent-bright), var(--accent)); vertical-align: -2px;
+}
+
+/* Sidebar: tab aktiv me shirit theksues + gradient i butë */
+.sidebar .tab.active { position: relative; transform: none; }
+.sidebar .tab.active::before {
+  content: ""; position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+  width: 3.5px; height: 56%; border-radius: 3px; background: linear-gradient(var(--accent-bright), var(--accent));
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+.sidebar .tab:hover { transform: translateX(2px); }
+.sidebar .tab.active:hover { transform: none; }
+
+/* Statusi "AI aktiv" — gjallë */
+.panel-status .dot { box-shadow: 0 0 0 0 var(--accent-glow); animation: dotPing 2.4s ease-out infinite; }
+@keyframes dotPing { 0% { box-shadow: 0 0 0 0 var(--accent-glow); } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+/* ============ MOBILE — përvojë si aplikacion native ============ */
+@media (max-width: 640px) {
+  /* Tab-bar horizontal: pilula me snap + prekje e rehatshme */
+  .sidebar .tabs { gap: 7px; padding: 7px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .sidebar .tab { scroll-snap-align: start; padding: 10px 15px; font-size: 13.5px; border-radius: 13px; }
+  .sidebar .tab.active::before { display: none; }
+  .sidebar .tab.active { box-shadow: 0 6px 16px -4px var(--accent-glow); }
+
+  /* Kartat & rrjetat: më të mëdha, lexohen mirë me gisht */
+  .stats-grid-top { grid-template-columns: repeat(2, 1fr); gap: 11px; }
+  .stat-card .num { font-size: 27px; }
+
+  /* MODALET → fletë që ngrihet nga poshtë (bottom-sheet), si iOS */
+  .modal-backdrop { padding: 0; align-items: end; }
+  .modal {
+    max-width: 100%; width: 100%; border-radius: 24px 24px 0 0;
+    max-height: 94vh; padding: 22px 18px calc(22px + env(safe-area-inset-bottom));
+    animation: sheetUp .4s cubic-bezier(.2,.9,.3,1);
+  }
+  .modal::before {
+    content: ""; display: block; width: 42px; height: 5px; border-radius: 3px;
+    background: var(--ink-faint); opacity: .45; margin: -6px auto 14px;
+  }
+  @keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+  .modal-actions { position: sticky; bottom: 0; background: linear-gradient(transparent, var(--glass-strong) 30%); padding-top: 14px; margin: 8px -2px 0; }
+}
+@media (max-width: 380px) { .stats-grid-top { grid-template-columns: 1fr; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #appView, .stat-card, .modal { animation: none !important; }
+}
+:root[data-theme="dark"] .stat-card:hover { box-shadow: 0 22px 44px -12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06); }
+:root[data-theme="dark"] .modal-actions { background: linear-gradient(transparent, rgba(20,28,25,.92) 30%); }
