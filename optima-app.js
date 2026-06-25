@@ -190,6 +190,8 @@ const T = {
     fixedHint: "Shtoji një nga një: rroga e secilit punëtor, qira, drita, interneti… emërtoji si të duash. AI ua zbret nga fitimi.",
     addExpense: "Shto shpenzim", expNamePh: "p.sh. Rroga – Ana, Qira, Drita…", expTotal: "Gjithsej:", perMonth: "muaj", fixedDefaultName: "Shpenzim fiks",
     repCogs: "Kosto e mallit", repGross: "Fitim bruto", repMargin: "Marzhi", repNet: "Fitim neto", repNetHint: "(pas shpenzimeve fikse)",
+    repBreakeven: "Pikë ekuilibri", repBeOk: "✓ e kalove", repBeUnder: "ende s'e ke mbuluar", repProfitOrder: "Fitim/porosi (mes.)",
+    repCustEcon: "Ekonomia e klientit", repUniqCust: "Klientë unikë", repAvgCust: "Të ardhura/klient (mes.)", repRepeatRate: "Klientë që kthehen",
     manRepeat: "Përsërit", repNone: "Pa përsëritje", repWeekly: "Çdo javë", repBiweekly: "Çdo 2 javë", repMonthly: "Çdo muaj",
     manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
     setPubH: "🌐 Faqe vetë-shërbimi (OPSIONALE)", pubDesc: "S'të duhet detyrimisht. Klientët thjesht të shkruajnë normalisht në WhatsApp/Instagram/Telegram dhe AI u përgjigjet aty. Ky link është vetëm një shtesë — nëse do, vendose në bio që klientët të rezervojnë edhe vetë (si Calendly).",
@@ -378,6 +380,8 @@ const T = {
     fixedHint: "Add them one by one: each worker's salary, rent, electricity, internet… name them however you like. The AI subtracts them from profit.",
     addExpense: "Add expense", expNamePh: "e.g. Salary – Ana, Rent, Electricity…", expTotal: "Total:", perMonth: "month", fixedDefaultName: "Fixed expense",
     repCogs: "Cost of goods", repGross: "Gross profit", repMargin: "Margin", repNet: "Net profit", repNetHint: "(after fixed expenses)",
+    repBreakeven: "Break-even", repBeOk: "✓ passed", repBeUnder: "not covered yet", repProfitOrder: "Profit/order (avg)",
+    repCustEcon: "Customer economics", repUniqCust: "Unique customers", repAvgCust: "Revenue/customer (avg)", repRepeatRate: "Returning customers",
     manRepeat: "Repeat", repNone: "No repeat", repWeekly: "Weekly", repBiweekly: "Every 2 weeks", repMonthly: "Monthly",
     manTimes: "How many", recurDone: "✅ Created {n} appointments",
     setPubH: "🌐 Self-service page (OPTIONAL)", pubDesc: "Not required. Customers just message you normally on WhatsApp/Instagram/Telegram and the AI replies there. This link is only an extra — if you want, put it in your bio so customers can also book themselves (like Calendly).",
@@ -1483,20 +1487,43 @@ async function renderReports() {
   // Fitimi (opsional) — kosto e mallit, bruto, marzh, neto (pas shpenzimeve fikse të prorratuara)
   let profitHtml = "";
   if (profitOn()) {
-    const cogs = items.reduce((a, i) => a + ((i.cost != null ? Number(i.cost) : 0) * (Number(i.qty) || 0)), 0);
-    const gross = revenue - cogs;
+    const cogs = round2(items.reduce((a, i) => a + ((i.cost != null ? Number(i.cost) : 0) * (Number(i.qty) || 0)), 0));
+    const gross = round2(revenue - cogs);
     const margin = revenue > 0 ? Math.round((gross / revenue) * 100) : 0;
     const days = Math.max(1, Math.round((to - from) / 86400000) + 1);
-    const fixed = fixedMonthlyTotal() * days / 30;
-    const net = gross - fixed;
+    const fixed = round2(fixedMonthlyTotal() * days / 30);
+    const net = round2(gross - fixed);
+    // Ekonomia: pikë ekuilibri (sa të ardhura duhen për të mbuluar fiksat) + fitimi mesatar/porosi
+    const marginRate = revenue > 0 ? gross / revenue : 0;
+    const breakeven = marginRate > 0 ? round2(fixed / marginRate) : null;
+    const profitPerOrder = orders.length ? round2(net / orders.length) : 0;
     profitHtml = `<div class="bi-h" style="margin-top:20px">💰 ${tr("repGross")}</div>
       <div class="stats-grid">
         <div class="stat-card"><div class="num">${money(cogs)}</div><div class="lbl">${tr("repCogs")}</div></div>
         <div class="stat-card ${gross >= 0 ? "" : "warn"}"><div class="num">${money(gross)}</div><div class="lbl">${tr("repGross")}</div></div>
         <div class="stat-card"><div class="num">${margin}%</div><div class="lbl">${tr("repMargin")}</div></div>
         <div class="stat-card ${net >= 0 ? "highlight" : "warn"}"><div class="num">${money(net)}</div><div class="lbl">${tr("repNet")} ${fixed > 0 ? `<small style="font-weight:600;color:var(--ink-faint)">${tr("repNetHint")}</small>` : ""}</div></div>
+      </div>
+      <div class="stats-grid">
+        ${breakeven != null && fixed > 0 ? `<div class="stat-card ${revenue >= breakeven ? "" : "warn"}"><div class="num">${money(breakeven)}</div><div class="lbl">${tr("repBreakeven")} <small style="font-weight:600;color:var(--ink-faint)">${revenue >= breakeven ? tr("repBeOk") : tr("repBeUnder")}</small></div></div>` : ""}
+        <div class="stat-card"><div class="num">${money(profitPerOrder)}</div><div class="lbl">${tr("repProfitOrder")}</div></div>
       </div>`;
   }
+
+  // Ekonomia e klientit (gjithmonë): klientë unikë, ardhura mesatare/klient, % që kthehen
+  const custCount = {};
+  orders.forEach((o) => { const k = (o.customer_name || "").trim() || "?"; custCount[k] = (custCount[k] || 0) + 1; });
+  const uniqKeys = Object.keys(custCount).filter((k) => k !== "?");
+  const uniqCust = uniqKeys.length || Object.keys(custCount).length;
+  const repeatN = uniqKeys.filter((k) => custCount[k] > 1).length;
+  const repeatRate = uniqCust ? Math.round(repeatN / uniqCust * 100) : 0;
+  const avgCust = uniqCust ? round2(revenue / uniqCust) : 0;
+  const custEconHtml = `<div class="bi-h" style="margin-top:20px">👤 ${tr("repCustEcon")}</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="num">${plainNum(uniqCust)}</div><div class="lbl">${tr("repUniqCust")}</div></div>
+      <div class="stat-card"><div class="num">${money(avgCust)}</div><div class="lbl">${tr("repAvgCust")}</div></div>
+      <div class="stat-card ${repeatRate >= 30 ? "highlight" : ""}"><div class="num">${repeatRate}%</div><div class="lbl">${tr("repRepeatRate")}</div></div>
+    </div>`;
 
   const prod = {};
   items.forEach((i) => { const k = i.name || "—"; prod[k] = prod[k] || { qty: 0, rev: 0 }; prod[k].qty += Number(i.qty) || 0; prod[k].rev += Number(i.line_total) || 0; });
@@ -1520,6 +1547,7 @@ async function renderReports() {
       <div class="stat-card"><div class="num">${money(wholeRev)}</div><div class="lbl">${tr("repWholesale")}</div></div>
     </div>
     ${profitHtml}
+    ${custEconHtml}
     <div class="bi-cols">
       <div class="bi-box"><h4 class="bi-h">${tr("repTopProducts")}</h4>
         ${topProd.map(([n, d]) => `<div class="bi-bar-row"><span class="bi-bar-lbl">${esc(n)} <small style="color:var(--ink-faint)">×${plainNum(d.qty)}</small></span><span class="bi-bar"><span class="bi-bar-fill" style="width:${Math.round((d.rev / maxRev) * 100)}%"></span></span><span class="bi-bar-num">${money(d.rev)}</span></div>`).join("")}
@@ -1568,61 +1596,6 @@ function applyModeUI() {
 }
 
 /* ---------------- Cilësimet (edito gjithçka pas regjistrimit) ---------------- */
-function setServiceRow(s) {
-  const card = document.createElement("div");
-  card.className = "service-card";
-  if (s && s.id) card.dataset.id = s.id;
-
-  const top = document.createElement("div"); top.className = "sc-top";
-  const nameI = document.createElement("input");
-  nameI.className = "s-name"; nameI.type = "text"; nameI.maxLength = 60; nameI.placeholder = tr("svcNamePh"); nameI.value = s ? s.name : "";
-  const kindS = document.createElement("select");
-  kindS.className = "s-kind";
-  kindS.innerHTML = `<option value="service">${tr("kindService")}</option><option value="product">${tr("kindProduct")}</option>`;
-  kindS.value = s && s.kind === "product" ? "product" : "service";
-  const del = document.createElement("button");
-  del.className = "s-del"; del.type = "button"; del.textContent = "✕"; del.onclick = () => card.remove();
-  top.append(nameI, kindS, del);
-
-  const descI = document.createElement("input");
-  descI.className = "s-desc"; descI.type = "text"; descI.maxLength = 300; descI.placeholder = tr("itemDescPh"); descI.value = s && s.description ? s.description : "";
-
-  const bottom = document.createElement("div"); bottom.className = "sc-bottom";
-  const durWrap = document.createElement("div"); durWrap.className = "sc-dur";
-  const durI = document.createElement("input");
-  durI.className = "s-dur"; durI.type = "number"; durI.min = 0; durI.step = 1;
-  durI.value = s ? (s.duration_value != null ? s.duration_value : s.duration_min) : 30;
-  const unitS = document.createElement("select");
-  unitS.className = "s-unit"; unitS.innerHTML = unitOptions(s && s.duration_unit ? s.duration_unit : "min");
-  durWrap.append(durI, unitS);
-  const priceI = document.createElement("input");
-  priceI.className = "s-price"; priceI.type = "number"; priceI.min = 0; priceI.step = 0.5; priceI.value = s ? s.price : 0;
-  const priceWrap = document.createElement("div"); priceWrap.className = "sc-price";
-  const cur = document.createElement("span"); cur.className = "sc-cur"; cur.textContent = curSym();
-  priceWrap.append(priceI, cur);
-  bottom.append(durWrap, priceWrap);
-  // Kosto (vetëm kur moduli i fitimit është ndezur)
-  const costI = document.createElement("input");
-  costI.className = "s-cost"; costI.type = "number"; costI.min = 0; costI.step = "0.01"; costI.placeholder = tr("itemCost");
-  costI.value = s && s.cost != null ? s.cost : "";
-  const costWrap = document.createElement("div"); costWrap.className = "sc-price"; costWrap.hidden = !profitOn();
-  const curC = document.createElement("span"); curC.className = "sc-cur"; curC.textContent = curSym();
-  costWrap.append(costI, curC);
-  bottom.append(costWrap);
-
-  const bookWrap = document.createElement("label"); bookWrap.className = "sc-book";
-  const bookC = document.createElement("input"); bookC.type = "checkbox"; bookC.className = "s-book";
-  bookC.checked = s ? (s.bookable !== false) : true;
-  const bookT = document.createElement("span"); bookT.textContent = tr("bookableLbl");
-  bookWrap.append(bookC, bookT);
-
-  // Produkt → kohëzgjatja s'ka kuptim, fshihet
-  const applyKind = () => { durWrap.style.visibility = kindS.value === "product" ? "hidden" : "visible"; };
-  kindS.onchange = applyKind; applyKind();
-
-  card.append(top, descI, bottom, bookWrap);
-  $("#setServices").appendChild(card);
-}
 
 // Pushimet gjatë ditës (p.sh. dreka) — ruhen te config.breaks[dow] = [{start,end}]
 function rawBreaksFor(dow) {
@@ -1687,7 +1660,6 @@ function renderSettings() {
   if (!biz) return;
   const sn = $("#setName"); if (sn) sn.value = biz.name || "";
   const sa = $("#setAddress"); if (sa) sa.value = biz.address || "";
-  const sc = $("#setServices"); if (sc) { sc.innerHTML = ""; services.forEach(setServiceRow); }
   const tg = $("#tgToken"); if (tg) tg.value = biz.telegram_token || "";
   const bid = $("#bizIdVal"); if (bid) bid.textContent = biz.id;
   const pubBase = location.href.split("?")[0].replace(/[^/]*$/, "") + "book.html?b=" + biz.id;
@@ -1781,45 +1753,6 @@ function updateTgWebhookLink() {
   link.hidden = false;
 }
 
-// Ruajtje e sigurt e një artikulli — me fallback nëse kolonat e reja s'ekzistojnë ende
-async function upsertService(id, data) {
-  try {
-    if (id) { const { error } = await sb.from("services").update(data).eq("id", id); if (error) throw error; }
-    else { const { error } = await sb.from("services").insert({ business_id: biz.id, ...data }); if (error) throw error; }
-  } catch (e) {
-    const { kind, description, bookable, cost, ...base } = data; // hiq kolonat e reja dhe riprovo
-    if (id) await sb.from("services").update(base).eq("id", id);
-    else await sb.from("services").insert({ business_id: biz.id, ...base });
-  }
-}
-
-async function saveServicesEdit() {
-  const rows = [...document.querySelectorAll("#setServices .service-card")];
-  const seen = new Set();
-  let i = 0;
-  for (const r of rows) {
-    const name = r.querySelector(".s-name").value.trim();
-    if (!name) continue;
-    const unit = r.querySelector(".s-unit") ? r.querySelector(".s-unit").value : "min";
-    const value = Math.max(0, +r.querySelector(".s-dur").value || 0);
-    const duration_min = durToMin(value, unit);
-    const price = +r.querySelector(".s-price").value || 0;
-    const kind = r.querySelector(".s-kind") ? r.querySelector(".s-kind").value : "service";
-    const description = r.querySelector(".s-desc") ? (r.querySelector(".s-desc").value.trim() || null) : null;
-    const bookable = r.querySelector(".s-book") ? r.querySelector(".s-book").checked : true;
-    const costEl = r.querySelector(".s-cost");
-    const cost = (costEl && costEl.value !== "") ? (Number(costEl.value) || 0) : null;
-    const rowData = { name, kind, description, bookable, cost, duration_min, duration_value: value, duration_unit: unit, price, sort_order: i, active: true };
-    await upsertService(r.dataset.id || null, rowData);
-    if (r.dataset.id) seen.add(r.dataset.id);
-    i++;
-  }
-  for (const s of services) if (!seen.has(s.id)) await sb.from("services").update({ active: false }).eq("id", s.id);
-  await loadServices();
-  renderSettings();
-  await renderAll();
-  toast(tr("toastSaved"));
-}
 
 async function saveHoursEdit() {
   const rows = [...document.querySelectorAll("#setHours .hours-row")];
@@ -2753,8 +2686,6 @@ function wire() {
   if ($("#orderPrint")) $("#orderPrint").onclick = printInvoice;
   if ($("#orderCancel")) $("#orderCancel").onclick = () => { $("#orderModal").hidden = true; };
   if ($("#orderModal")) $("#orderModal").addEventListener("click", (e) => { if (e.target === $("#orderModal")) $("#orderModal").hidden = true; });
-  if ($("#setAddService")) $("#setAddService").onclick = () => setServiceRow(null);
-  if ($("#saveServices")) $("#saveServices").onclick = saveServicesEdit;
   if ($("#saveHours")) $("#saveHours").onclick = saveHoursEdit;
   $("#calPrev").onclick = () => { const d = parseDate(calDate); d.setDate(d.getDate() - 1); calDate = fmtDate(d); renderCalendar(); };
   $("#calNext").onclick = () => { const d = parseDate(calDate); d.setDate(d.getDate() + 1); calDate = fmtDate(d); renderCalendar(); };
