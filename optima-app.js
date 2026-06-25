@@ -100,6 +100,7 @@ const T = {
     statThisMonth: "Të ardhura këtë muaj", statVsLast: "vs muaji i kaluar",
     statPeakDay: "Dita më e ngarkuar", statPeakHour: "Ora e pikut",
     statCancelRate: "Norma e anulimeve", statAiShare: "Punon AI për ty",
+    statCapacity: "Kapaciteti i mbushur (këtë muaj)", statProfitHour: "Fitim/orë (këtë muaj)", statNoShows: "Mungesa (no-show)",
     statNoShow: "rrezik mungese", secInsights: "Çfarë të thotë biznesi",
     secTopServices: "Shërbimet më të kërkuara", secVip: "Klientët më besnikë",
     secLoad: "Ngarkesa — 7 ditët e ardhshme", visitsW: "vizita", bookingsW: "rezervime",
@@ -292,6 +293,7 @@ const T = {
     statThisMonth: "Revenue this month", statVsLast: "vs last month",
     statPeakDay: "Busiest day", statPeakHour: "Peak hour",
     statCancelRate: "Cancellation rate", statAiShare: "AI works for you",
+    statCapacity: "Capacity filled (this month)", statProfitHour: "Profit/hour (this month)", statNoShows: "No-shows",
     statNoShow: "no-show risk", secInsights: "What your business tells you",
     secTopServices: "Top services", secVip: "Most loyal clients",
     secLoad: "Load — next 7 days", visitsW: "visits", bookingsW: "bookings",
@@ -2269,7 +2271,7 @@ async function renderStats() {
   renderInsights();
   // Marrim çdo takim me emrin/çmimin e shërbimit (edhe nëse shërbimi është çaktivizuar)
   const { data } = await sb.from("appointments")
-    .select("appt_date, appt_time, status, source, client_name, services(name, price)")
+    .select("appt_date, appt_time, status, source, client_name, services(name, price, duration_min, cost)")
     .eq("business_id", biz.id);
   const appts = data || [];
   const grid = $("#statsGrid");
@@ -2302,9 +2304,27 @@ async function renderStats() {
     trendHtml = `<span class="trend ${cls}">${arrow} ${Math.abs(pct)}% ${word}</span>`;
   }
 
-  // ----- Norma e anulimeve -----
-  const cancelled = appts.length - active.length;
+  // ----- Kapaciteti i mbushur + fitimi/orë (këtë muaj) -----
+  const staffCount = Math.max(1, staff.length);
+  const breakMinFor = (dow) => breaksFor(dow).reduce((a, [s, e]) => a + (e - s), 0);
+  const dailyCap = (dow) => { const h = hours[dow]; if (!h) return 0; return Math.max(0, (toMin(h.close) - toMin(h.open)) - breakMinFor(dow)) * staffCount; };
+  const dim = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  let capAvail = 0;
+  for (let day = 1; day <= dim; day++) capAvail += dailyCap(new Date(now.getFullYear(), now.getMonth(), day).getDay());
+  let bookedMin = 0, cogsM = 0;
+  for (const a of active) if (ym(parseDate(a.appt_date)) === thisYM) {
+    bookedMin += (a.services && a.services.duration_min) ? Number(a.services.duration_min) : 30;
+    cogsM += (a.services && a.services.cost != null) ? Number(a.services.cost) : 0;
+  }
+  const utilPct = capAvail > 0 ? Math.round(bookedMin / capAvail * 100) : 0;
+  const bookedHours = bookedMin / 60;
+  const netM = round2(revThis - cogsM - fixedMonthlyTotal());
+  const profitPerHour = bookedHours > 0 ? round2(netM / bookedHours) : 0;
+
+  // ----- Norma e anulimeve + mungesat (no-show) -----
+  const cancelled = appts.filter((a) => a.status === "cancelled").length;
   const cancelRate = appts.length ? Math.round((cancelled / appts.length) * 100) : 0;
+  const noShows = appts.filter((a) => a.status === "no_show").length;
 
   // ----- Pjesa e AI -----
   const aiCount = active.filter((a) => a.source === "ai").length;
@@ -2364,6 +2384,15 @@ async function renderStats() {
         <div class="num">${cancelRate}%</div>
         <div class="lbl">${tr("statCancelRate")}</div>
       </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card ${utilPct >= 70 ? "highlight" : (capAvail > 0 && utilPct < 30 ? "warn" : "")}">
+        <div class="num">${capAvail > 0 ? utilPct + "%" : "—"}</div>
+        <div class="lbl">${tr("statCapacity")}</div>
+      </div>
+      ${profitOn() ? `<div class="stat-card"><div class="num">${money(profitPerHour)}</div><div class="lbl">${tr("statProfitHour")}</div></div>` : ""}
+      ${noShows > 0 ? `<div class="stat-card warn"><div class="num">${noShows}</div><div class="lbl">${tr("statNoShows")}</div></div>` : ""}
     </div>
 
     <h3 class="bi-h">${tr("secInsights")}</h3>
