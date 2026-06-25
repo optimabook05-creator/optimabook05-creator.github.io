@@ -136,7 +136,15 @@ const T = {
     addonsHint: "Gjëra që shiten BASHKË me këtë artikull. Secila 'e detyrueshme' (shtohet vetë) ose 'opsionale' (klienti zgjedh). E përdor kush i duhet, si çmimet me shumicë.",
     addonReq: "e detyrueshme", addonOpt: "opsionale", addonOne: "shtesë", addonMany: "shtesa", addonsTitle: "Shto me të:", itemAddonsShort: "Shtesa",
     customizeFields: "⚙ Përshtat fushat për këtë artikull", customizeHint: "Hiq ato që s'i duhen pikërisht këtij artikulli (p.sh. një shërbim s'ka stok). Ndikon vetëm këtë artikull.",
-    errGeneric: "Diçka shkoi keq. Provo sërish.",
+    errGeneric: "Diçka shkoi keq. Provo sërish.", itemDescTitle: "📝 Përshkrimi",
+    infoDesc: "Detaje që i shfaqen klientit dhe i përdor AI-ja për t'iu përgjigjur pyetjeve (p.sh. përbërësit, madhësia, ngjyra).",
+    infoTime: "Sa zgjat shërbimi dhe a zë një orar në kalendar. Vetëm për shërbime.",
+    infoBook: "Nëse aktiv, klientët e rezervojnë vetë në një orar të lirë. Fike për gjëra që s'kanë orar.",
+    infoUnit: "Si matet/shitet (copë, kg, litër, shishe…). Shfaqet pranë çmimit.",
+    infoStock: "Ndjek sasinë në magazinë; AI lajmëron kur po mbaron. Lëre fikur për shërbime.",
+    infoSku: "Kod i brendshëm i artikullit për ta gjetur shpejt (barkod/referencë). Opsional.",
+    infoTiers: "Çmim më i lirë kur blihet shumë. P.sh. nga 10 copë → 8€. Zbatohet vetë sipas sasisë.",
+    infoAddons: "Shtesa që shiten bashkë (montim, postë, garanci). 'E detyrueshme' shtohet vetë; 'opsionale' e zgjedh klienti.",
     commerceLbl: "🛒 Tregti (produkte, porosi, raporte) & monedha", commerceOnLbl: "Aktivizo katalogun, porositë & raportet",
     delete: "Fshi", confirmDelete: "Ta fshij këtë? S'kthehet mbrapsht.",
     tabGeneral: "🏢 Profili & orari", generalDesc: "Info-ja e kompanisë tënde + orari — plotësoje këtu, pastaj kliko Ruaj. (Shërbimet & produktet i menaxhon te 📦 Çfarë ofroj.)", phoneLbl: "Telefoni / kontakti",
@@ -316,7 +324,15 @@ const T = {
     addonsHint: "Things sold TOGETHER with this item. Each 'required' (added automatically) or 'optional' (customer chooses). Use it if you need it, like wholesale pricing.",
     addonReq: "required", addonOpt: "optional", addonOne: "add-on", addonMany: "add-ons", addonsTitle: "Add with it:", itemAddonsShort: "Add-ons",
     customizeFields: "⚙ Customize fields for this item", customizeHint: "Turn off what this specific item doesn't need (e.g. a service has no stock). Affects only this item.",
-    errGeneric: "Something went wrong. Try again.",
+    errGeneric: "Something went wrong. Try again.", itemDescTitle: "📝 Description",
+    infoDesc: "Details shown to the customer and used by the AI to answer questions (e.g. ingredients, size, color).",
+    infoTime: "How long the service takes and whether it books a calendar slot. Services only.",
+    infoBook: "If on, customers can self-book a free slot. Turn off for things without a schedule.",
+    infoUnit: "How it's measured/sold (pc, kg, litre, bottle…). Shown next to the price.",
+    infoStock: "Tracks quantity on hand; the AI alerts when low. Leave off for services.",
+    infoSku: "Internal item code to find it fast (barcode/reference). Optional.",
+    infoTiers: "Cheaper price when buying a lot. E.g. from 10 pcs → 8€. Applied automatically by quantity.",
+    infoAddons: "Extras sold together (installation, shipping, warranty). 'Required' is auto-added; 'optional' the customer chooses.",
     commerceLbl: "🛒 Commerce (products, orders, reports) & currency", commerceOnLbl: "Enable catalog, orders & reports",
     delete: "Delete", confirmDelete: "Delete this? This cannot be undone.",
     tabGeneral: "🏢 Profile & hours", generalDesc: "Your company info + hours — fill it here, then click Save. (Manage services & products in 📦 What I offer.)", phoneLbl: "Phone / contact",
@@ -1032,9 +1048,8 @@ function openItem(s) {
   (s ? priceTiers.filter((t) => t.service_id === s.id) : []).forEach((t) => addTierRow(t.min_qty, t.unit_price));
   // Shtesat (montim, postë, garanci…)
   if ($("#itemAddons")) { $("#itemAddons").innerHTML = ""; ((s && Array.isArray(s.addons)) ? s.addons : []).forEach((a) => addAddonRow(a.name, a.price, a.cost, a.required)); }
-  // Fushat per-artikull: vendos checkbox-et nga override-i i artikullit (ose default-i global)
-  document.querySelectorAll("#itemFieldsBox .fit").forEach((c) => { c.checked = itemShowsField(s, c.dataset.f); c.onchange = applyItemFields; });
-  if ($("#itemFieldsBox")) $("#itemFieldsBox").hidden = true; // i mbledhur si parazgjedhje
+  // Çelësat per-seksion: vendosi nga override-i i artikullit (ose default-i global)
+  document.querySelectorAll("#itemModal .fit").forEach((c) => { c.checked = itemShowsField(s, c.dataset.f); c.onchange = applyItemFields; });
   $("#itemKind").onchange = applyItemFields;
   applyItemFields();
   $("#itemDelete").hidden = !s;
@@ -1048,18 +1063,14 @@ function itemShowsField(item, key) {
   const gk = ITEM_FIELD_GLOBAL[key];
   return OB.fieldVisible(key, item && item.hidden_fields, gk ? showField(gk) : true);
 }
-// Zbaton dukshmërinë e seksioneve sipas checkbox-eve per-artikull + llojit (shërbim/produkt)
+// Zbaton gjendjen on/off të secilit seksion (çelësi per-seksion) + llojin (shërbim/produkt)
 function applyItemFields() {
-  const on = (f) => { const c = document.querySelector('.fit[data-f="' + f + '"]'); return c ? c.checked : true; };
   const isService = $("#itemKind") && $("#itemKind").value !== "product";
-  if ($("#fldDesc")) $("#fldDesc").hidden = !on("desc");
-  if ($("#secTime")) $("#secTime").hidden = !(isService && on("time"));
-  if ($("#fldUnit")) $("#fldUnit").hidden = !on("unit");
-  if ($("#stockRow")) $("#stockRow").hidden = !on("stock");
-  if ($("#fldSku")) $("#fldSku").hidden = !on("sku");
-  if ($("#secStock")) $("#secStock").hidden = !(on("stock") || on("sku"));
-  if ($("#fldTiers")) $("#fldTiers").hidden = !on("tiers");
-  if ($("#fldAddons")) $("#fldAddons").hidden = !on("addons");
+  document.querySelectorAll("#itemModal .opt-block").forEach((blk) => {
+    const cb = blk.querySelector(".fit"); if (!cb) return;
+    if (cb.dataset.f === "time") { blk.hidden = !isService; }  // produktet s'kanë kohë/prenotim
+    blk.classList.toggle("off", !cb.checked);                  // off → trupi mblidhet (CSS)
+  });
 }
 // Një rresht shtese (emër + çmim + kosto opsionale + e detyrueshme?)
 function addAddonRow(name, price, cost, required) {
@@ -1130,7 +1141,7 @@ async function saveItem() {
   payload.addons = addons.length ? addons : null;
   // Fushat e fshehura për këtë artikull (override per-artikull)
   const hidden = [];
-  document.querySelectorAll("#itemFieldsBox .fit").forEach((c) => { if (!c.checked) hidden.push(c.dataset.f); });
+  document.querySelectorAll("#itemModal .fit").forEach((c) => { if (!c.checked) hidden.push(c.dataset.f); });
   payload.hidden_fields = hidden.length ? hidden : null;
   // Shkrim me fallback nëse kolonat e reja s'ekzistojnë ende (para SETUP-ALL.sql)
   const writeItem = async (pl) => {
@@ -2564,8 +2575,36 @@ function setupModalA11y() {
   });
 }
 
+// Butonat "i": kliko → shfaq një shpjegim të vogël (popover) pranë tyre; kliko jashtë → mbyll
+function setupInfoDots() {
+  let pop = null;
+  const close = () => { if (pop) { pop.remove(); pop = null; } };
+  document.addEventListener("click", (e) => {
+    const dot = e.target.closest(".info-dot");
+    if (!dot) { close(); return; }
+    e.preventDefault(); e.stopPropagation();
+    const reopen = pop && pop._for === dot;
+    close();
+    if (reopen) return;
+    pop = document.createElement("div");
+    pop.className = "info-pop"; pop._for = dot;
+    pop.textContent = tr(dot.dataset.info) || dot.dataset.info || "";
+    document.body.appendChild(pop);
+    const r = dot.getBoundingClientRect();
+    const w = Math.min(260, window.innerWidth - 24);
+    pop.style.width = w + "px";
+    let left = window.scrollX + r.left + r.width / 2 - w / 2;
+    left = Math.max(window.scrollX + 12, Math.min(left, window.scrollX + window.innerWidth - w - 12));
+    pop.style.left = left + "px";
+    pop.style.top = (window.scrollY + r.bottom + 9) + "px";
+  });
+  window.addEventListener("resize", close);
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+}
+
 function wire() {
   setupModalA11y();
+  setupInfoDots();
   document.querySelectorAll("#langSwitch button").forEach((b) => {
     b.onclick = () => { lang = b.dataset.l; localStorage.setItem(LANG_KEY, lang); applyLang();
       if (!$("#onboardView").hidden) openOnboard();
@@ -2696,7 +2735,6 @@ function wire() {
   if ($("#btnAddItem")) $("#btnAddItem").onclick = () => openItem(null);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
   if ($("#addAddon")) $("#addAddon").onclick = () => { addAddonRow("", "", "", false); const rows = document.querySelectorAll("#itemAddons .addon-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".a-name").focus(); };
-  if ($("#itemFieldsToggle")) $("#itemFieldsToggle").onclick = () => { const b = $("#itemFieldsBox"); if (b) b.hidden = !b.hidden; const c = $("#itemFieldsToggle").querySelector(".chev"); if (c) c.textContent = b.hidden ? "▾" : "▴"; };
   if ($("#itemSave")) $("#itemSave").onclick = saveItem;
   if ($("#itemDelete")) $("#itemDelete").onclick = deleteItem;
   if ($("#itemCancel")) $("#itemCancel").onclick = () => { $("#itemModal").hidden = true; };

@@ -1669,3 +1669,41 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 #itemFieldsBox { margin-top: 12px; }
 #toast.err { background: linear-gradient(180deg, #ef5350, var(--red)); color: #fff; border-color: rgba(255,255,255,.2); }
 :root[data-theme="dark"] .item-customize-btn { border-color: rgba(255,255,255,.14); }
+
+/* ===================================================================
+   Çelësa on/off për-seksion + butona "i" (info) — UI premium
+   =================================================================== */
+.opt-block { border: 1px solid var(--glass-line); border-radius: 16px; padding: 12px 15px; margin-bottom: 13px;
+  background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.22)); transition: opacity .2s ease; }
+.opt-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.opt-title { font-family: var(--font-display); font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--ink-soft);
+  text-transform: uppercase; display: inline-flex; align-items: center; gap: 7px; }
+.opt-body { overflow: hidden; max-height: 760px; opacity: 1; margin-top: 12px;
+  transition: max-height .28s ease, opacity .2s ease, margin-top .2s ease; }
+.opt-block.off { opacity: .7; }
+.opt-block.off .opt-body { max-height: 0; opacity: 0; margin-top: 0; }
+.opt-block.off .opt-title { color: var(--ink-faint); }
+
+/* Çelësi iOS-style */
+.ob-switch { position: relative; display: inline-block; width: 46px; height: 28px; flex: 0 0 auto; cursor: pointer; }
+.ob-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.ob-slider { position: absolute; inset: 0; border-radius: 999px; background: rgba(120,130,128,.34);
+  transition: background .25s ease; box-shadow: inset 0 1px 3px rgba(0,0,0,.18); }
+.ob-slider::before { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.28); transition: transform .26s cubic-bezier(.4,1.35,.5,1); }
+.ob-switch input:checked + .ob-slider { background: linear-gradient(180deg, var(--accent-bright), var(--accent)); }
+.ob-switch input:checked + .ob-slider::before { transform: translateX(18px); }
+.ob-switch input:focus-visible + .ob-slider { box-shadow: inset 0 1px 3px rgba(0,0,0,.18), 0 0 0 3px var(--accent-soft); }
+
+/* Butoni "i" */
+.info-dot { width: 18px; height: 18px; min-width: 18px; border-radius: 50%; border: none; background: var(--accent-soft);
+  color: var(--accent-deep); font: italic 800 11px Georgia, "Times New Roman", serif; cursor: pointer; padding: 0;
+  display: inline-grid; place-items: center; transition: background .15s ease, transform .15s ease; vertical-align: middle; }
+.info-dot:hover { background: var(--accent); color: #fff; transform: scale(1.12); }
+.info-pop { position: absolute; z-index: 9999; max-width: 260px; background: #222d29; color: #fff; font-size: 12.5px;
+  line-height: 1.5; font-weight: 500; padding: 10px 12px; border-radius: 12px; box-shadow: 0 14px 34px rgba(0,0,0,.34);
+  font-family: var(--font-body); animation: aiPop .15s ease; }
+.info-pop::before { content: ""; position: absolute; top: -6px; left: 24px; border: 6px solid transparent; border-bottom-color: #222d29; border-top: 0; }
+
+:root[data-theme="dark"] .opt-block { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border-color: rgba(255,255,255,.1); }
+:root[data-theme="dark"] .info-dot { background: rgba(32,201,151,.18); color: var(--accent-bright); }

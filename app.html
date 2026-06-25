@@ -501,61 +501,94 @@
           <option value="product" data-t="kindProduct">Produkt / mall</option>
         </select>
       </label>
-      <label class="field" id="fldDesc"><span data-t="itemDesc">Përshkrimi (detaje për klientin & AI-në)</span><textarea id="itemDesc" rows="2" maxlength="400" data-t-ph="itemDescPh" placeholder="p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako"></textarea></label>
     </div>
 
-    <div class="item-sec" id="secTime">
-      <h4 class="item-sec-h" data-t="secTime">⏱ Koha & prenotimi</h4>
-      <div class="field-row" id="fldDur">
-        <label class="field"><span data-t="itemDur">Kohëzgjatja</span><input type="number" id="itemDur" min="0" step="1" value="30"></label>
-        <label class="field"><span data-t="itemDurUnit">Njësia e kohës</span><select id="itemDurUnit"></select></label>
+    <div class="opt-block" id="blkDesc">
+      <div class="opt-head">
+        <span class="opt-title"><span data-t="itemDescTitle">📝 Përshkrimi</span><button type="button" class="info-dot" data-info="infoDesc" aria-label="info">i</button></span>
+        <label class="ob-switch" title="on/off"><input type="checkbox" class="fit" data-f="desc" checked><span class="ob-slider"></span></label>
       </div>
-      <label class="commerce-toggle" id="fldBook"><input type="checkbox" id="itemBook" checked> <span data-t="bookableLbl">📅 Prenotohet me kalendar</span></label>
+      <div class="opt-body">
+        <label class="field" id="fldDesc"><textarea id="itemDesc" rows="2" maxlength="400" data-t-ph="itemDescPh" placeholder="p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako"></textarea></label>
+      </div>
+    </div>
+
+    <div class="opt-block" id="secTime">
+      <div class="opt-head">
+        <span class="opt-title"><span data-t="secTime">⏱ Koha & prenotimi</span><button type="button" class="info-dot" data-info="infoTime" aria-label="info">i</button></span>
+        <label class="ob-switch"><input type="checkbox" class="fit" data-f="time" checked><span class="ob-slider"></span></label>
+      </div>
+      <div class="opt-body">
+        <div class="field-row" id="fldDur">
+          <label class="field"><span data-t="itemDur">Kohëzgjatja</span><input type="number" id="itemDur" min="0" step="1" value="30"></label>
+          <label class="field"><span data-t="itemDurUnit">Njësia e kohës</span><select id="itemDurUnit"></select></label>
+        </div>
+        <label class="commerce-toggle" id="fldBook"><input type="checkbox" id="itemBook" checked> <span data-t="bookableLbl">📅 Prenotohet me kalendar</span><button type="button" class="info-dot" data-info="infoBook" aria-label="info">i</button></label>
+      </div>
     </div>
 
     <div class="item-sec">
-      <h4 class="item-sec-h" data-t="secPricing">💶 Çmimi</h4>
+      <h4 class="item-sec-h"><span data-t="secPricing">💶 Çmimi</span></h4>
       <div class="field-row">
         <label class="field"><span data-t="itemPrice">Çmimi për 1 (bazë)</span><input type="number" id="itemPrice" min="0" step="0.01" value="0"></label>
         <label class="field" id="fldCost" hidden><span data-t="itemCost">Kosto (për ty)</span><input type="number" id="itemCost" min="0" step="0.01" placeholder="—"></label>
-        <label class="field" id="fldUnit"><span data-t="itemUnit">Njësia</span><input type="text" id="itemUnit" maxlength="14" data-t-ph="itemUnitPh" placeholder="copë, shishe, kg, m…"></label>
       </div>
     </div>
 
-    <div class="item-sec" id="secStock">
-      <h4 class="item-sec-h" data-t="secStock">📦 Stoku & kodi</h4>
-      <div class="field-row" id="stockRow">
-        <label class="field commerce-toggle" style="align-self:end"><input type="checkbox" id="itemTrack"> <span data-t="itemTrack">Ndiq stokun</span></label>
-        <label class="field"><span data-t="itemStock">Sasia në stok</span><input type="number" id="itemStock" min="0" step="1" placeholder="—"></label>
+    <div class="opt-block" id="blkUnit">
+      <div class="opt-head">
+        <span class="opt-title"><span data-t="itemUnit">Njësia</span><button type="button" class="info-dot" data-info="infoUnit" aria-label="info">i</button></span>
+        <label class="ob-switch"><input type="checkbox" class="fit" data-f="unit" checked><span class="ob-slider"></span></label>
       </div>
-      <label class="field" id="fldSku"><span data-t="itemSku">Kodi (SKU, opsional)</span><input type="text" id="itemSku" maxlength="40"></label>
+      <div class="opt-body">
+        <label class="field" id="fldUnit"><input type="text" id="itemUnit" maxlength="14" data-t-ph="itemUnitPh" placeholder="copë, shishe, kg, m…"></label>
+      </div>
     </div>
 
-    <div class="item-sec" id="fldTiers">
-      <h4 class="item-sec-h" data-t="itemTiers">💹 Çmime sipas sasisë (shumicë)</h4>
-      <p class="tier-hint" data-t="tiersHint">P.sh. nga 10 copë → 8€, nga 100 → 6€. Çmimi më i mirë zbatohet sipas sasisë.</p>
-      <div id="itemTiers"></div>
-      <button class="btn ghost small" id="addTier" type="button" data-t="addTier">+ Shkallë çmimi</button>
+    <div class="opt-block" id="blkStock">
+      <div class="opt-head">
+        <span class="opt-title"><span data-t="cfgStockLbl">📦 Stoku</span><button type="button" class="info-dot" data-info="infoStock" aria-label="info">i</button></span>
+        <label class="ob-switch"><input type="checkbox" class="fit" data-f="stock" checked><span class="ob-slider"></span></label>
+      </div>
+      <div class="opt-body">
+        <div class="field-row" id="stockRow">
+          <label class="field commerce-toggle" style="align-self:end"><input type="checkbox" id="itemTrack"> <span data-t="itemTrack">Ndiq stokun</span></label>
+          <label class="field"><span data-t="itemStock">Sasia në stok</span><input type="number" id="itemStock" min="0" step="1" placeholder="—"></label>
+        </div>
+      </div>
     </div>
 
-    <div class="item-sec" id="fldAddons">
-      <h4 class="item-sec-h" data-t="itemAddons">➕ Shtesa (montim, postë, garanci…)</h4>
-      <p class="tier-hint" data-t="addonsHint">Gjëra që shiten BASHKË me këtë artikull. Shëno secilën si "e detyrueshme" (shtohet vetë) ose "opsionale" (klienti zgjedh vetë) — si te çmimet me shumicë, e përdor kush i duhet.</p>
-      <div id="itemAddons"></div>
-      <button class="btn ghost small" id="addAddon" type="button" data-t="addAddon">+ Shto shtesë</button>
+    <div class="opt-block" id="blkSku">
+      <div class="opt-head">
+        <span class="opt-title"><span data-t="cfgSkuLbl">🔖 Kodi (SKU)</span><button type="button" class="info-dot" data-info="infoSku" aria-label="info">i</button></span>
+        <label class="ob-switch"><input type="checkbox" class="fit" data-f="sku" checked><span class="ob-slider"></span></label>
+      </div>
+      <div class="opt-body">
+        <label class="field" id="fldSku"><input type="text" id="itemSku" maxlength="40"></label>
+      </div>
     </div>
 
-    <div class="item-sec" id="fldCustomize">
-      <button type="button" class="item-customize-btn" id="itemFieldsToggle"><span data-t="customizeFields">⚙ Përshtat fushat për këtë artikull</span> <span class="chev">▾</span></button>
-      <p class="tier-hint" data-t="customizeHint" style="margin-top:8px">Hiq ato që s'i duhen pikërisht këtij artikulli (p.sh. një shërbim s'ka stok). Ndikon vetëm këtë artikull.</p>
-      <div class="field-toggles" id="itemFieldsBox" hidden>
-        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="desc" checked> <span data-t="cfgDescLbl">Përshkrimi</span></label>
-        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="time" checked> <span data-t="secTime">Koha & prenotimi</span></label>
-        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="unit" checked> <span data-t="cfgUnitLbl">Njësia</span></label>
-        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="stock" checked> <span data-t="cfgStockLbl">Stoku</span></label>
-        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="sku" checked> <span data-t="cfgSkuLbl">Kodi (SKU)</span></label>
-        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="tiers" checked> <span data-t="cfgTiersLbl">Çmime shumice</span></label>
-        <label class="commerce-toggle"><input type="checkbox" class="fit" data-f="addons" checked> <span data-t="itemAddonsShort">Shtesa</span></label>
+    <div class="opt-block" id="fldTiers">
+      <div class="opt-head">
+        <span class="opt-title"><span data-t="itemTiers">💹 Çmime sipas sasisë (shumicë)</span><button type="button" class="info-dot" data-info="infoTiers" aria-label="info">i</button></span>
+        <label class="ob-switch"><input type="checkbox" class="fit" data-f="tiers" checked><span class="ob-slider"></span></label>
+      </div>
+      <div class="opt-body">
+        <p class="tier-hint" data-t="tiersHint">P.sh. nga 10 copë → 8€, nga 100 → 6€. Çmimi më i mirë zbatohet sipas sasisë.</p>
+        <div id="itemTiers"></div>
+        <button class="btn ghost small" id="addTier" type="button" data-t="addTier">+ Shkallë çmimi</button>
+      </div>
+    </div>
+
+    <div class="opt-block" id="fldAddons">
+      <div class="opt-head">
+        <span class="opt-title"><span data-t="itemAddons">➕ Shtesa (montim, postë, garanci…)</span><button type="button" class="info-dot" data-info="infoAddons" aria-label="info">i</button></span>
+        <label class="ob-switch"><input type="checkbox" class="fit" data-f="addons" checked><span class="ob-slider"></span></label>
+      </div>
+      <div class="opt-body">
+        <p class="tier-hint" data-t="addonsHint">Gjëra që shiten BASHKË me këtë artikull. Shëno secilën si "e detyrueshme" (shtohet vetë) ose "opsionale" (klienti zgjedh vetë) — si te çmimet me shumicë, e përdor kush i duhet.</p>
+        <div id="itemAddons"></div>
+        <button class="btn ghost small" id="addAddon" type="button" data-t="addAddon">+ Shto shtesë</button>
       </div>
     </div>
 
