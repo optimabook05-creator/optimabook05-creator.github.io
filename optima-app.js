@@ -42,6 +42,7 @@ const T = {
     grpHome: "Kreu", grpWork: "Puna", grpBiz: "Biznesi", grpOther: "Tjera",
     grpDaily: "Përdor çdo ditë", grpSetup: "Rregullo një herë", tabConfig: "🚀 Konfigurimi", optional: "opsionale",
     bnHome: "Kreu", bnCal: "Kalendari", bnAppt: "Takimet", bnEcon: "Ekonomia", bnMore: "Më shumë", menuTitle: "Menu",
+    bnOrders: "Porositë", bnLeads: "Kërkesa", undo: "Kthe",
     configDesc: "Vendi i vetëm për ta rregulluar biznesin — hapat kryesorë në një vend. Plotësoji një herë; pastaj OptimaBook merret me klientët.",
     cfgStepProfile: "Profili i biznesit", cfgStepProfileD: "Emri, adresa, kontakti, monedha, përshkrimi.",
     cfgStepOffer: "Çfarë ofron", cfgStepOfferD: "Shërbimet & produktet — çmim, kohëzgjatje, stok.",
@@ -239,6 +240,7 @@ const T = {
     grpHome: "Home", grpWork: "Work", grpBiz: "Business", grpOther: "More",
     grpDaily: "Use daily", grpSetup: "Set up once", tabConfig: "🚀 Setup", optional: "optional",
     bnHome: "Home", bnCal: "Calendar", bnAppt: "Bookings", bnEcon: "Economy", bnMore: "More", menuTitle: "Menu",
+    bnOrders: "Orders", bnLeads: "Requests", undo: "Undo",
     configDesc: "The single place to set up your business — the key steps in one spot. Fill it once; then OptimaBook handles customers.",
     cfgStepProfile: "Business profile", cfgStepProfileD: "Name, address, contact, currency, description.",
     cfgStepOffer: "What you offer", cfgStepOfferD: "Services & products — price, duration, stock.",
@@ -465,12 +467,18 @@ const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getD
 const parseDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
 const SLOT_STEP = 30;
 let toastTimer;
-function toast(text, kind) {
+function toast(text, kind, action) {
   const el = $("#toast"); if (!el) return;
-  el.textContent = text;
+  el.innerHTML = "";
+  const span = document.createElement("span"); span.textContent = text; el.appendChild(span);
+  if (action && action.fn) {
+    const b = document.createElement("button"); b.className = "toast-act"; b.textContent = action.label;
+    b.onclick = () => { el.classList.remove("show"); haptic(); action.fn(); };
+    el.appendChild(b);
+  }
   el.classList.toggle("err", kind === "err");
   el.classList.add("show");
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), kind === "err" ? 4200 : 2600);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), action ? 5500 : (kind === "err" ? 4200 : 2600));
 }
 // Haptic — dridhje e lehtë në veprime (ndjesi native, kur pajisja e mbështet)
 function haptic(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) {} }
@@ -1604,11 +1612,27 @@ function applyModeUI() {
     else if (commerceTabs.includes(tab)) t.hidden = !commerce;
   });
   const shb = $("#setHoursBlock"); if (shb) shb.hidden = !showAppt; // orari vetëm kur ka kalendar
+  setBotnavForMode(mode);
   const active = document.querySelector(".tab.active");
   if (active && active.hidden) {
     const fb = document.querySelector('.tab[data-tab="stats"]') || document.querySelector(".tab:not([hidden])");
     if (fb) fb.click();
   }
+}
+
+// Bottom-nav adaptiv: biznes me porosi → Porositë/Kërkesa; me takime → Kalendari/Takimet
+function setBotnavForMode(mode) {
+  const btns = document.querySelectorAll('#botnav button[data-go]'); // [stats, slot2, slot3, reports]
+  if (btns.length < 4) return;
+  const m = (mode === "inquiry")
+    ? [["orders", "🧾", tr("bnOrders")], ["leads", "📥", tr("bnLeads")]]
+    : [["calendar", "📅", tr("bnCal")], ["appointments", "📋", tr("bnAppt")]];
+  [[btns[1], m[0]], [btns[2], m[1]]].forEach(([btn, cfg]) => {
+    btn.dataset.go = cfg[0];
+    const i = btn.querySelector(".bn-i"); if (i) i.textContent = cfg[1];
+    const l = btn.querySelector(".bn-l"); if (l) l.textContent = cfg[2];
+  });
+  if (typeof syncBotnav === "function") syncBotnav();
 }
 
 /* ---------------- Cilësimet (edito gjithçka pas regjistrimit) ---------------- */
@@ -2199,9 +2223,9 @@ async function renderAppointments() {
       mkBtn("ghost", "🔄 " + tr("rescheduleBtn"), () => rescheduleAppt(card, a));
       if (a.appt_date <= today) {
         mkBtn("ghost", "✓ " + tr("attendedBtn"), () => setStatus(a.id, "attended"));
-        mkBtn("ghost danger", "✘ " + tr("noShowBtn"), () => setStatus(a.id, "no_show"));
+        mkBtn("ghost danger", "✘ " + tr("noShowBtn"), () => setStatus(a.id, "no_show", a.status));
       }
-      mkBtn("ghost danger", tr("cancelBtn"), () => setStatus(a.id, "cancelled"));
+      mkBtn("ghost danger", tr("cancelBtn"), () => setStatus(a.id, "cancelled", a.status));
     }
     list.appendChild(card);
     attachSwipe(card, a, today);
@@ -2227,7 +2251,7 @@ function attachSwipe(card, a, today) {
     card.style.transition = "transform .25s ease"; card.style.transform = "";
     card.classList.remove("swipe-r", "swipe-l");
     if (dx > 85) { haptic(15); setStatus(a.id, a.appt_date <= today ? "attended" : "confirmed"); }
-    else if (dx < -85) { haptic(15); setStatus(a.id, "cancelled"); }
+    else if (dx < -85) { haptic(15); setStatus(a.id, "cancelled", a.status); }
     x0 = null;
   };
   card.addEventListener("touchend", end, { passive: true });
@@ -2254,11 +2278,13 @@ async function rescheduleAppt(card, a) {
   act.append(dIn, tIn, ok, no);
 }
 
-async function setStatus(id, status) {
+async function setStatus(id, status, prev) {
   haptic(12);
   await sb.from("appointments").update({ status }).eq("id", id);
   const m = status === "cancelled" ? tr("toastCancelled") : status === "no_show" ? tr("toastNoShow") : status === "attended" ? tr("toastAttended") : tr("toastConfirmed");
-  toast(m);
+  // Undo për veprime të rrezikshme (parandalon humbjen e takimit nga prekje aksidentale)
+  const undoable = (status === "cancelled" || status === "no_show") && prev && prev !== status;
+  toast(m, null, undoable ? { label: tr("undo"), fn: () => setStatus(id, prev) } : null);
   await renderAll();
 }
 
@@ -2687,7 +2713,14 @@ function setupMobileNav() {
   if (more) more.onclick = () => { const s = document.querySelector(".sidebar"); if (!s) return; const open = !s.classList.contains("open"); s.classList.toggle("open", open); document.body.classList.toggle("menu-open", open); const b = $("#sidebarBackdrop"); if (b) b.hidden = !open; };
   const cl = $("#sidebarClose"); if (cl) cl.onclick = closeSidebarDrawer;
   const bd = $("#sidebarBackdrop"); if (bd) bd.onclick = closeSidebarDrawer;
-  const fab = $("#fab"); if (fab) fab.onclick = () => { haptic(12); if (biz && biz.mode === "inquiry") openOrder(null); else openManual(); };
+  const fab = $("#fab"); if (fab) fab.onclick = () => {
+    haptic(12);
+    const cur = (document.querySelector(".tab.active") || {}).dataset ? document.querySelector(".tab.active").dataset.tab : "";
+    if (cur === "catalog") openItem(null);                 // FAB kontekstual: veprimi i duhur sipas skedës
+    else if (cur === "orders") openOrder(null);
+    else if (biz && biz.mode === "inquiry") openOrder(null);
+    else openManual();
+  };
   syncBotnav();
 }
 

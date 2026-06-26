@@ -1971,3 +1971,9 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 .appt-card.swipe-r { box-shadow: inset 6px 0 0 0 var(--accent), var(--shadow-glass); background: linear-gradient(90deg, var(--accent-soft), var(--glass)); }
 .appt-card.swipe-l { box-shadow: inset -6px 0 0 0 var(--red), var(--shadow-glass); background: linear-gradient(270deg, var(--red-soft), var(--glass)); }
 @media (prefers-reduced-motion: reduce) { .skel-row { animation: none; } }
+
+/* Butoni "Kthe" (undo) brenda toast-it */
+#toast { display: inline-flex; align-items: center; gap: 12px; }
+.toast-act { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3); color: #fff; font-weight: 800;
+  font-family: var(--font-body); font-size: 13px; padding: 5px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; pointer-events: auto; }
+.toast-act:hover { background: rgba(255,255,255,.3); }
