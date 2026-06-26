@@ -1808,3 +1808,45 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
   .sidebar .tabs::-webkit-scrollbar-thumb { background: rgba(120,130,128,.35); border-radius: 8px; }
   .sidebar .tabs:hover::-webkit-scrollbar-thumb { background: rgba(120,130,128,.55); }
 }
+
+/* ===================================================================
+   📱 NAVIGIM NATIV PËR TELEFON (bottom-nav + sirtar) + anështrim PC më i gjatë
+   =================================================================== */
+@media (min-width: 901px) {
+  .sidebar .tabs { min-height: calc(100vh - 150px); } /* panel majtas më i gjatë (scroll mbetet) */
+}
+.botnav, .sidebar-backdrop { display: none; }
+
+@media (max-width: 900px) {
+  .panel-body { display: block; }
+  /* Anështrimi → sirtar që ngrihet nga poshtë me "Më shumë" */
+  .sidebar { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 60;
+    transform: translateY(101%); transition: transform .34s cubic-bezier(.2,.9,.3,1); }
+  .sidebar.open { transform: none; }
+  .sidebar .tabs { flex-direction: column; align-items: stretch; gap: 3px; overflow-x: hidden; overflow-y: auto; max-height: 78vh;
+    border-radius: 24px 24px 0 0; padding: 16px 14px calc(18px + env(safe-area-inset-bottom)); scroll-snap-type: none; box-shadow: 0 -16px 50px rgba(22,32,28,.25); }
+  .sidebar .tabs::before { content: ""; display: block; width: 42px; height: 5px; border-radius: 3px; background: var(--ink-faint); opacity: .4; margin: -4px auto 12px; }
+  .sidebar .tab { width: 100%; justify-content: flex-start; padding: 13px 15px; font-size: 15px; border-radius: 13px; }
+  .nav-group { display: block; }
+  .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 55; background: rgba(0,0,0,.42);
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: opx-backdrop .26s ease; }
+  .sidebar-backdrop[hidden] { display: none; }
+
+  /* Bar poshtë (bottom-nav) — gjithmonë i arritshëm */
+  .botnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--glass-strong); -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
+    border-top: 1px solid var(--glass-line); padding: 7px 4px calc(7px + env(safe-area-inset-bottom)); box-shadow: 0 -8px 24px rgba(22,32,28,.08); }
+  .botnav button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none;
+    cursor: pointer; color: var(--ink-faint); font-family: var(--font-body); font-weight: 700; padding: 5px 2px; border-radius: 13px;
+    transition: color .15s ease, transform .12s ease; }
+  .botnav .bn-i { font-size: 21px; line-height: 1; }
+  .botnav .bn-l { font-size: 10.5px; }
+  .botnav button.active { color: var(--accent-deep); }
+  .botnav button.active .bn-i { transform: translateY(-1px) scale(1.06); }
+  .botnav button:active { transform: scale(.9); }
+
+  .panel-content { padding-bottom: 88px; }
+}
+:root[data-theme="dark"] .botnav { background: rgba(20,28,25,.9); }
+:root[data-theme="dark"] .botnav button.active { color: var(--accent-bright); }
+:root[data-theme="dark"] .sidebar-backdrop { background: rgba(0,0,0,.6); }
