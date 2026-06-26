@@ -2649,7 +2649,22 @@ function applyLang() {
   document.querySelectorAll("[data-t-ph]").forEach((el) => {
     const v = T[lang][el.dataset.tPh]; if (v !== undefined) el.placeholder = v;
   });
+  decorateMenuIcons();
   renderAuthMode();
+}
+
+/* Ndan ikonën (emoji) nga teksti te skedat e menusë → ikona në një kuti/rreth qelqi
+   (si referenca whygoalbania). Çdo string i18n është "emoji⎵tekst", ndaj e ndajmë te
+   hapësira e parë. Thirret pas çdo applyLang (që rivendos textContent). */
+function decorateMenuIcons() {
+  document.querySelectorAll(".sidebar .tabs .tab").forEach((b) => {
+    const txt = b.textContent.trim();
+    const sp = txt.indexOf(" ");
+    if (sp <= 0) return; // tashmë e ndarë (pa hapësirë) ose pa ikonë
+    b.innerHTML = '<span class="tab-ic" aria-hidden="true"></span><span class="tab-lb"></span>';
+    b.querySelector(".tab-ic").textContent = txt.slice(0, sp);
+    b.querySelector(".tab-lb").textContent = txt.slice(sp + 1);
+  });
 }
 
 // Aksesueshmëri për modalet: bllokon fokusin brenda + Escape mbyll + kthen fokusin

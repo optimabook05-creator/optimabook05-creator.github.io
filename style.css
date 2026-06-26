@@ -1381,6 +1381,10 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
   width: 100%; flex: 0 0 auto; justify-content: flex-start; text-align: left;
   border-radius: 12px; padding: 11px 14px; font-size: 14px; white-space: nowrap;
 }
+/* ikona + etiketa si dy elementë (ikona mund të bëhet kuti në telefon) */
+.sidebar .tabs .tab { display: flex; align-items: center; gap: 9px; }
+.tab-ic { flex: none; font-size: 15px; line-height: 1; }
+.tab-lb { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .nav-group {
   font-size: 10.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
   color: var(--ink-faint); padding: 14px 14px 5px;
@@ -1848,8 +1852,12 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
     -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
   .sidebar.open .tabs { flex-direction: column; align-items: stretch; gap: 6px; background: none; border: none; box-shadow: none;
     -webkit-backdrop-filter: none; backdrop-filter: none; padding: 6px 14px 0; max-height: none; overflow: visible; border-radius: 0; }
-  .sidebar .tab { width: 100%; justify-content: flex-start; gap: 13px; padding: 15px 16px; font-size: 15.5px; font-weight: 700; border-radius: 17px;
+  .sidebar .tab { width: 100%; justify-content: flex-start; gap: 12px; padding: 12px 13px; font-size: 15.5px; font-weight: 700; border-radius: 17px;
     color: rgba(255,255,255,.92); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09); position: relative; }
+  /* IKONA në kuti qelqi majtas (si referenca whygoalbania) */
+  .sidebar .tab .tab-ic { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 19px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.13); flex: none; }
+  .sidebar .tab.active .tab-ic { background: rgba(255,255,255,.24); border-color: rgba(255,255,255,.34); }
   /* shigjeta › në rreth qelqi në fund të çdo rreshti (si referenca) */
   .sidebar .tab::after { content: "\203A"; margin-left: auto; font-size: 19px; font-weight: 700; line-height: 1; color: rgba(255,255,255,.5);
     width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
