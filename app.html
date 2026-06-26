@@ -140,7 +140,6 @@
     <nav class="tabs">
       <div class="nav-group" data-t="grpDaily">Përdor çdo ditë</div>
       <button class="tab active" data-tab="stats" data-t="tabStat">🏠 Përmbledhje</button>
-      <button class="tab" data-tab="aidemo" data-t="tabAiDemo">🤖 Provo AI-në</button>
       <button class="tab" data-tab="calendar" data-t="tabCal">📅 Kalendari</button>
       <button class="tab" data-tab="appointments" data-t="tabAppt">📋 Takimet</button>
       <button class="tab" data-tab="orders" data-t="tabOrders">🧾 Porositë</button>
@@ -282,22 +281,6 @@
     <div class="tab-pane active" id="pane-stats">
       <div id="insightsBox"></div>
       <div class="stats-grid" id="statsGrid"></div>
-    </div>
-
-    <div class="tab-pane" id="pane-aidemo">
-      <p class="pane-desc" data-t="aiDemoDesc">Provo recepsionistin tënd AI — përgjigjet me të dhënat reale të biznesit (çmime, orar, shërbime, rezervime). Kështu do t'u flasë klientëve 24/7.</p>
-      <div class="ai-chat">
-        <div class="ai-head">
-          <span class="ai-ava">🤖</span>
-          <span class="ai-htxt"><b id="aiHeadName">AI</b><small class="ai-badge" data-t="aiBadge">Demo · truri lokal</small></span>
-        </div>
-        <div class="ai-msgs" id="aiMsgs"></div>
-        <div class="ai-chips" id="aiChips"></div>
-        <form class="ai-inputbar" id="aiForm">
-          <input type="text" id="aiInput" data-t-ph="aiPlaceholder" placeholder="Shkruaj si klient… p.sh. 'Sa kushton qethja?'" autocomplete="off" maxlength="200">
-          <button class="btn primary" type="submit" data-t="aiSend">Dërgo</button>
-        </form>
-      </div>
     </div>
 
     <div class="tab-pane" id="pane-waitlist">

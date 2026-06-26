@@ -154,7 +154,7 @@ const T = {
     genMode: "Mënyra e biznesit", genCurrency: "Monedha", aboutLbl: "Përshkrimi i biznesit (çfarë ofron — e përdor edhe AI)",
     secIdentity: "👤 Identiteti & kontakti", secConfig: "⚙️ Konfigurimi", secDesc: "📝 Përshkrimi",
     aboutPh: "P.sh. Berber në Shkodër — qethje, rruajtje, ngjyrosje. Hapur 9:00–19:00.", saveAllBtn: "💾 Ruaj gjithçka",
-    tabOrders: "🧾 Porositë", tabReports: "📈 Raporte",
+    tabOrders: "🧾 Porositë", tabReports: "💰 Ekonomia",
     ordersDesc: "Porositë/shitjet e tua — kush, çfarë, sa, çmimi, statusi dhe pagesa. Edhe porosi që zgjasin muaj (me ETA).",
     addOrder: "+ Porosi e re", filterOpen: "Aktive", filterAll: "Të gjitha",
     stNew: "E re", stConfirmed: "Konfirmuar", stInProgress: "Në punë", stShipped: "Nisur", stDelivered: "Dorëzuar", stCompleted: "Përfunduar", stCancelled: "Anuluar",
@@ -166,7 +166,7 @@ const T = {
     orderAmountPaid: "Shuma e paguar", orderNotes: "Shënime",
     emptyOrders: "Ende pa porosi.", emptyOrdersHint: "Krijo një porosi ose lëre AI-në ta marrë vetë — do shfaqet këtu me status e total.",
     orderNeedItem: "Shto të paktën një artikull.", noItems: "(pa artikuj)", noName: "Pa emër", etaShort: "ETA",
-    reportsDesc: "Raport shitjesh: sa u shit, çfarë, te kush — sipas periudhës që zgjedh.",
+    reportsDesc: "Analiza ekonomike e plotë: të ardhura, fitim, pikë ekuilibri, kapacitet, klientë — sipas periudhës.",
     rep_today: "Sot", rep_week: "7 ditë", rep_month: "Këtë muaj", rep_lastMonth: "Muaji i kaluar", rep_year: "Këtë vit", rep_custom: "Periudhë", apply: "Apliko",
     repNoData: "Pa shitje në këtë periudhë.", repNoDataHint: "Kur të regjistrosh porosi në këtë periudhë, raporti shfaqet këtu.",
     repRevenue: "Të ardhura", repOrders: "Porosi", repUnits: "Njësi të shitura",
@@ -195,6 +195,7 @@ const T = {
     repBreakeven: "Pikë ekuilibri", repBeOk: "✓ e kalove", repBeUnder: "ende s'e ke mbuluar", repProfitOrder: "Fitim/porosi (mes.)",
     repCustEcon: "Ekonomia e klientit", repUniqCust: "Klientë unikë", repAvgCust: "Të ardhura/klient (mes.)", repRepeatRate: "Klientë që kthehen",
     repWhatIf: "Simulo çmimin", repWhatIfHint: "Po të ndryshoja çmimet, sa do bëhej fitimi? (duke supozuar të njëjtën sasi)", repWhatIfRev: "Të ardhura",
+    repCapacity: "Kapaciteti", repCapFilled: "I mbushur", repBookedHours: "Orë të zëna", repProfitHour: "Fitim/orë",
     manRepeat: "Përsërit", repNone: "Pa përsëritje", repWeekly: "Çdo javë", repBiweekly: "Çdo 2 javë", repMonthly: "Çdo muaj",
     manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
     setPubH: "🌐 Faqe vetë-shërbimi (OPSIONALE)", pubDesc: "S'të duhet detyrimisht. Klientët thjesht të shkruajnë normalisht në WhatsApp/Instagram/Telegram dhe AI u përgjigjet aty. Ky link është vetëm një shtesë — nëse do, vendose në bio që klientët të rezervojnë edhe vetë (si Calendly).",
@@ -347,7 +348,7 @@ const T = {
     genMode: "Business mode", genCurrency: "Currency", aboutLbl: "Business description (what you offer — used by the AI too)",
     secIdentity: "👤 Identity & contact", secConfig: "⚙️ Configuration", secDesc: "📝 Description",
     aboutPh: "E.g. Barber in Shkodër — haircut, shave, coloring. Open 9:00–19:00.", saveAllBtn: "💾 Save all",
-    tabOrders: "🧾 Orders", tabReports: "📈 Reports",
+    tabOrders: "🧾 Orders", tabReports: "💰 Economy",
     ordersDesc: "Your orders/sales — who, what, how many, price, status and payment. Even orders that take months (with ETA).",
     addOrder: "+ New order", filterOpen: "Active", filterAll: "All",
     stNew: "New", stConfirmed: "Confirmed", stInProgress: "In progress", stShipped: "Shipped", stDelivered: "Delivered", stCompleted: "Completed", stCancelled: "Cancelled",
@@ -359,7 +360,7 @@ const T = {
     orderAmountPaid: "Amount paid", orderNotes: "Notes",
     emptyOrders: "No orders yet.", emptyOrdersHint: "Create an order or let the AI capture it — it'll appear here with status and total.",
     orderNeedItem: "Add at least one item.", noItems: "(no items)", noName: "No name", etaShort: "ETA",
-    reportsDesc: "Sales report: how much you sold, what, to whom — for the period you pick.",
+    reportsDesc: "Full economic analysis: revenue, profit, break-even, capacity, customers — for the period you pick.",
     rep_today: "Today", rep_week: "7 days", rep_month: "This month", rep_lastMonth: "Last month", rep_year: "This year", rep_custom: "Custom", apply: "Apply",
     repNoData: "No sales in this period.", repNoDataHint: "Once you record orders in this period, the report shows up here.",
     repRevenue: "Revenue", repOrders: "Orders", repUnits: "Units sold",
@@ -388,6 +389,7 @@ const T = {
     repBreakeven: "Break-even", repBeOk: "✓ passed", repBeUnder: "not covered yet", repProfitOrder: "Profit/order (avg)",
     repCustEcon: "Customer economics", repUniqCust: "Unique customers", repAvgCust: "Revenue/customer (avg)", repRepeatRate: "Returning customers",
     repWhatIf: "Price simulator", repWhatIfHint: "If I changed prices, what would profit be? (assuming the same volume)", repWhatIfRev: "Revenue",
+    repCapacity: "Capacity", repCapFilled: "Filled", repBookedHours: "Booked hours", repProfitHour: "Profit/hour",
     manRepeat: "Repeat", repNone: "No repeat", repWeekly: "Weekly", repBiweekly: "Every 2 weeks", repMonthly: "Monthly",
     manTimes: "How many", recurDone: "✅ Created {n} appointments",
     setPubH: "🌐 Self-service page (OPTIONAL)", pubDesc: "Not required. Customers just message you normally on WhatsApp/Instagram/Telegram and the AI replies there. This link is only an extra — if you want, put it in your bio so customers can also book themselves (like Calendly).",
@@ -1397,7 +1399,7 @@ function periodRange(p) {
 
 async function renderReports() {
   const box = $("#reportsBox");
-  if (!box || !biz || !commerceOn()) return;
+  if (!box || !biz) return;
   const periods = ["today", "week", "month", "lastMonth", "year", "custom"];
   box.innerHTML =
     `<div class="rep-periods">` +
@@ -1414,16 +1416,39 @@ async function renderReports() {
 
   const { from, to } = periodRange(reportPeriod);
   const results = $("#repResults");
-  let orders = [];
+  let orders = [], items = [];
+  if (commerceOn()) {
+    try {
+      const { data } = await sb.from("orders").select("*").eq("business_id", biz.id)
+        .gte("placed_at", from.toISOString()).lte("placed_at", to.toISOString());
+      orders = (data || []).filter((o) => o.status !== "cancelled");
+      if (orders.length) { const { data: it } = await sb.from("order_items").select("*").in("order_id", orders.map((o) => o.id)); items = it || []; }
+    } catch (e) {}
+  }
+  // Takimet trajtohen si "shitje" → Ekonomia punon edhe për biznese me takime (jo vetëm tregti)
+  let bookedMin = 0;
   try {
-    const { data } = await sb.from("orders").select("*").eq("business_id", biz.id)
-      .gte("placed_at", from.toISOString()).lte("placed_at", to.toISOString());
-    orders = (data || []).filter((o) => o.status !== "cancelled");
-  } catch (e) { results.innerHTML = emptyHTML("📈", tr("repNoData"), tr("repNoDataHint")); return; }
-  if (!orders.length) { results.innerHTML = emptyHTML("📈", tr("repNoData"), tr("repNoDataHint")); return; }
+    const { data } = await sb.from("appointments").select("appt_date, status, client_name, services(name, price, duration_min, cost)")
+      .eq("business_id", biz.id).gte("appt_date", fmtDate(from)).lte("appt_date", fmtDate(to));
+    for (const a of (data || [])) {
+      if (a.status === "cancelled" || a.status === "no_show") continue;
+      const p = a.services ? Number(a.services.price) || 0 : 0;
+      const c = (a.services && a.services.cost != null) ? Number(a.services.cost) : null;
+      orders.push({ total: p, amount_paid: p, customer_name: a.client_name, order_type: "retail" });
+      items.push({ name: a.services ? a.services.name : "—", qty: 1, line_total: p, cost: c });
+      bookedMin += (a.services && a.services.duration_min) ? Number(a.services.duration_min) : 30;
+    }
+  } catch (e) {}
+  if (!orders.length) { results.innerHTML = emptyHTML("💰", tr("repNoData"), tr("repNoDataHint")); return; }
 
-  let items = [];
-  try { const { data } = await sb.from("order_items").select("*").in("order_id", orders.map((o) => o.id)); items = data || []; } catch (e) {}
+  // Kapaciteti i mbushur për periudhën (orë pune − pushime, × staf) + orët e zëna
+  const staffCount = Math.max(1, staff.length);
+  const breakMinFor = (dow) => breaksFor(dow).reduce((a, [s, e]) => a + (e - s), 0);
+  const dailyCap = (dow) => { const h = hours[dow]; if (!h) return 0; return Math.max(0, (toMin(h.close) - toMin(h.open)) - breakMinFor(dow)) * staffCount; };
+  let capAvail = 0;
+  for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) capAvail += dailyCap(d.getDay());
+  const utilPct = capAvail > 0 ? Math.round(bookedMin / capAvail * 100) : 0;
+  const bookedHours = bookedMin / 60;
 
   const revenue = orders.reduce((a, o) => a + (Number(o.total) || 0), 0);
   const paid = orders.reduce((a, o) => a + (Number(o.amount_paid) || 0), 0);
@@ -1455,6 +1480,7 @@ async function renderReports() {
       <div class="stats-grid">
         ${breakeven != null && fixed > 0 ? `<div class="stat-card ${revenue >= breakeven ? "" : "warn"}"><div class="num">${money(breakeven)}</div><div class="lbl">${tr("repBreakeven")} <small style="font-weight:600;color:var(--ink-faint)">${revenue >= breakeven ? tr("repBeOk") : tr("repBeUnder")}</small></div></div>` : ""}
         <div class="stat-card"><div class="num">${money(profitPerOrder)}</div><div class="lbl">${tr("repProfitOrder")}</div></div>
+        ${(capAvail > 0 && bookedHours > 0) ? `<div class="stat-card"><div class="num">${money(round2(net / bookedHours))}</div><div class="lbl">${tr("repProfitHour")}</div></div>` : ""}
       </div>
       <div class="whatif" id="whatIf" data-rev="${revenue}" data-cogs="${cogs}" data-fixed="${fixed}" data-net="${net}">
         <div class="bi-h" style="margin-top:16px">🔮 ${tr("repWhatIf")}</div>
@@ -1479,6 +1505,13 @@ async function renderReports() {
       <div class="stat-card ${repeatRate >= 30 ? "highlight" : ""}"><div class="num">${repeatRate}%</div><div class="lbl">${tr("repRepeatRate")}</div></div>
     </div>`;
 
+  // Kapaciteti (kur ka orar pune) — % e mbushur + orët e zëna
+  const capHtml = capAvail > 0 ? `<div class="bi-h" style="margin-top:20px">⏳ ${tr("repCapacity")}</div>
+    <div class="stats-grid">
+      <div class="stat-card ${utilPct >= 70 ? "highlight" : (utilPct < 30 ? "warn" : "")}"><div class="num">${utilPct}%</div><div class="lbl">${tr("repCapFilled")}</div></div>
+      <div class="stat-card"><div class="num">${plainNum(Math.round(bookedHours))}h</div><div class="lbl">${tr("repBookedHours")}</div></div>
+    </div>` : "";
+
   const prod = {};
   items.forEach((i) => { const k = i.name || "—"; prod[k] = prod[k] || { qty: 0, rev: 0 }; prod[k].qty += Number(i.qty) || 0; prod[k].rev += Number(i.line_total) || 0; });
   const topProd = Object.entries(prod).sort((a, b) => b[1].rev - a[1].rev).slice(0, 6);
@@ -1501,6 +1534,7 @@ async function renderReports() {
       <div class="stat-card"><div class="num">${money(wholeRev)}</div><div class="lbl">${tr("repWholesale")}</div></div>
     </div>
     ${profitHtml}
+    ${capHtml}
     ${custEconHtml}
     <div class="bi-cols">
       <div class="bi-box"><h4 class="bi-h">${tr("repTopProducts")}</h4>
@@ -1550,7 +1584,7 @@ function applyModeUI() {
   const showLeads = mode === "inquiry" || mode === "both"; // porosi OSE të dyja → kërkesa
   const commerce = commerceOn();
   const apptTabs = ["calendar", "appointments", "blocks", "waitlist", "staff"]; // "customers" = universal (takime + porosi)
-  const commerceTabs = ["orders", "reports"]; // Katalogu = gjithmonë i dukshëm (vendi i vetëm për shërbime + produkte)
+  const commerceTabs = ["orders"]; // Ekonomia & Katalogu = gjithmonë të dukshme; vetëm Porositë kushtëzohen me tregti
   document.querySelectorAll(".tabs .tab").forEach((t) => {
     const tab = t.dataset.tab;
     if (apptTabs.includes(tab)) t.hidden = !showAppt;
@@ -2735,7 +2769,6 @@ function wire() {
       if (tab.dataset.tab === "orders") renderOrders();
       else if (tab.dataset.tab === "reports") renderReports();
       else if (tab.dataset.tab === "catalog") renderCatalog();
-      else if (tab.dataset.tab === "aidemo") renderAiDemo();
       else if (tab.dataset.tab === "config") renderConfigHub();
     };
   });
