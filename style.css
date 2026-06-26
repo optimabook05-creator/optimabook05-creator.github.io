@@ -1920,3 +1920,41 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 }
 @keyframes menuItemIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .sidebar.open .tabs > * { animation: none !important; } }
+
+/* ===================================================================
+   ☀️ "SOT" — karta e parë (glanceable) + FAB (veprim i shpejtë me gisht)
+   =================================================================== */
+.today-card { border: 1px solid var(--glass-edge); border-radius: var(--r-lg); padding: 16px 18px; margin-bottom: 16px; cursor: pointer;
+  background: linear-gradient(160deg, var(--accent-soft), var(--glass)); box-shadow: var(--shadow-glass), inset 0 1px 0 rgba(255,255,255,.7);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); transition: transform .16s ease, box-shadow .2s ease; }
+.today-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); }
+.today-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.today-t { font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+.today-d { color: var(--ink-soft); font-size: 12.5px; font-weight: 700; margin-top: 2px; text-transform: capitalize; }
+.today-sum { font-size: 13px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.today-sum b { font-family: var(--font-display); font-size: 19px; color: var(--accent-deep); }
+.today-empty { margin-top: 12px; color: var(--ink-soft); font-weight: 600; font-size: 14px; }
+.today-list { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+.today-row { display: flex; align-items: center; gap: 12px; padding: 9px 11px; border-radius: 12px; background: rgba(255,255,255,.5); }
+.today-row.next { background: linear-gradient(135deg, var(--accent), var(--accent-bright)); box-shadow: 0 8px 18px -5px var(--accent-glow); }
+.today-row.next .tr-time, .today-row.next .tr-who strong, .today-row.next .tr-who small { color: #fff; }
+.tr-time { font-family: var(--font-display); font-weight: 800; font-size: 14.5px; font-variant-numeric: tabular-nums; min-width: 46px; }
+.tr-who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.tr-who strong { font-size: 14px; }
+.tr-who small { color: var(--ink-soft); font-size: 12px; font-weight: 600; }
+.tr-next { font-size: 10px; font-weight: 800; letter-spacing: .06em; color: #fff; background: rgba(255,255,255,.25); padding: 3px 8px; border-radius: 999px; }
+.tr-st { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
+.tr-st.ok { color: var(--accent-deep); background: var(--accent-soft); }
+.tr-st.no { color: var(--red); background: var(--red-soft); }
+:root[data-theme="dark"] .today-row { background: rgba(255,255,255,.06); }
+
+/* FAB — butoni rrethor pluskues (vetëm telefon), nën gishtin e djathtë */
+.fab { display: none; }
+@media (max-width: 900px) {
+  .fab { display: grid; place-items: center; position: fixed; right: 18px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 52;
+    width: 58px; height: 58px; border-radius: 50%; border: none; cursor: pointer; color: #fff; font-size: 32px; font-weight: 300; line-height: 1;
+    background: radial-gradient(120% 90% at 30% 12%, rgba(255,255,255,.5), transparent 50%), linear-gradient(160deg, var(--accent-bright), var(--accent) 60%, var(--accent-deep));
+    box-shadow: 0 12px 28px var(--accent-glow), 0 2px 6px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.5);
+    transition: transform .16s cubic-bezier(.34,1.56,.64,1); }
+  .fab:active { transform: scale(.9); }
+}

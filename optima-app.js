@@ -102,6 +102,7 @@ const T = {
     statPeakDay: "Dita më e ngarkuar", statPeakHour: "Ora e pikut",
     statCancelRate: "Norma e anulimeve", statAiShare: "Punon AI për ty",
     statCapacity: "Kapaciteti i mbushur (këtë muaj)", statProfitHour: "Fitim/orë (këtë muaj)", statNoShows: "Mungesa (no-show)",
+    todayTitle: "Sot", todayAppts: "takime", todayNext: "TJETRI", todayEmpty: "Asnjë takim sot — AI yt po pret klientë 24/7 ✨",
     statNoShow: "rrezik mungese", secInsights: "Çfarë të thotë biznesi",
     secTopServices: "Shërbimet më të kërkuara", secVip: "Klientët më besnikë",
     secLoad: "Ngarkesa — 7 ditët e ardhshme", visitsW: "vizita", bookingsW: "rezervime",
@@ -297,6 +298,7 @@ const T = {
     statPeakDay: "Busiest day", statPeakHour: "Peak hour",
     statCancelRate: "Cancellation rate", statAiShare: "AI works for you",
     statCapacity: "Capacity filled (this month)", statProfitHour: "Profit/hour (this month)", statNoShows: "No-shows",
+    todayTitle: "Today", todayAppts: "bookings", todayNext: "NEXT", todayEmpty: "No bookings today — your AI is taking customers 24/7 ✨",
     statNoShow: "no-show risk", secInsights: "What your business tells you",
     secTopServices: "Top services", secVip: "Most loyal clients",
     secLoad: "Load — next 7 days", visitsW: "visits", bookingsW: "bookings",
@@ -2303,6 +2305,39 @@ function buildInsights(appts, orders, items) {
   return out.sort((a, b) => b.impact - a.impact);
 }
 
+// "Sot" — karta e parë që sheh pronari në telefon: kush vjen sot, tjetri, sa para sot
+function renderTodayGlance(appts) {
+  const box = $("#todayBox"); if (!box) return;
+  if ((biz.mode || "appointments") === "inquiry") { box.innerHTML = ""; return; }
+  const todayStr = fmtDate(new Date());
+  const t = appts.filter((a) => a.appt_date === todayStr && a.status !== "cancelled")
+    .sort((a, b) => hm(a.appt_time).localeCompare(hm(b.appt_time)));
+  const nowM = new Date().getHours() * 60 + new Date().getMinutes();
+  const nextIdx = t.findIndex((a) => toMin(hm(a.appt_time)) >= nowM && a.status !== "no_show" && a.status !== "attended");
+  const d = new Date();
+  const dateLbl = `${T[lang].dayNames[d.getDay()]}, ${d.getDate()} ${T[lang].months[d.getMonth()]}`;
+  const todRev = t.reduce((s, a) => s + (a.services ? Number(a.services.price) || 0 : 0), 0);
+  let inner = `<div class="today-head"><div><div class="today-t">☀️ ${tr("todayTitle")}</div><div class="today-d">${dateLbl}</div></div>`
+    + `<div class="today-sum"><b>${t.length}</b> ${tr("todayAppts")}${todRev ? ` · ${money(todRev)}` : ""}</div></div>`;
+  if (!t.length) {
+    inner += `<div class="today-empty">${tr("todayEmpty")}</div>`;
+  } else {
+    inner += `<div class="today-list">` + t.map((a, i) => {
+      const nm = a.services ? a.services.name : "";
+      const st = a.status === "no_show" ? `<span class="tr-st no">${tr("noShowW")}</span>`
+        : a.status === "attended" ? `<span class="tr-st ok">${tr("attendedW")}</span>`
+        : a.status === "confirmed" ? `<span class="tr-st ok">${tr("confirmedW")}</span>` : "";
+      return `<div class="today-row${i === nextIdx ? " next" : ""}">
+        <span class="tr-time">${hm(a.appt_time)}</span>
+        <span class="tr-who"><strong>${esc(a.client_name || tr("noName"))}</strong>${nm ? `<small>${esc(nm)}</small>` : ""}</span>
+        ${i === nextIdx ? `<span class="tr-next">${tr("todayNext")}</span>` : st}</div>`;
+    }).join("") + `</div>`;
+  }
+  box.innerHTML = `<div class="today-card">${inner}</div>`;
+  const card = box.querySelector(".today-card");
+  if (card) card.onclick = () => { const tab = document.querySelector('.tab[data-tab="appointments"]'); if (tab) tab.click(); };
+}
+
 async function renderStats() {
   renderInsights();
   // Marrim çdo takim me emrin/çmimin e shërbimit (edhe nëse shërbimi është çaktivizuar)
@@ -2311,6 +2346,9 @@ async function renderStats() {
     .eq("business_id", biz.id);
   const appts = data || [];
   const grid = $("#statsGrid");
+
+  // ---- "SOT" — pamja e shpejtë (UX mobile: hap app → sheh sot menjëherë) ----
+  renderTodayGlance(appts);
 
   if (!appts.length) {
     grid.innerHTML = `<div class="bi-empty">${tr("statNoData")}</div>`;
@@ -2610,6 +2648,7 @@ function setupMobileNav() {
   if (more) more.onclick = () => { const s = document.querySelector(".sidebar"); if (!s) return; const open = !s.classList.contains("open"); s.classList.toggle("open", open); document.body.classList.toggle("menu-open", open); const b = $("#sidebarBackdrop"); if (b) b.hidden = !open; };
   const cl = $("#sidebarClose"); if (cl) cl.onclick = closeSidebarDrawer;
   const bd = $("#sidebarBackdrop"); if (bd) bd.onclick = closeSidebarDrawer;
+  const fab = $("#fab"); if (fab) fab.onclick = () => { if (biz && biz.mode === "inquiry") openOrder(null); else openManual(); };
   syncBotnav();
 }
 
