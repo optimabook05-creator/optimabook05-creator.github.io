@@ -1827,46 +1827,50 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 
   /* Backdrop: errëson + turbullon LEHTË përmbajtjen (pa nesting të rëndë blur-i) */
   .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 65;
-    background: rgba(6,10,9,.55); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    background: rgba(10,16,14,.32); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
     animation: opx-backdrop .25s ease; }
   .sidebar-backdrop[hidden] { display: none; }
 
   /* FLETË "Menu" — QELQ I ERRËT TRANSPARENT me blur (sheh faqen pas, stil iOS si referenca) */
   .sidebar { display: none; }
+  /* QELQ TRANSPARENT që përshtatet me temën (dritë=qumësht, errësirë=i errët) — glassmorphism i vërtetë */
   .sidebar.open {
     display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 70; max-height: 86vh; overflow-y: auto;
-    -webkit-overflow-scrolling: touch; color: #fff;
-    background: linear-gradient(180deg, rgba(22,30,28,.62), rgba(13,19,17,.8));
-    -webkit-backdrop-filter: blur(40px) saturate(1.9); backdrop-filter: blur(40px) saturate(1.9);
-    border-top: 1px solid rgba(255,255,255,.16); border-radius: 28px 28px 0 0;
-    box-shadow: 0 -30px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.18);
+    -webkit-overflow-scrolling: touch; color: var(--ink);
+    background: linear-gradient(180deg, var(--glass-strong), var(--glass));
+    -webkit-backdrop-filter: blur(36px) saturate(1.9); backdrop-filter: blur(36px) saturate(1.9);
+    border-top: 1px solid var(--glass-edge); border-radius: 28px 28px 0 0;
+    box-shadow: 0 -30px 80px rgba(8,14,11,.28), inset 0 1px 0 rgba(255,255,255,.5);
     padding-bottom: calc(18px + env(safe-area-inset-bottom));
     animation: sheetUp .4s cubic-bezier(.2,.95,.3,1);
   }
+  /* header me sfond qelqi (mbulon rreshtat që rrëshqasin poshtë) + vijë ndarëse */
   .sidebar-mhead { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 2;
-    padding: 24px 20px 14px; background: transparent; font-family: var(--font-display); font-weight: 800; font-size: 21px; color: #fff; }
-  .sidebar-mhead::before { content: ""; position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-    width: 42px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.4); }
-  .sidebar-mhead button { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; color: #fff; font-size: 17px; font-weight: 700;
-    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
-    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+    padding: 24px 20px 14px; color: var(--ink); font-family: var(--font-display); font-weight: 800; font-size: 21px;
+    background: var(--glass-strong); -webkit-backdrop-filter: blur(24px) saturate(1.8); backdrop-filter: blur(24px) saturate(1.8);
+    border-bottom: 1px solid var(--glass-edge); border-radius: 28px 28px 0 0; }
+  .sidebar-mhead::before { content: ""; position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+    width: 42px; height: 5px; border-radius: 3px; background: var(--ink-soft); opacity: .4; }
+  .sidebar-mhead button { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; color: var(--ink); font-size: 17px; font-weight: 700;
+    background: var(--glass-soft); border: 1px solid var(--glass-edge); }
   .sidebar.open .tabs { flex-direction: column; align-items: stretch; gap: 6px; background: none; border: none; box-shadow: none;
-    -webkit-backdrop-filter: none; backdrop-filter: none; padding: 6px 14px 0; max-height: none; overflow: visible; border-radius: 0; }
-  .sidebar .tab { width: 100%; justify-content: flex-start; gap: 12px; padding: 12px 13px; font-size: 15.5px; font-weight: 700; border-radius: 17px;
-    color: rgba(255,255,255,.92); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09); position: relative; }
+    -webkit-backdrop-filter: none; backdrop-filter: none; padding: 8px 14px 0; max-height: none; overflow: visible; border-radius: 0; }
+  .sidebar .tab { width: 100%; justify-content: flex-start; gap: 12px; padding: 11px 13px; font-size: 15.5px; font-weight: 700; border-radius: 17px;
+    color: var(--ink); background: var(--glass-soft); border: 1px solid var(--glass-edge); position: relative; }
   /* IKONA në kuti qelqi majtas (si referenca whygoalbania) */
   .sidebar .tab .tab-ic { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-    font-size: 19px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.13); flex: none; }
-  .sidebar .tab.active .tab-ic { background: rgba(255,255,255,.24); border-color: rgba(255,255,255,.34); }
+    font-size: 19px; background: var(--glass); border: 1px solid var(--glass-edge); flex: none; }
+  .sidebar .tab.active .tab-ic { background: rgba(255,255,255,.28); border-color: rgba(255,255,255,.45); }
   /* shigjeta › në rreth qelqi në fund të çdo rreshti (si referenca) */
-  .sidebar .tab::after { content: "\203A"; margin-left: auto; font-size: 19px; font-weight: 700; line-height: 1; color: rgba(255,255,255,.5);
+  .sidebar .tab::after { content: "\203A"; margin-left: auto; font-size: 19px; font-weight: 700; line-height: 1; color: var(--ink-soft);
     width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
-    background: rgba(255,255,255,.07); flex: none; padding-bottom: 2px; }
-  .sidebar .tab:active { background: rgba(255,255,255,.13); }
+    background: var(--glass-soft); flex: none; padding-bottom: 2px; }
+  .sidebar .tab:active { background: var(--glass); }
   .sidebar .tab.active { background: linear-gradient(135deg, var(--accent), var(--accent-bright)); color: #fff;
     box-shadow: 0 10px 26px -6px var(--accent-glow); border-color: transparent; }
-  .sidebar .tab.active::after { color: #fff; background: rgba(255,255,255,.24); }
-  .nav-group { display: block; padding: 18px 16px 8px; color: rgba(255,255,255,.5); }
+  .sidebar .tab.active::after { color: #fff; background: rgba(255,255,255,.28); }
+  .sidebar .tab.active .tab-lb { color: #fff; }
+  .nav-group { display: block; padding: 18px 16px 8px; color: var(--ink-soft); }
   body.menu-open { overflow: hidden; }
 
   /* BOTTOM NAV — bar PLUSKUES prej qelqi; aktivi = pilulë e mbushur me gradient + ikonë e bardhë */
