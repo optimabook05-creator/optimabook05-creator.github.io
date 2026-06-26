@@ -2722,9 +2722,31 @@ function setupInfoDots() {
 
 // Navigimi për telefon: bar poshtë (bottom-nav) + sirtar "Më shumë"
 function closeSidebarDrawer() {
-  const s = document.querySelector(".sidebar"); if (s) s.classList.remove("open");
+  const s = document.querySelector(".sidebar"); if (s) { s.classList.remove("open"); s.style.transform = ""; s.style.transition = ""; }
   const b = $("#sidebarBackdrop"); if (b) b.hidden = true;
   document.body.classList.remove("menu-open");
+}
+// Tërhiq fletën poshtë për ta mbyllur (ndjesi native iOS) — vetëm nga koka/dorezimi
+function setupSheetDrag() {
+  const head = document.querySelector(".sidebar-mhead");
+  const sheet = document.querySelector(".sidebar");
+  if (!head || !sheet) return;
+  let startY = 0, dy = 0, dragging = false;
+  head.addEventListener("touchstart", (e) => {
+    if (!sheet.classList.contains("open")) return;
+    startY = e.touches[0].clientY; dy = 0; dragging = true; sheet.style.transition = "none";
+  }, { passive: true });
+  head.addEventListener("touchmove", (e) => {
+    if (!dragging) return;
+    dy = e.touches[0].clientY - startY; if (dy < 0) dy = 0;
+    sheet.style.transform = "translateY(" + dy + "px)";
+  }, { passive: true });
+  head.addEventListener("touchend", () => {
+    if (!dragging) return; dragging = false;
+    sheet.style.transition = "transform .3s cubic-bezier(.2,.9,.3,1)";
+    if (dy > 90) { haptic(); sheet.style.transform = "translateY(100%)"; setTimeout(closeSidebarDrawer, 280); }
+    else { sheet.style.transform = "translateY(0)"; setTimeout(() => { sheet.style.transform = ""; sheet.style.transition = ""; }, 300); }
+  });
 }
 function syncBotnav() {
   const active = document.querySelector(".tab.active");
@@ -2741,6 +2763,7 @@ function setupMobileNav() {
   if (more) more.onclick = () => { const s = document.querySelector(".sidebar"); if (!s) return; const open = !s.classList.contains("open"); s.classList.toggle("open", open); document.body.classList.toggle("menu-open", open); const b = $("#sidebarBackdrop"); if (b) b.hidden = !open; };
   const cl = $("#sidebarClose"); if (cl) cl.onclick = closeSidebarDrawer;
   const bd = $("#sidebarBackdrop"); if (bd) bd.onclick = closeSidebarDrawer;
+  setupSheetDrag();
   const fab = $("#fab"); if (fab) fab.onclick = () => {
     haptic(12);
     const cur = (document.querySelector(".tab.active") || {}).dataset ? document.querySelector(".tab.active").dataset.tab : "";
@@ -2927,9 +2950,10 @@ function wire() {
   });
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.onclick = () => {
-      document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+      document.querySelectorAll(".tab").forEach((x) => { x.classList.remove("active"); x.setAttribute("aria-current", "false"); });
       document.querySelectorAll(".tab-pane").forEach((x) => x.classList.remove("active"));
       tab.classList.add("active");
+      tab.setAttribute("aria-current", "page");
       $("#pane-" + tab.dataset.tab).classList.add("active");
       // Render lazy për skedat e tregtisë (gjithmonë të freskëta kur i hap)
       if (tab.dataset.tab === "orders") renderOrders();

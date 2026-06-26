@@ -1857,10 +1857,20 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
     -webkit-backdrop-filter: none; backdrop-filter: none; padding: 8px 14px 0; max-height: none; overflow: visible; border-radius: 0; }
   .sidebar .tab { width: 100%; justify-content: flex-start; gap: 12px; padding: 11px 13px; font-size: 15.5px; font-weight: 700; border-radius: 17px;
     color: var(--ink); background: var(--glass-soft); border: 1px solid var(--glass-edge); position: relative; }
-  /* IKONA në kuti qelqi majtas (si referenca whygoalbania) */
+  /* IKONA në kuti me NGJYRË (si iOS Settings) — ngjyra vjen nga --tc i çdo skede (DRY) */
+  .sidebar .tab { --tc: 16,185,129; }
   .sidebar .tab .tab-ic { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
-    font-size: 19px; background: var(--glass); border: 1px solid var(--glass-edge); flex: none; }
-  .sidebar .tab.active .tab-ic { background: rgba(255,255,255,.28); border-color: rgba(255,255,255,.45); }
+    font-size: 19px; flex: none; background: linear-gradient(145deg, rgba(var(--tc),.30), rgba(var(--tc),.15));
+    border: 1px solid rgba(var(--tc),.42); box-shadow: 0 5px 14px rgba(var(--tc),.20), inset 0 1px 0 rgba(255,255,255,.25); }
+  .sidebar .tab[data-tab="stats"]{--tc:124,92,246} .sidebar .tab[data-tab="calendar"]{--tc:244,63,94}
+  .sidebar .tab[data-tab="appointments"]{--tc:59,130,246} .sidebar .tab[data-tab="orders"]{--tc:245,158,11}
+  .sidebar .tab[data-tab="leads"]{--tc:6,182,212} .sidebar .tab[data-tab="waitlist"]{--tc:168,85,247}
+  .sidebar .tab[data-tab="blocks"]{--tc:239,68,68} .sidebar .tab[data-tab="customers"]{--tc:20,184,166}
+  .sidebar .tab[data-tab="reports"]{--tc:16,185,129} .sidebar .tab[data-tab="config"]{--tc:251,146,60}
+  .sidebar .tab[data-tab="catalog"]{--tc:14,165,233} .sidebar .tab[data-tab="general"]{--tc:99,102,241}
+  .sidebar .tab[data-tab="staff"]{--tc:236,72,153} .sidebar .tab[data-tab="settings"]{--tc:100,116,139}
+  .sidebar .tab[data-tab="activity"]{--tc:245,158,11}
+  .sidebar .tab.active .tab-ic { background: rgba(255,255,255,.28); border-color: rgba(255,255,255,.5); box-shadow: 0 5px 14px rgba(255,255,255,.15); }
   /* shigjeta › në rreth qelqi në fund të çdo rreshti (si referenca) */
   .sidebar .tab::after { content: "\203A"; margin-left: auto; font-size: 19px; font-weight: 700; line-height: 1; color: var(--ink-soft);
     width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
