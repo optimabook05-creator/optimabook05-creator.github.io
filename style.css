@@ -1819,47 +1819,60 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 
 @media (max-width: 900px) {
   .panel-body { display: block; }
-  .sidebar-backdrop { display: none !important; }   /* fleta full-screen s'e do */
 
-  /* Anështrimi → FLETË "Menu" e plotë, e ngurtë (pa mbivendosje gjysmë-të-tejdukshme) */
+  /* Backdrop: errëson + TURBULLON përmbajtjen pas fletës — zemra e glassmorphism-it */
+  .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 65;
+    background: rgba(10,18,15,.32); -webkit-backdrop-filter: blur(11px) saturate(1.1); backdrop-filter: blur(11px) saturate(1.1);
+    animation: opx-backdrop .3s ease; }
+  .sidebar-backdrop[hidden] { display: none; }
+
+  /* FLETË "Menu" prej QELQI TË NGRIRË (frosted glass) që ngrihet nga poshtë */
   .sidebar { display: none; }
   .sidebar.open {
-    display: block; position: fixed; inset: 0; z-index: 70; overflow-y: auto;
-    background: var(--milk); -webkit-overflow-scrolling: touch;
-    padding-bottom: calc(24px + env(safe-area-inset-bottom));
-    animation: sheetUp .3s cubic-bezier(.2,.9,.3,1);
+    display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 70; max-height: 86vh; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.64));
+    -webkit-backdrop-filter: blur(36px) saturate(1.8); backdrop-filter: blur(36px) saturate(1.8);
+    border-top: 1.5px solid rgba(255,255,255,.7); border-radius: 30px 30px 0 0;
+    box-shadow: 0 -22px 64px rgba(10,18,15,.3);
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
+    animation: sheetUp .42s cubic-bezier(.2,.95,.3,1);
   }
-  .sidebar-mhead {
-    display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 2;
-    padding: calc(16px + env(safe-area-inset-top)) 18px 14px; background: var(--milk);
-    font-family: var(--font-display); font-weight: 800; font-size: 21px; border-bottom: 1px solid var(--glass-line);
-  }
-  .sidebar-mhead button { width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
-    background: var(--glass-soft); color: var(--ink); font-size: 18px; font-weight: 700; }
-  .sidebar.open .tabs {
-    flex-direction: column; align-items: stretch; gap: 4px; background: none; border: none; box-shadow: none;
-    -webkit-backdrop-filter: none; backdrop-filter: none; padding: 6px 14px 0; max-height: none; overflow: visible; border-radius: 0;
-  }
-  .sidebar .tab { width: 100%; justify-content: flex-start; padding: 15px 16px; font-size: 16px; border-radius: 14px; }
-  .nav-group { display: block; padding: 18px 16px 6px; }
+  .sidebar-mhead { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 2;
+    padding: 20px 20px 12px; background: transparent; font-family: var(--font-display); font-weight: 800; font-size: 20px; }
+  .sidebar-mhead::before { content: ""; position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
+    width: 42px; height: 5px; border-radius: 3px; background: var(--ink-faint); opacity: .4; }
+  .sidebar-mhead button { width: 38px; height: 38px; border-radius: 50%; cursor: pointer; color: var(--ink); font-size: 16px; font-weight: 700;
+    background: rgba(255,255,255,.55); border: 1px solid var(--glass-edge); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .sidebar.open .tabs { flex-direction: column; align-items: stretch; gap: 4px; background: none; border: none; box-shadow: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none; padding: 4px 14px 0; max-height: none; overflow: visible; border-radius: 0; }
+  .sidebar .tab { width: 100%; justify-content: flex-start; padding: 14px 16px; font-size: 15.5px; border-radius: 16px; }
+  .sidebar .tab.active { background: linear-gradient(135deg, var(--accent-soft), rgba(255,255,255,.35)); }
+  .nav-group { display: block; padding: 16px 16px 6px; }
   body.menu-open { overflow: hidden; }
 
-  /* Bar poshtë (bottom-nav) — gjithmonë i arritshëm */
-  .botnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-    background: var(--glass-strong); -webkit-backdrop-filter: blur(22px) saturate(1.5); backdrop-filter: blur(22px) saturate(1.5);
-    border-top: 1px solid var(--glass-line); padding: 7px 4px calc(7px + env(safe-area-inset-bottom)); box-shadow: 0 -8px 24px rgba(22,32,28,.08); }
-  .botnav button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none;
-    cursor: pointer; color: var(--ink-faint); font-family: var(--font-body); font-weight: 700; padding: 5px 2px; border-radius: 13px;
-    transition: color .15s ease, transform .12s ease; }
-  .botnav .bn-i { font-size: 21px; line-height: 1; }
-  .botnav .bn-l { font-size: 10.5px; }
+  /* BOTTOM NAV — bar PLUSKUES prej qelqi me indikator aktiv (glass pill) */
+  .botnav { display: flex; position: fixed; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 50; gap: 2px;
+    background: linear-gradient(180deg, rgba(255,255,255,.66), rgba(255,255,255,.48));
+    -webkit-backdrop-filter: blur(28px) saturate(1.9); backdrop-filter: blur(28px) saturate(1.9);
+    border: 1px solid rgba(255,255,255,.6); border-radius: 24px; padding: 8px 6px;
+    box-shadow: 0 14px 38px rgba(10,18,15,.18), inset 0 1px 0 rgba(255,255,255,.75); }
+  .botnav button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer;
+    color: var(--ink-soft); font-family: var(--font-body); font-weight: 700; padding: 7px 2px; border-radius: 16px; position: relative;
+    transition: color .18s ease, transform .14s ease; }
+  .botnav .bn-i { font-size: 20px; line-height: 1; }
+  .botnav .bn-l { font-size: 10px; }
   .botnav button.active { color: var(--accent-deep); }
-  .botnav button.active .bn-i { transform: translateY(-1px) scale(1.06); }
+  .botnav button.active::before { content: ""; position: absolute; inset: 2px 5px; border-radius: 14px; z-index: -1;
+    background: linear-gradient(160deg, var(--accent-soft), rgba(32,201,151,.10)); box-shadow: 0 4px 14px var(--accent-glow); }
+  .botnav button.active .bn-i { transform: translateY(-1px) scale(1.08); }
   .botnav button:active { transform: scale(.9); }
 
-  .panel-content { padding-bottom: 92px; }
+  .panel-content { padding-bottom: 98px; }
 }
-:root[data-theme="dark"] .sidebar.open { background: #0f1714; }
-:root[data-theme="dark"] .sidebar-mhead { background: #0f1714; }
-:root[data-theme="dark"] .botnav { background: rgba(15,23,20,.92); }
+:root[data-theme="dark"] .sidebar.open { background: linear-gradient(180deg, rgba(26,36,32,.86), rgba(18,26,23,.68)); border-top-color: rgba(255,255,255,.12); }
+:root[data-theme="dark"] .sidebar-mhead button { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.14); }
+:root[data-theme="dark"] .sidebar .tab.active { background: linear-gradient(135deg, var(--accent-soft), rgba(255,255,255,.05)); }
+:root[data-theme="dark"] .botnav { background: linear-gradient(180deg, rgba(32,42,38,.66), rgba(20,28,25,.54)); border-color: rgba(255,255,255,.12); box-shadow: 0 14px 38px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08); }
 :root[data-theme="dark"] .botnav button.active { color: var(--accent-bright); }
+:root[data-theme="dark"] .sidebar-backdrop { background: rgba(0,0,0,.5); }
