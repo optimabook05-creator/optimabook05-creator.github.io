@@ -2387,18 +2387,31 @@ function renderTodayGlance(appts) {
   } else {
     inner += `<div class="today-list">` + t.map((a, i) => {
       const nm = a.services ? a.services.name : "";
-      const st = a.status === "no_show" ? `<span class="tr-st no">${tr("noShowW")}</span>`
-        : a.status === "attended" ? `<span class="tr-st ok">${tr("attendedW")}</span>`
-        : a.status === "confirmed" ? `<span class="tr-st ok">${tr("confirmedW")}</span>` : "";
+      const passed = toMin(hm(a.appt_time)) <= nowM;
+      const actionable = passed && (a.status === "pending" || a.status === "confirmed");
+      let right;
+      if (actionable) {  // takim që kaloi sot e pa shënuar → shëno direkt nga kreu
+        right = `<span class="tr-acts">
+          <button class="ta-btn ok" data-id="${a.id}" data-act="attended" data-prev="${a.status}" aria-label="${tr("attendedBtn")}">✓</button>
+          <button class="ta-btn no" data-id="${a.id}" data-act="no_show" data-prev="${a.status}" aria-label="${tr("noShowBtn")}">✘</button></span>`;
+      } else if (i === nextIdx) {
+        right = `<span class="tr-next">${tr("todayNext")}</span>`;
+      } else {
+        right = a.status === "no_show" ? `<span class="tr-st no">${tr("noShowW")}</span>`
+          : a.status === "attended" ? `<span class="tr-st ok">${tr("attendedW")}</span>`
+          : a.status === "confirmed" ? `<span class="tr-st ok">${tr("confirmedW")}</span>` : "";
+      }
       return `<div class="today-row${i === nextIdx ? " next" : ""}">
         <span class="tr-time">${hm(a.appt_time)}</span>
         <span class="tr-who"><strong>${esc(a.client_name || tr("noName"))}</strong>${nm ? `<small>${esc(nm)}</small>` : ""}</span>
-        ${i === nextIdx ? `<span class="tr-next">${tr("todayNext")}</span>` : st}</div>`;
+        ${right}</div>`;
     }).join("") + `</div>`;
   }
   box.innerHTML = `<div class="today-card">${inner}</div>`;
   const card = box.querySelector(".today-card");
   if (card) card.onclick = () => { const tab = document.querySelector('.tab[data-tab="appointments"]'); if (tab) tab.click(); };
+  // Veprime inline (mos lejo që klikimi i butonit të hapë skedën Takimet)
+  box.querySelectorAll(".ta-btn").forEach((b) => b.onclick = (e) => { e.stopPropagation(); setStatus(b.dataset.id, b.dataset.act, b.dataset.prev); });
 }
 
 async function renderStats() {
@@ -2702,7 +2715,7 @@ function syncBotnav() {
   const active = document.querySelector(".tab.active");
   const cur = active ? active.dataset.tab : "";
   const primary = ["stats", "calendar", "appointments", "reports"];
-  document.querySelectorAll("#botnav button[data-go]").forEach((b) => b.classList.toggle("active", b.dataset.go === cur));
+  document.querySelectorAll("#botnav button[data-go]").forEach((b) => { const on = b.dataset.go === cur; b.classList.toggle("active", on); b.setAttribute("aria-current", on ? "page" : "false"); });
   const more = $("#botMore"); if (more) more.classList.toggle("active", !primary.includes(cur));
 }
 function setupMobileNav() {

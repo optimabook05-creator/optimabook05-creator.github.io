@@ -1977,3 +1977,12 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 .toast-act { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3); color: #fff; font-weight: 800;
   font-family: var(--font-body); font-size: 13px; padding: 5px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; pointer-events: auto; }
 .toast-act:hover { background: rgba(255,255,255,.3); }
+
+/* Veprime inline te karta "Sot" (shëno erdhi/mungoi pa lënë kreun) */
+.tr-acts { display: inline-flex; gap: 6px; flex: 0 0 auto; }
+.ta-btn { width: 32px; height: 32px; border-radius: 10px; border: none; cursor: pointer; font-size: 14px; font-weight: 800; line-height: 1; }
+.ta-btn.ok { background: var(--accent-soft); color: var(--accent-deep); }
+.ta-btn.ok:hover { background: var(--accent); color: #fff; }
+.ta-btn.no { background: var(--red-soft); color: var(--red); }
+.ta-btn.no:hover { background: var(--red); color: #fff; }
+.ta-btn:active { transform: scale(.88); }
