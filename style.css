@@ -155,11 +155,11 @@ body {
 body::before {
   content: ""; position: fixed; inset: -30%; z-index: -2;
   background:
-    radial-gradient(38% 34% at 24% 26%, rgba(32, 201, 151, .34), transparent 70%),
-    radial-gradient(34% 32% at 78% 16%, rgba(116, 173, 255, .32), transparent 70%),
-    radial-gradient(36% 34% at 72% 82%, rgba(255, 196, 145, .30), transparent 70%),
-    radial-gradient(28% 28% at 16% 86%, rgba(196, 156, 255, .22), transparent 70%);
-  filter: blur(70px) saturate(1.25);
+    radial-gradient(40% 36% at 22% 22%, rgba(32, 201, 151, .46), transparent 70%),
+    radial-gradient(36% 34% at 80% 14%, rgba(116, 173, 255, .44), transparent 70%),
+    radial-gradient(38% 36% at 74% 84%, rgba(255, 184, 130, .40), transparent 70%),
+    radial-gradient(30% 30% at 14% 88%, rgba(196, 156, 255, .34), transparent 70%);
+  filter: blur(66px) saturate(1.45);
   animation: aurora 28s ease-in-out infinite alternate;
 }
 @keyframes aurora {
