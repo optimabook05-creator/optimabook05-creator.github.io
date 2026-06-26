@@ -41,7 +41,7 @@ const T = {
     tabCal: "📅 Kalendari", tabAppt: "📋 Takimet", tabBlock: "⛔ Bllokime", tabStat: "🏠 Përmbledhje",
     grpHome: "Kreu", grpWork: "Puna", grpBiz: "Biznesi", grpOther: "Tjera",
     grpDaily: "Përdor çdo ditë", grpSetup: "Rregullo një herë", tabConfig: "🚀 Konfigurimi", optional: "opsionale",
-    bnHome: "Kreu", bnCal: "Kalendari", bnAppt: "Takimet", bnEcon: "Ekonomia", bnMore: "Më shumë",
+    bnHome: "Kreu", bnCal: "Kalendari", bnAppt: "Takimet", bnEcon: "Ekonomia", bnMore: "Më shumë", menuTitle: "Menu",
     configDesc: "Vendi i vetëm për ta rregulluar biznesin — hapat kryesorë në një vend. Plotësoji një herë; pastaj OptimaBook merret me klientët.",
     cfgStepProfile: "Profili i biznesit", cfgStepProfileD: "Emri, adresa, kontakti, monedha, përshkrimi.",
     cfgStepOffer: "Çfarë ofron", cfgStepOfferD: "Shërbimet & produktet — çmim, kohëzgjatje, stok.",
@@ -236,7 +236,7 @@ const T = {
     tabCal: "📅 Calendar", tabAppt: "📋 Appointments", tabBlock: "⛔ Blocks", tabStat: "🏠 Overview",
     grpHome: "Home", grpWork: "Work", grpBiz: "Business", grpOther: "More",
     grpDaily: "Use daily", grpSetup: "Set up once", tabConfig: "🚀 Setup", optional: "optional",
-    bnHome: "Home", bnCal: "Calendar", bnAppt: "Bookings", bnEcon: "Economy", bnMore: "More",
+    bnHome: "Home", bnCal: "Calendar", bnAppt: "Bookings", bnEcon: "Economy", bnMore: "More", menuTitle: "Menu",
     configDesc: "The single place to set up your business — the key steps in one spot. Fill it once; then OptimaBook handles customers.",
     cfgStepProfile: "Business profile", cfgStepProfileD: "Name, address, contact, currency, description.",
     cfgStepOffer: "What you offer", cfgStepOfferD: "Services & products — price, duration, stock.",
@@ -2592,7 +2592,7 @@ function setupInfoDots() {
 // Navigimi për telefon: bar poshtë (bottom-nav) + sirtar "Më shumë"
 function closeSidebarDrawer() {
   const s = document.querySelector(".sidebar"); if (s) s.classList.remove("open");
-  const b = $("#sidebarBackdrop"); if (b) b.hidden = true;
+  document.body.classList.remove("menu-open");
 }
 function syncBotnav() {
   const active = document.querySelector(".tab.active");
@@ -2606,7 +2606,8 @@ function setupMobileNav() {
     b.onclick = () => { const t = document.querySelector('.tab[data-tab="' + b.dataset.go + '"]'); if (t) t.click(); window.scrollTo({ top: 0, behavior: "smooth" }); };
   });
   const more = $("#botMore");
-  if (more) more.onclick = () => { const s = document.querySelector(".sidebar"); if (!s) return; const open = !s.classList.contains("open"); s.classList.toggle("open", open); const b = $("#sidebarBackdrop"); if (b) b.hidden = !open; };
+  if (more) more.onclick = () => { const s = document.querySelector(".sidebar"); if (!s) return; const open = !s.classList.contains("open"); s.classList.toggle("open", open); document.body.classList.toggle("menu-open", open); };
+  const cl = $("#sidebarClose"); if (cl) cl.onclick = closeSidebarDrawer;
   const bd = $("#sidebarBackdrop"); if (bd) bd.onclick = closeSidebarDrawer;
   syncBotnav();
 }
