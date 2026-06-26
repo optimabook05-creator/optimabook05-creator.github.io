@@ -103,6 +103,7 @@ const T = {
     statCancelRate: "Norma e anulimeve", statAiShare: "Punon AI për ty",
     statCapacity: "Kapaciteti i mbushur (këtë muaj)", statProfitHour: "Fitim/orë (këtë muaj)", statNoShows: "Mungesa (no-show)",
     todayTitle: "Sot", todayAppts: "takime", todayNext: "TJETRI", todayEmpty: "Asnjë takim sot — AI yt po pret klientë 24/7 ✨",
+    greetMorning: "Mirëmëngjes", greetAfternoon: "Mirëdita", greetEvening: "Mirëmbrëma", swipeHint: "← rrëshqit për veprime",
     statNoShow: "rrezik mungese", secInsights: "Çfarë të thotë biznesi",
     secTopServices: "Shërbimet më të kërkuara", secVip: "Klientët më besnikë",
     secLoad: "Ngarkesa — 7 ditët e ardhshme", visitsW: "vizita", bookingsW: "rezervime",
@@ -299,6 +300,7 @@ const T = {
     statCancelRate: "Cancellation rate", statAiShare: "AI works for you",
     statCapacity: "Capacity filled (this month)", statProfitHour: "Profit/hour (this month)", statNoShows: "No-shows",
     todayTitle: "Today", todayAppts: "bookings", todayNext: "NEXT", todayEmpty: "No bookings today — your AI is taking customers 24/7 ✨",
+    greetMorning: "Good morning", greetAfternoon: "Good afternoon", greetEvening: "Good evening", swipeHint: "← swipe for actions",
     statNoShow: "no-show risk", secInsights: "What your business tells you",
     secTopServices: "Top services", secVip: "Most loyal clients",
     secLoad: "Load — next 7 days", visitsW: "visits", bookingsW: "bookings",
@@ -470,6 +472,12 @@ function toast(text, kind) {
   el.classList.add("show");
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), kind === "err" ? 4200 : 2600);
 }
+// Haptic — dridhje e lehtë në veprime (ndjesi native, kur pajisja e mbështet)
+function haptic(ms) { try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) {} }
+// Skeleton — vendoset gjatë ngarkimit (shpejtësi e perceptuar, jo ekran bosh)
+function skel(n) { let h = ""; for (let i = 0; i < (n || 3); i++) h += '<div class="skel-row"></div>'; return `<div class="skel">${h}</div>`; }
+// Përshëndetje sipas kohës së ditës
+function greetWord() { const h = new Date().getHours(); return h < 12 ? tr("greetMorning") : h < 18 ? tr("greetAfternoon") : tr("greetEvening"); }
 // Njoftim gabimi i bukur (zëvendëson alert) + log i lehtë për diagnostikë
 function errToast(e) {
   const msg = (e && e.message) ? e.message : (typeof e === "string" ? e : tr("errGeneric"));
@@ -2161,12 +2169,13 @@ async function renderCalendar() {
 function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 
 async function renderAppointments() {
-  const list = $("#apptList"); list.innerHTML = "";
+  const list = $("#apptList"); list.innerHTML = skel(4);
   const today = fmtDate(new Date());
   const { data } = await sb.from("appointments").select("*").eq("business_id", biz.id)
     .gte("appt_date", today).order("appt_date").order("appt_time");
   const appts = data || [];
   if (!appts.length) { list.innerHTML = emptyHTML("📅", tr("emptyAppt"), tr("emptyApptHint")); return; }
+  list.innerHTML = "";  // pastro skeleton-in
   for (const a of appts) {
     const s = svcById(a.service_id); const d = parseDate(a.appt_date);
     const card = document.createElement("div");
@@ -2195,7 +2204,34 @@ async function renderAppointments() {
       mkBtn("ghost danger", tr("cancelBtn"), () => setStatus(a.id, "cancelled"));
     }
     list.appendChild(card);
+    attachSwipe(card, a, today);
   }
+}
+
+// Swipe mbi kartën e takimit (telefon): djathtas → erdhi/konfirmo, majtas → anulo
+function attachSwipe(card, a, today) {
+  if (a.status === "cancelled" || a.status === "no_show" || a.status === "attended") return;
+  let x0 = null, y0 = null, dx = 0, dragging = false;
+  card.addEventListener("touchstart", (e) => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; dx = 0; dragging = false; card.style.transition = "none"; }, { passive: true });
+  card.addEventListener("touchmove", (e) => {
+    if (x0 == null) return;
+    const t = e.touches[0], ddx = t.clientX - x0, ddy = t.clientY - y0;
+    if (!dragging && Math.abs(ddx) < Math.abs(ddy)) { x0 = null; return; }  // lëvizje vertikale → scroll normal
+    dragging = true; dx = Math.max(-130, Math.min(130, ddx));
+    card.style.transform = "translateX(" + dx + "px)";
+    card.classList.toggle("swipe-r", dx > 35);
+    card.classList.toggle("swipe-l", dx < -35);
+  }, { passive: true });
+  const end = () => {
+    if (x0 == null) { return; }
+    card.style.transition = "transform .25s ease"; card.style.transform = "";
+    card.classList.remove("swipe-r", "swipe-l");
+    if (dx > 85) { haptic(15); setStatus(a.id, a.appt_date <= today ? "attended" : "confirmed"); }
+    else if (dx < -85) { haptic(15); setStatus(a.id, "cancelled"); }
+    x0 = null;
+  };
+  card.addEventListener("touchend", end, { passive: true });
+  card.addEventListener("touchcancel", end, { passive: true });
 }
 
 // Ricaktim i shpejtë (inline): zëvendëson veprimet me datë + orë + ruaj
@@ -2219,6 +2255,7 @@ async function rescheduleAppt(card, a) {
 }
 
 async function setStatus(id, status) {
+  haptic(12);
   await sb.from("appointments").update({ status }).eq("id", id);
   const m = status === "cancelled" ? tr("toastCancelled") : status === "no_show" ? tr("toastNoShow") : status === "attended" ? tr("toastAttended") : tr("toastConfirmed");
   toast(m);
@@ -2317,7 +2354,7 @@ function renderTodayGlance(appts) {
   const d = new Date();
   const dateLbl = `${T[lang].dayNames[d.getDay()]}, ${d.getDate()} ${T[lang].months[d.getMonth()]}`;
   const todRev = t.reduce((s, a) => s + (a.services ? Number(a.services.price) || 0 : 0), 0);
-  let inner = `<div class="today-head"><div><div class="today-t">☀️ ${tr("todayTitle")}</div><div class="today-d">${dateLbl}</div></div>`
+  let inner = `<div class="today-head"><div><div class="today-t">${greetWord()} 👋</div><div class="today-d">${tr("todayTitle")} · ${dateLbl}</div></div>`
     + `<div class="today-sum"><b>${t.length}</b> ${tr("todayAppts")}${todRev ? ` · ${money(todRev)}` : ""}</div></div>`;
   if (!t.length) {
     inner += `<div class="today-empty">${tr("todayEmpty")}</div>`;
@@ -2340,6 +2377,8 @@ function renderTodayGlance(appts) {
 
 async function renderStats() {
   renderInsights();
+  const sg0 = $("#statsGrid"); if (sg0) sg0.innerHTML = skel(4);   // skeleton gjatë ngarkimit
+  const tb0 = $("#todayBox"); if (tb0 && (biz.mode || "appointments") !== "inquiry") tb0.innerHTML = skel(2);
   // Marrim çdo takim me emrin/çmimin e shërbimit (edhe nëse shërbimi është çaktivizuar)
   const { data } = await sb.from("appointments")
     .select("appt_date, appt_time, status, source, client_name, services(name, price, duration_min, cost)")
@@ -2642,13 +2681,13 @@ function syncBotnav() {
 }
 function setupMobileNav() {
   document.querySelectorAll("#botnav button[data-go]").forEach((b) => {
-    b.onclick = () => { const t = document.querySelector('.tab[data-tab="' + b.dataset.go + '"]'); if (t) t.click(); window.scrollTo({ top: 0, behavior: "smooth" }); };
+    b.onclick = () => { haptic(); const t = document.querySelector('.tab[data-tab="' + b.dataset.go + '"]'); if (t) t.click(); window.scrollTo({ top: 0, behavior: "smooth" }); };
   });
   const more = $("#botMore");
   if (more) more.onclick = () => { const s = document.querySelector(".sidebar"); if (!s) return; const open = !s.classList.contains("open"); s.classList.toggle("open", open); document.body.classList.toggle("menu-open", open); const b = $("#sidebarBackdrop"); if (b) b.hidden = !open; };
   const cl = $("#sidebarClose"); if (cl) cl.onclick = closeSidebarDrawer;
   const bd = $("#sidebarBackdrop"); if (bd) bd.onclick = closeSidebarDrawer;
-  const fab = $("#fab"); if (fab) fab.onclick = () => { if (biz && biz.mode === "inquiry") openOrder(null); else openManual(); };
+  const fab = $("#fab"); if (fab) fab.onclick = () => { haptic(12); if (biz && biz.mode === "inquiry") openOrder(null); else openManual(); };
   syncBotnav();
 }
 
