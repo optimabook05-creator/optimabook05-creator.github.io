@@ -89,7 +89,7 @@
     0 6px 16px rgba(0, 0, 0, .45),
     0 40px 90px rgba(0, 0, 0, .65);
 }
-:root[data-theme="dark"] body::before { opacity: .45; filter: blur(80px) saturate(1.1); }
+:root[data-theme="dark"] body::before { opacity: .6; filter: blur(72px) saturate(1.5); }   /* neon-glow mbi errësirë (si referencat) */
 :root[data-theme="dark"] body::after { opacity: .06; }
 :root[data-theme="dark"] .lang-switch { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .10); }
 :root[data-theme="dark"] .lang-switch button.active { background: rgba(255, 255, 255, .14); color: var(--accent-bright); box-shadow: none; }
@@ -155,12 +155,13 @@ body {
 body::before {
   content: ""; position: fixed; inset: -30%; z-index: -2;
   background:
-    radial-gradient(40% 36% at 22% 22%, rgba(32, 201, 151, .46), transparent 70%),
-    radial-gradient(36% 34% at 80% 14%, rgba(116, 173, 255, .44), transparent 70%),
-    radial-gradient(38% 36% at 74% 84%, rgba(255, 184, 130, .40), transparent 70%),
-    radial-gradient(30% 30% at 14% 88%, rgba(196, 156, 255, .34), transparent 70%);
-  filter: blur(66px) saturate(1.45);
-  animation: aurora 28s ease-in-out infinite alternate;
+    radial-gradient(46% 42% at 16% 18%, rgba(168, 85, 247, .50), transparent 66%),   /* vjollcë */
+    radial-gradient(44% 40% at 86% 12%, rgba(34, 211, 238, .46), transparent 66%),    /* cyan */
+    radial-gradient(48% 44% at 82% 82%, rgba(236, 72, 153, .46), transparent 66%),    /* rozë */
+    radial-gradient(42% 40% at 10% 88%, rgba(251, 146, 60, .42), transparent 66%),    /* portokalli */
+    radial-gradient(36% 34% at 50% 52%, rgba(32, 201, 151, .28), transparent 70%);    /* jeshil (brandi) */
+  filter: blur(62px) saturate(1.55);
+  animation: aurora 26s ease-in-out infinite alternate;
 }
 @keyframes aurora {
   from { transform: translate3d(-2.5%, -1.5%, 0) rotate(-1.5deg) scale(1); }
@@ -1892,4 +1893,18 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
     -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5);
   }
   .panel-head h2 { font-size: 22px; }
+}
+
+/* Glow ngjyrësh nën kartat që notojnë (si masterpieces #5/#6) — vetëm telefon */
+@media (max-width: 900px) {
+  .panel-content .stat-card, .panel-content .ins-card, .panel-content .cfg-card,
+  .panel-content .settings-block, .panel-content .bi-box, .panel-content .cat-item,
+  .panel-content .appt-card, .panel-content .order-card, .panel-content .block-item {
+    box-shadow: 0 12px 34px rgba(90,50,140,.14), 0 2px 8px rgba(22,32,28,.06), inset 0 1px 0 rgba(255,255,255,.75);
+  }
+}
+:root[data-theme="dark"] .panel-content .stat-card, :root[data-theme="dark"] .panel-content .ins-card,
+:root[data-theme="dark"] .panel-content .cfg-card, :root[data-theme="dark"] .panel-content .settings-block,
+:root[data-theme="dark"] .panel-content .bi-box {
+  box-shadow: 0 14px 40px rgba(168,85,247,.20), inset 0 1px 0 rgba(255,255,255,.07);
 }
