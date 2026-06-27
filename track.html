@@ -110,8 +110,7 @@ function renderAppt(d) {
     ${d.customer ? `<div class="tk-line"><span class="k">${L.customer}</span><span>${esc(d.customer)}</span></div>` : ""}`;
 }
 if ("serviceWorker" in navigator && location.protocol === "https:") {
-  navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
-  if (window.caches) caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+  window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 init();
 </script>

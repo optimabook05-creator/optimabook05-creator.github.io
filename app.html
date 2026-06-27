@@ -20,9 +20,9 @@
 <link rel="preconnect" href="https://mhbrhrsjlxluxvwjhcne.supabase.co" crossorigin>
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=83">
-<link rel="modulepreload" href="config.js?v=83">
-<link rel="modulepreload" href="optima-app.js?v=83">
+<link rel="stylesheet" href="style.css?v=84">
+<link rel="modulepreload" href="config.js?v=84">
+<link rel="modulepreload" href="optima-app.js?v=84">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -677,13 +677,13 @@
 </div>
 
 <script>
-/* Auto-përditësim: kap versionin e ri pa rifreskim manual */
+/* Service Worker: ngarkim i menjëhershëm në vizita të përsëritura + offline.
+   I sigurt ndaj cache-it të vjetër: HTML & version.txt marrin gjithmonë rrjetin; asetet janë me ?v=. */
 if ("serviceWorker" in navigator && location.protocol === "https:") {
-  navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
-  if (window.caches) caches.keys().then((ks) => ks.forEach((k) => caches.delete(k))).catch(() => {});
+  window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=83"></script>
-<script type="module" src="optima-app.js?v=83"></script>
+<script src="core.js?v=84"></script>
+<script type="module" src="optima-app.js?v=84"></script>
 </body>
 </html>
