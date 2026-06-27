@@ -139,6 +139,8 @@ const T = {
     addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
     secBasics: "📝 Bazat", secTime: "⏱ Koha & prenotimi", secPricing: "💶 Çmimi", secStock: "📦 Stoku & kodi",
     itemAddons: "➕ Shtesa (montim, postë, garanci…)", addAddon: "+ Shto shtesë", addonNamePh: "p.sh. Montim, Postë, Garanci…", addonRequired: "E detyrueshme",
+    itemVariants: "🧩 Paketa / çmime të shumta", addVariant: "+ Shto paketë", variantNamePh: "p.sh. 1-3 faqe, 4-6 faqe…",
+    variantsHint: "Opsione me çmime të ndryshme për të njëjtin artikull (p.sh. '1-3 faqe → 120€', '4-6 faqe → 200€'). AI tregon çmimin sipas asaj që zgjedh klienti.",
     addonsHint: "Gjëra që shiten BASHKË me këtë artikull. Secila 'e detyrueshme' (shtohet vetë) ose 'opsionale' (klienti zgjedh). E përdor kush i duhet, si çmimet me shumicë.",
     addonReq: "e detyrueshme", addonOpt: "opsionale", addonOne: "shtesë", addonMany: "shtesa", addonsTitle: "Shto me të:", itemAddonsShort: "Shtesa",
     customizeFields: "⚙ Përshtat fushat për këtë artikull", customizeHint: "Hiq ato që s'i duhen pikërisht këtij artikulli (p.sh. një shërbim s'ka stok). Ndikon vetëm këtë artikull.",
@@ -337,6 +339,8 @@ const T = {
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
     secBasics: "📝 Basics", secTime: "⏱ Time & booking", secPricing: "💶 Price", secStock: "📦 Stock & code",
     itemAddons: "➕ Add-ons (installation, shipping, warranty…)", addAddon: "+ Add add-on", addonNamePh: "e.g. Installation, Shipping, Warranty…", addonRequired: "Required",
+    itemVariants: "🧩 Packages / multiple prices", addVariant: "+ Add package", variantNamePh: "e.g. 1-3 pages, 4-6 pages…",
+    variantsHint: "Options with different prices for the same item (e.g. '1-3 pages → 120€', '4-6 pages → 200€'). The AI quotes the price based on what the customer picks.",
     addonsHint: "Things sold TOGETHER with this item. Each 'required' (added automatically) or 'optional' (customer chooses). Use it if you need it, like wholesale pricing.",
     addonReq: "required", addonOpt: "optional", addonOne: "add-on", addonMany: "add-ons", addonsTitle: "Add with it:", itemAddonsShort: "Add-ons",
     customizeFields: "⚙ Customize fields for this item", customizeHint: "Turn off what this specific item doesn't need (e.g. a service has no stock). Affects only this item.",
@@ -838,6 +842,7 @@ function renderCatalog() {
     }
     if (itemShowsField(s, "tiers") && tiers.length) meta.push(`💹 ${tiers.map((t) => `${plainNum(t.min_qty)}+ → ${money(t.unit_price)}`).join(", ")}`);
     if (itemShowsField(s, "addons") && Array.isArray(s.addons) && s.addons.length) meta.push(`➕ ${s.addons.length} ${tr(s.addons.length === 1 ? "addonOne" : "addonMany")}`);
+    if (itemShowsField(s, "variants") && Array.isArray(s.variants) && s.variants.length) meta.push(`🧩 ${s.variants.map((v) => `${esc(v.label)} → ${money(v.price)}`).join(", ")}`);
     const desc = (itemShowsField(s, "desc") && s.description) ? `<div class="cat-desc">${esc(s.description)}</div>` : "";
     const item = document.createElement("div");
     item.className = "cat-item";
@@ -1022,6 +1027,8 @@ function openItem(s) {
   (s ? priceTiers.filter((t) => t.service_id === s.id) : []).forEach((t) => addTierRow(t.min_qty, t.unit_price));
   // Shtesat (montim, postë, garanci…)
   if ($("#itemAddons")) { $("#itemAddons").innerHTML = ""; ((s && Array.isArray(s.addons)) ? s.addons : []).forEach((a) => addAddonRow(a.name, a.price, a.cost, a.required)); }
+  // Paketat / çmimet e shumta
+  if ($("#itemVariants")) { $("#itemVariants").innerHTML = ""; ((s && Array.isArray(s.variants)) ? s.variants : []).forEach((v) => addVariantRow(v.label, v.price)); }
   // Çelësat per-seksion: vendosi nga override-i i artikullit (ose default-i global)
   document.querySelectorAll("#itemModal .fit").forEach((c) => { c.checked = itemShowsField(s, c.dataset.f); c.onchange = applyItemFields; });
   $("#itemKind").onchange = applyItemFields;
@@ -1064,6 +1071,20 @@ function addAddonRow(name, price, cost, required) {
   del.type = "button"; del.className = "t-del"; del.textContent = "✕"; del.onclick = () => row.remove();
   row.append(n, p, c, reqWrap, del);
   $("#itemAddons").appendChild(row);
+}
+
+// Një rresht pakete/çmimi (etiketë + çmim) — p.sh. "1-3 faqe" → 120
+function addVariantRow(label, price) {
+  const row = document.createElement("div");
+  row.className = "tier-row variant-row";
+  const l = document.createElement("input");
+  l.type = "text"; l.className = "v-label"; l.maxLength = 50; l.placeholder = tr("variantNamePh"); l.value = label || "";
+  const p = document.createElement("input");
+  p.type = "number"; p.min = 0; p.step = 0.01; p.className = "v-price"; p.placeholder = tr("tierPrice"); p.value = price != null ? price : "";
+  const del = document.createElement("button");
+  del.type = "button"; del.className = "t-del"; del.textContent = "✕"; del.onclick = () => row.remove();
+  row.append(l, p, del);
+  $("#itemVariants").appendChild(row);
 }
 
 function addTierRow(minQty, unitPrice) {
@@ -1113,6 +1134,14 @@ async function saveItem() {
     addons.push({ name: an, price: ap, cost: ac, required: r.querySelector(".a-required").checked });
   });
   payload.addons = addons.length ? addons : null;
+  // Paketat / çmimet e shumta (etiketë + çmim)
+  const variants = [];
+  document.querySelectorAll("#itemVariants .variant-row").forEach((r) => {
+    const vl = r.querySelector(".v-label").value.trim(); if (!vl) return;
+    const vp = Number(r.querySelector(".v-price").value) || 0;
+    variants.push({ label: vl, price: vp });
+  });
+  payload.variants = variants.length ? variants : null;
   // Fushat e fshehura për këtë artikull (override per-artikull)
   const hidden = [];
   document.querySelectorAll("#itemModal .fit").forEach((c) => { if (!c.checked) hidden.push(c.dataset.f); });
@@ -1125,7 +1154,7 @@ async function saveItem() {
   try {
     let itemId;
     try { itemId = await writeItem(payload); }
-    catch (e1) { const { addons: _a, hidden_fields: _h, ...base } = payload; itemId = await writeItem(base); } // pa kolonat e reja
+    catch (e1) { const { addons: _a, hidden_fields: _h, variants: _v, ...base } = payload; itemId = await writeItem(base); } // pa kolonat e reja
     // Shkallët e çmimit: fshi të vjetrat + rivendos
     await sb.from("price_tiers").delete().eq("service_id", itemId);
     const rows = [];
@@ -2910,6 +2939,7 @@ function wire() {
   if ($("#btnAddItem")) $("#btnAddItem").onclick = () => openItem(null);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
   if ($("#addAddon")) $("#addAddon").onclick = () => { addAddonRow("", "", "", false); const rows = document.querySelectorAll("#itemAddons .addon-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".a-name").focus(); };
+  if ($("#addVariant")) $("#addVariant").onclick = () => { addVariantRow("", ""); const rows = document.querySelectorAll("#itemVariants .variant-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".v-label").focus(); };
   if ($("#itemSave")) $("#itemSave").onclick = saveItem;
   if ($("#itemDelete")) $("#itemDelete").onclick = deleteItem;
   if ($("#itemCancel")) $("#itemCancel").onclick = () => { $("#itemModal").hidden = true; };

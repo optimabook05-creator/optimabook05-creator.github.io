@@ -20,9 +20,9 @@
 <link rel="preconnect" href="https://mhbrhrsjlxluxvwjhcne.supabase.co" crossorigin>
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=85">
-<link rel="modulepreload" href="config.js?v=85">
-<link rel="modulepreload" href="optima-app.js?v=85">
+<link rel="stylesheet" href="style.css?v=86">
+<link rel="modulepreload" href="config.js?v=86">
+<link rel="modulepreload" href="optima-app.js?v=86">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -559,6 +559,18 @@
       </div>
     </div>
 
+    <div class="opt-block" id="fldVariants">
+      <div class="opt-head">
+        <span class="opt-title"><span data-t="itemVariants">🧩 Paketa / çmime të shumta</span></span>
+        <label class="ob-switch"><input type="checkbox" class="fit" data-f="variants" checked><span class="ob-slider"></span></label>
+      </div>
+      <div class="opt-body">
+        <p class="tier-hint" data-t="variantsHint">Opsione me çmime të ndryshme për të njëjtin artikull (p.sh. "1-3 faqe → 120€", "4-6 faqe → 200€"). AI tregon çmimin sipas asaj që zgjedh klienti.</p>
+        <div id="itemVariants"></div>
+        <button class="btn ghost small" id="addVariant" type="button" data-t="addVariant">+ Shto paketë</button>
+      </div>
+    </div>
+
     <div class="opt-block" id="fldTiers">
       <div class="opt-head">
         <span class="opt-title"><span data-t="itemTiers">💹 Çmime sipas sasisë (shumicë)</span><button type="button" class="info-dot" data-info="infoTiers" aria-label="info">i</button></span>
@@ -683,7 +695,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=85"></script>
-<script type="module" src="optima-app.js?v=85"></script>
+<script src="core.js?v=86"></script>
+<script type="module" src="optima-app.js?v=86"></script>
 </body>
 </html>

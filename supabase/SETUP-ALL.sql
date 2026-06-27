@@ -158,6 +158,7 @@ alter table public.services add column if not exists bookable    boolean not nul
 alter table public.services add column if not exists addons      jsonb;   -- shtesa: [{name,price,cost,required}] (montim/postë/garanci…)
 alter table public.services add column if not exists hidden_fields jsonb;  -- fushat e fshehura për KËTË artikull (p.sh. ["stock","sku","tiers"])
 alter table public.services add column if not exists cost        numeric;
+alter table public.services add column if not exists variants    jsonb;   -- paketa/çmime të shumta: [{label,price}] (p.sh. "1-3 faqe"→120, "4-6 faqe"→200)
 
 create table if not exists public.price_tiers (
   id uuid primary key default gen_random_uuid(),
@@ -223,7 +224,7 @@ returns jsonb language sql security definer stable set search_path = public as $
     'timezone', b.timezone, 'lang', b.lang,
     'services', coalesce((select jsonb_agg(jsonb_build_object(
         'id', s.id, 'name', s.name, 'price', s.price, 'kind', s.kind, 'bookable', s.bookable,
-        'description', s.description, 'unit_label', s.unit_label, 'addons', s.addons, 'hidden_fields', s.hidden_fields,
+        'description', s.description, 'unit_label', s.unit_label, 'addons', s.addons, 'hidden_fields', s.hidden_fields, 'variants', s.variants,
         'duration_min', s.duration_min, 'duration_value', s.duration_value, 'duration_unit', s.duration_unit
       ) order by s.sort_order) from services s where s.business_id = b.id and s.active), '[]'::jsonb),
     'tiers', coalesce((select jsonb_agg(jsonb_build_object('service_id', t.service_id, 'min_qty', t.min_qty, 'unit_price', t.unit_price))
