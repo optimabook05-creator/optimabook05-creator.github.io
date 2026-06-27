@@ -2024,3 +2024,19 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 .order-card, .cat-item, .block-item { transition: transform .16s ease, box-shadow .24s ease, border-color .2s ease; }
 .appt-card:active, .order-card:active, .cat-item:active, .block-item:active, .today-card:active { transform: scale(.985); }
 .btn:active { transform: scale(.97); }
+
+/* ===================================================================
+   ⚡ SMOOTHNESS MAX — optimizime pa asnjë ndryshim pamjeje
+   =================================================================== */
+/* Shfletuesi kapërcen renderimin e kartave JASHTË ekranit në lista të gjata
+   → scroll shumë më i lëmuar (kur dalin në ekran, renderohen normalisht). */
+.appt-card, .order-card, .cat-item, .block-item, .service-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 84px;
+}
+/* Pa "scroll-chaining" (jank kur arrin fundin e listës/modalit) */
+.panel-col, .appt-list, .block-list, .modal, .timeline, .sidebar.open {
+  overscroll-behavior: contain;
+}
+/* Promovim në shtresë GPU për elementët pluskues (s'riboëjnë faqen kur scroll-on) */
+.fab, .botnav { transform: translateZ(0); }
