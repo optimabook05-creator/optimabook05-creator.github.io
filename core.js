@@ -88,7 +88,19 @@
     return amts.every((a) => ok.has(a));
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk };
+  // Zbulon përpjekje manipulimi (prompt-injection / jailbreak) te mesazhi i klientit — SQ + EN.
+  // Deterministik → i testueshëm; sistemi forcon prompt-in kur kjo është true.
+  function looksLikeInjection(text) {
+    const t = String(text || "").toLowerCase();
+    return /(ignore|disregard|forget|override)\b.{0,30}\b(instruction|instructions|rule|rules|prompt)\b/.test(t)
+      || /\b(act as|pretend to be|pretend you are|roleplay as|system prompt|developer mode|jailbreak|new instructions)\b/.test(t)
+      || /\byou are now (a |an |the |my )/.test(t)
+      || /\breveal your (instructions|prompt|rules|system)\b/.test(t)
+      || /(injoro|shpërfill|harro)\b.{0,30}\b(udhëzim|udhëzimet|rregull|rregullat|prompt)\b/.test(t)
+      || /\b(tani je një|tani ti je|bëhu si|shfaq (udhëzimet|rregullat)|(udhëzimet|rregullat) e tua)\b/.test(t);
+  }
+
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);
