@@ -380,7 +380,8 @@ async function tryRules(ctx: any): Promise<any | null> {
   const { biz, services, hours, hMap, svcDur, businessId, text, client_name, staff } = ctx;
   // Rregullat japin përgjigje vetëm për biznese shqip/anglisht
   if (!isSqLang(biz) && !isEnLang(biz)) return null;
-  const sq = isSqLang(biz);
+  const alb = isAlbanian(text);                       // gjuha e MESAZHIT të klientit
+  const sq = (alb === null) ? isSqLang(biz) : alb;     // përgjigju në gjuhën e klientit (fallback: gjuha e biznesit)
   const tx = norm(text);
   const name = (client_name || "").split(" ")[0];
   const hist: any[] = ctx.history || [];
@@ -642,6 +643,18 @@ function harden(system: string, bizName: string, userText: string): string {
   return system + sec + alert;
 }
 
+// Zbulon gjuhën e mesazhit të klientit → AI/rregullat përgjigjen NË ATË gjuhë.
+// Kthen true=shqip, false=anglisht, null=e paqartë (përdor gjuhën e biznesit).
+function isAlbanian(raw: string): boolean | null {
+  const t = String(raw || "").toLowerCase();
+  if (/[ëç]/.test(t)) return true;
+  const sq = (t.match(/\b(sa|kushton|cmim|cmimet|qmim|keni|kam|dua|faqe|fage|pershendetje|ckemi|tung|neser|neser|sot|orari|hapur|mbyll|ben|trego|lutem|faleminderit|flm|rrofsh|mund|nje|dy|tre|kater|pese|gjashte|diten|ora|takim|qethje|parfum|blej|marr|porosi|sherbim|jeni|jam)\b/g) || []).length;
+  const en = (t.match(/\b(the|you|your|do|does|have|how|much|price|cost|want|book|booking|hello|hi|hey|what|when|where|can|could|with|for|please|thanks|thank|need|service|buy|order|appointment|website|web)\b/g) || []).length;
+  if (sq > en) return true;
+  if (en > sq) return false;
+  return null;
+}
+
 async function runAI(ctx: any) {
   const { biz, services, hMap, svcDur, businessId, text, client_name, history, staff } = ctx;
   const availability = await buildAvailability(businessId, services, hMap, svcDur, staff, ctx.now);
@@ -653,7 +666,7 @@ async function runAI(ctx: any) {
     biz.address ? `Address: ${biz.address}.` : "",
     `Today is ${DOW[parseDate(todayStr).getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
     `STYLE: warm, human, 1–2 short sentences, offer only 2–3 times, occasional tasteful emoji, never robotic.`,
-    `LANGUAGE: ALWAYS reply in ${bizLang} unless the customer writes a full sentence clearly in another language (then mirror it). Set "lang" to the ISO code of your reply language (sq, en, it, ...).`,
+    `LANGUAGE: Reply in the SAME language as the customer's latest message — mirror it exactly (Albanian→Albanian, English→English, Italian→Italian, etc.). Only if the message is too short/ambiguous to tell, use ${bizLang}. Set "lang" to the ISO code of your reply.`,
     `SERVICES (name — minutes — price):`,
     services.map((s: any) => `- ${s.name} — ${s.duration_min} min — ${s.price}`).join("\n"),
     biz.ai_notes ? `BUSINESS INFO / FAQ (use to answer about packages, prices, delivery times, policies — do NOT book these as calendar slots; instead offer a consultation/meeting):\n${biz.ai_notes}` : "",
@@ -714,8 +727,9 @@ async function saveLead(ctx: any, summary: string) {
 
 async function runInquiry(ctx: any) {
   const { biz, services, client_name, history, text } = ctx;
-  const sq = isSqLang(biz);
-  const lang = isEnLang(biz) ? "English" : (sq ? "Albanian" : "the customer's language");
+  const alb = isAlbanian(text);                      // gjuha e MESAZHIT të klientit
+  const sq = (alb === null) ? isSqLang(biz) : alb;   // përgjigju në gjuhën e klientit
+  const lang = "the customer's language";
   const catalog = services.map((s: any) => { const d = durHuman(s, sq); return `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}${d ? " — gati ~" + d : ""}`; }).join("\n");
   const system = [
     `You are the warm, friendly assistant for "${biz.name}".${biz.address ? ` (${biz.address})` : ""}`,
@@ -727,7 +741,7 @@ async function runInquiry(ctx: any) {
     `IMPORTANT: this business does NOT take calendar appointments. NEVER offer time slots or bookings.`,
     `When the customer wants to order / proceed / start, warmly confirm and tell them the owner will contact them shortly to finalize.`,
     `EXAMPLES: "a keni parfum per burra?" → answer ONLY from WHAT WE OFFER. "po makina keni?" (not offered) → say what "${biz.name}" actually offers and don't invent. "sa kushton?" → give price ONLY if listed above, otherwise say the owner will confirm. "dua ta marr" → confirm warmly + owner will contact.`,
-    `Reply in ${lang}. Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
+    `LANGUAGE: Reply in the SAME language as the customer's latest message — mirror it exactly (Albanian→Albanian, English→English, etc.). Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
   ].filter(Boolean).join("\n");
 
   const contents: any[] = [];
