@@ -82,3 +82,20 @@ test("overlaps", () => {
   assert.strictEqual(OB.overlaps(570, 30, [[600, 660]]), false);
   assert.strictEqual(OB.overlaps(630, 30, [[600, 660]]), true);
 });
+
+test("extractAmounts — nxjerr vetëm shumat me monedhë", () => {
+  assert.deepStrictEqual(OB.extractAmounts("Kushton 45€"), [45]);
+  assert.deepStrictEqual(OB.extractAmounts("45 euro ose €60"), [45, 60]);
+  assert.deepStrictEqual(OB.extractAmounts("Parfumi 199.50 € me 1500 lekë"), [199.5, 1500]);
+  assert.deepStrictEqual(OB.extractAmounts("ora 3, 15 min, 200ml"), []); // pa monedhë → asgjë
+  assert.deepStrictEqual(OB.extractAmounts("open 24/7 all day"), []);    // "all" s'është monedhë
+});
+
+test("replyPriceOk — kap çmimin e shpikur jashtë katalogut", () => {
+  const allowed = [45, 60, 199.5];
+  assert.strictEqual(OB.replyPriceOk("Parfumi kushton 45€.", allowed), true);
+  assert.strictEqual(OB.replyPriceOk("Janë 45€ dhe 60 euro.", allowed), true);
+  assert.strictEqual(OB.replyPriceOk("Makina kushton 9000€.", allowed), false); // i shpikur
+  assert.strictEqual(OB.replyPriceOk("Të ndihmoj me diçka?", allowed), true);    // pa çmim → ok
+  assert.strictEqual(OB.replyPriceOk("199,50 € për 50ml", allowed), true);       // presje dhjetore
+});

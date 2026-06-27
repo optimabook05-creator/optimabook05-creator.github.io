@@ -533,7 +533,7 @@ async function askGemini(system: string, contents: any[]) {
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error("Gemini: " + JSON.stringify(data).slice(0, 200));
-  return JSON.parse(text);
+  return safeParse(text);
 }
 
 // ChatGPT (OpenAI) — i njëjti rezultat JSON, me dalje të strukturuar (strict).
@@ -565,7 +565,7 @@ async function askOpenAI(system: string, contents: any[]) {
   const data = await res.json();
   const txt = data?.choices?.[0]?.message?.content;
   if (!txt) throw new Error("OpenAI: " + JSON.stringify(data).slice(0, 200));
-  return JSON.parse(txt);
+  return safeParse(txt);
 }
 
 // Përzgjedhësi: GPT nëse është konfiguruar, përndryshe Gemini.
@@ -586,6 +586,41 @@ async function buildAvailability(businessId: string, services: any[], hMap: any,
     if (slots.length) lines.push(`${DOW[d.getDay()]} ${ds} (${d.getDate()} ${MON[d.getMonth()]}): ${slots.join(", ")}`);
   }
   return lines.join("\n") || "(no free slots in the next 10 days)";
+}
+
+/* ---- Parsim JSON i sigurt (s'rrëzon kurrë rrjedhën edhe nëse modeli kthen tekst jo-JSON) ---- */
+function safeParse(text: string): any {
+  try { return JSON.parse(text); } catch (_e) { /* provo të nxjerrësh bllokun {…} */ }
+  const a = text.indexOf("{"), b = text.lastIndexOf("}");
+  if (a >= 0 && b > a) { try { return JSON.parse(text.slice(a, b + 1)); } catch (_e) { /* dështoi */ } }
+  return { reply: (text && text.trim()) ? text.trim().slice(0, 500) : "", wants_to_book: false, wants_to_cancel: false };
+}
+
+/* ---- Roja anti-halucinacion çmimi (pasqyron OB.extractAmounts/replyPriceOk te core.js;
+        Deno s'importon dot core.js kur funksioni deploy-ohet si skedar i vetëm) ---- */
+function extractAmounts(text: string): number[] {
+  const out: number[] = [];
+  const re = /(?:€|eur|euro|lek[eë]?)\s*(\d+(?:[.,]\d+)?)|(\d+(?:[.,]\d+)?)\s*(?:€|eur|euro|lek[eë]?)/gi;
+  const s = String(text || ""); let m: any;
+  while ((m = re.exec(s))) { const num = (m[1] != null ? m[1] : m[2]); if (num != null) out.push(Math.round(parseFloat(String(num).replace(",", ".")) * 100) / 100); }
+  return out;
+}
+function allowedAmounts(services: any[], biz: any): number[] {
+  const set = new Set<number>();
+  const add = (txt: string) => { const re = /\d+(?:[.,]\d+)?/g; let m: any; while ((m = re.exec(txt))) { const n = Math.round(parseFloat(m[0].replace(",", ".")) * 100) / 100; if (n > 0) set.add(n); } };
+  add(JSON.stringify(services || []));   // çmime bazë + shkallë + addon (çfarëdo fushe numerike)
+  add(String(biz?.ai_notes || ""));      // çmime legjitime në FAQ
+  return [...set];
+}
+// Nëse përgjigjja përmend një çmim me monedhë që S'është te të dhënat reale → zëvendëson me fallback të sigurt.
+function guardReply(reply: string, services: any[], biz: any, sq: boolean): string {
+  const amts = extractAmounts(reply);
+  if (!amts.length) return reply;
+  const ok = new Set(allowedAmounts(services, biz));
+  if (amts.every((a) => ok.has(a))) return reply;
+  return sq
+    ? "Më lër ta konfirmoj çmimin e saktë me pronarin dhe të kthehem te ti sa më shpejt. 🙏"
+    : "Let me confirm the exact price with the owner and get right back to you. 🙏";
 }
 
 async function runAI(ctx: any) {
@@ -614,6 +649,7 @@ async function runAI(ctx: any) {
     `TIMES: "ora 2 pasdite"/"2pm"=14:00, "ora 3" afternoon=15:00.`,
     `BOOKING: when service+date+available time are known, set wants_to_book=true (exact service, date YYYY-MM-DD, time HH:MM) and write a complete warm confirmation in the customer's language.`,
     `CANCELLING: if they want to cancel / can't come, set wants_to_cancel=true.`,
+    `EXAMPLES (messy Albanian → understanding): "a ke nai or neser na 3" → wants_to_book, date=tomorrow, time=15:00. "sa kushton" → reply with prices from SERVICES, no booking. "s'mund te vij neser" → wants_to_cancel=true. "rrofsh/flm" → short thanks, no booking.`,
   ].filter(Boolean).join("\n");
 
   const contents: any[] = [];
@@ -637,6 +673,8 @@ async function runAI(ctx: any) {
     const r = await doCancel(ctx, out.lang);
     if (r.cancelled) { cancelled = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
   }
+  // Roja: vetëm përgjigjet e gjeneruara nga AI (jo konfirmimet e ndërtuara nga sistemi)
+  if (!booked && !cancelled) reply = guardReply(reply, services, biz, isSqLang(biz));
   return { reply, booked, cancelled, via: "ai" };
 }
 
@@ -669,6 +707,7 @@ async function runInquiry(ctx: any) {
     `SCOPE (STRICT): You represent ONLY "${biz.name}". Talk strictly about what we offer above. If asked about a product, category, brand, or topic we do NOT sell, do NOT invent and do NOT pretend to offer it — warmly clarify what "${biz.name}" actually offers and steer back. Never mention or compare other businesses.`,
     `IMPORTANT: this business does NOT take calendar appointments. NEVER offer time slots or bookings.`,
     `When the customer wants to order / proceed / start, warmly confirm and tell them the owner will contact them shortly to finalize.`,
+    `EXAMPLES: "a keni parfum per burra?" → answer ONLY from WHAT WE OFFER. "po makina keni?" (not offered) → say what "${biz.name}" actually offers and don't invent. "sa kushton?" → give price ONLY if listed above, otherwise say the owner will confirm. "dua ta marr" → confirm warmly + owner will contact.`,
     `Reply in ${lang}. Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
   ].filter(Boolean).join("\n");
 
@@ -682,6 +721,8 @@ async function runInquiry(ctx: any) {
     reply = sq ? "Më fal, pata një vështirësi të vogël. Më shkruaj edhe një herë çfarë të duhet? 🙏"
                : "Sorry, a small hiccup. Could you tell me again what you need? 🙏";
   }
+  reply = guardReply(reply, services, biz, sq); // roja anti-çmim-i-shpikur
+
   // Kapja e kërkesës (lead) me intent të qartë
   const tx = norm(text);
   if (/\b(dua|e dua|e marr|po e marr|porosi|porosit|porosis|interesoj|interesohem|le ta bejme|dakord|me ndihmoni|me beni|order|i want|interested|let s do)\b/.test(tx)) {
