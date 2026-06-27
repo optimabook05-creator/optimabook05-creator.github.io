@@ -155,11 +155,11 @@ body {
 body::before {
   content: ""; position: fixed; inset: -30%; z-index: -2;
   background:
-    radial-gradient(52% 48% at 18% 20%, rgba(16, 185, 129, .50), transparent 66%),    /* EMERALD (kryesor) */
-    radial-gradient(44% 40% at 86% 14%, rgba(34, 211, 238, .44), transparent 66%),     /* cyan */
-    radial-gradient(46% 42% at 82% 84%, rgba(45, 212, 191, .42), transparent 66%),     /* teal */
-    radial-gradient(40% 38% at 10% 90%, rgba(139, 92, 246, .30), transparent 66%),     /* vjollcë (theks) */
-    radial-gradient(34% 32% at 58% 50%, rgba(251, 191, 100, .24), transparent 70%);    /* ari i butë (theks) */
+    radial-gradient(54% 50% at 18% 20%, rgba(16, 185, 129, .52), transparent 66%),    /* EMERALD (kryesor) */
+    radial-gradient(46% 42% at 86% 14%, rgba(45, 212, 191, .40), transparent 66%),     /* teal */
+    radial-gradient(44% 40% at 82% 84%, rgba(34, 211, 238, .34), transparent 66%),     /* cyan i butë */
+    radial-gradient(42% 40% at 10% 90%, rgba(13, 148, 136, .34), transparent 66%),     /* teal i thellë (kohezion) */
+    radial-gradient(34% 32% at 58% 50%, rgba(251, 191, 100, .16), transparent 70%);    /* ar i butë (puhi luksi) */
   filter: blur(62px) saturate(1.5);
   animation: aurora 26s ease-in-out infinite alternate;
 }
