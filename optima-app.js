@@ -533,7 +533,7 @@ let editingItemId = null;  // artikulli në editim (katalog)
 let myUserId = null, myEmail = "";  // përdoruesi aktual (për pronar vs anëtar ekipi)
 
 // Monedha (global) — simboli sipas biznesit
-const CUR_SYM = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
+const CUR_SYM = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", NZD:"$", AED:"AED", ILS:"₪", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", MDL:"L", UAH:"₴", RUB:"₽", PLN:"zł", CZK:"Kč", HUF:"Ft", SEK:"kr", NOK:"kr", DKK:"kr", ISK:"kr", INR:"₹", PKR:"₨", BDT:"৳", JPY:"¥", CNY:"¥", KRW:"₩", HKD:"$", TWD:"$", SGD:"$", MYR:"RM", THB:"฿", IDR:"Rp", PHP:"₱", VND:"₫", KZT:"₸", AZN:"₼", GEL:"₾", AMD:"֏", ZAR:"R", NGN:"₦", GHS:"₵", BRL:"R$", MXN:"$", ARS:"$", CLP:"$", COP:"$", UYU:"$" };
 function curSym() { return CUR_SYM[(biz && biz.currency) || "EUR"] || ((biz && biz.currency) || "€"); }
 function round2(n) { return OB.round2(n); } // logjikë e testuar te core.js
 function money(n) { const v = round2(n); const s = curSym(); return s.length === 1 ? `${v}${s}` : `${v} ${s}`; }
