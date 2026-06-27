@@ -129,7 +129,7 @@ const T = {
     emptyActivityHint: "Çdo veprim i AI-së (rezervime, anulime, kujtesa) shfaqet këtu në kohë reale.",
     emptyBlockHint: "Blloko orare kur s'punon (pushime, dreka) që AI të mos rezervojë atëherë.",
     tabCatalog: "📦 Çfarë ofroj", catalogDesc: "Vendi i vetëm për gjithçka që ofron — shërbime & produkte: çmim, kosto, kohëzgjatje, prenotim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).",
-    addItem: "+ Shto artikull", emptyCatalog: "Ende pa artikuj.", emptyCatalogHint: "Shembull: 'Qethje' → Shërbim, 30 min, çmimi 10. Ose 'Parfum 199ml' → Produkt, çmimi 45, çmime shumice: nga 2 → 40, nga 100 → 12.",
+    addItem: "+ Shto artikull", emptyCatalog: "Ende pa artikuj.", emptyCatalogHint: "Shembull: 'Konsultë' → Shërbim, 30 min, çmimi 10. Ose 'Parfum 199ml' → Produkt, çmimi 45, çmime shumice: nga 2 → 40, nga 100 → 12.",
     itemNew: "Artikull i ri", itemEdit: "Ndrysho artikullin", itemName: "Emri", itemNamePh: "p.sh. Parfum 'Tobako Mix'", itemKind: "Lloji",
     itemDur: "Kohëzgjatja", itemDurUnit: "Njësia e kohës", bookableLbl: "📅 Prenotohet me kalendar",
     itemDesc: "Përshkrimi (detaje për klientin & AI-në)", itemDescPh: "p.sh. 199 ml · erë e fortë · mix kanellë–limon–tobako",
@@ -327,7 +327,7 @@ const T = {
     emptyActivityHint: "Every AI action (bookings, cancellations, reminders) appears here in real time.",
     emptyBlockHint: "Block off times when you're closed (holidays, lunch) so the AI won't book then.",
     tabCatalog: "📦 What I offer", catalogDesc: "The single place for everything you offer — services & products: price, cost, duration, booking, stock, unit and quantity pricing (wholesale/retail).",
-    addItem: "+ Add item", emptyCatalog: "No items yet.", emptyCatalogHint: "Example: 'Haircut' → Service, 30 min, price 10. Or 'Perfume 199ml' → Product, price 45, wholesale tiers: from 2 → 40, from 100 → 12.",
+    addItem: "+ Add item", emptyCatalog: "No items yet.", emptyCatalogHint: "Example: 'Consultation' → Service, 30 min, price 10. Or 'Perfume 199ml' → Product, price 45, wholesale tiers: from 2 → 40, from 100 → 12.",
     itemNew: "New item", itemEdit: "Edit item", itemName: "Name", itemNamePh: "e.g. Perfume 'Tobacco Mix'", itemKind: "Type",
     itemDur: "Duration", itemDurUnit: "Time unit", bookableLbl: "📅 Bookable on calendar",
     itemDesc: "Description (details for customer & AI)", itemDescPh: "e.g. 199 ml · strong scent · cinnamon–lemon–tobacco mix",
@@ -437,7 +437,7 @@ const PRESETS = {
     tattoo:{label:"🎨 Tatuazh",name:"Ink Studio",services:[["Konsultë",30,0],["Seancë",120,80]]},
     photo:{label:"📸 Fotograf",name:"Foto Art",services:[["Portret",60,40],["Event",120,100]]},
     tutor:{label:"📚 Mësues",name:"Qendra Edu",services:[["Orë individuale",60,10]]},
-    other:{label:"✨ Tjetër",name:"Biznesi Im",services:[["Shërbim standard",30,10]]},
+    other:{label:"✨ Tjetër",name:"Biznesi Im",services:[["Shërbim standard",30,15],["Parfum 50ml",0,45]]},
   },
   en: {
     barber:{label:"💈 Barbershop",name:"Tony's Barbershop",services:[["Haircut",30,15],["Haircut + Beard",45,22]]},
@@ -453,7 +453,7 @@ const PRESETS = {
     tattoo:{label:"🎨 Tattoo",name:"Ink Studio",services:[["Consultation",30,0],["Session",120,150]]},
     photo:{label:"📸 Photographer",name:"Art Photo",services:[["Portrait",60,90],["Event",120,200]]},
     tutor:{label:"📚 Tutor",name:"Edu Center",services:[["Private lesson",60,30]]},
-    other:{label:"✨ Other",name:"My Business",services:[["Standard service",30,20]]},
+    other:{label:"✨ Other",name:"My Business",services:[["Standard service",30,20],["Perfume 50ml",0,45]]},
   },
 };
 
@@ -1895,6 +1895,7 @@ function addServiceRow(s) {
 function openOnboard() {
   const sel = $("#obType");
   fillTypeSelect(sel);
+  sel.value = "other"; // parazgjedhje neutrale/universale (jo berber) — shembull me parfum
   const applyPreset = () => {
     const p = PRESETS[lang][sel.value];
     $("#obName").value = p.name;
