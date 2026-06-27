@@ -11,9 +11,10 @@ create table if not exists public.team_members (
   business_id uuid not null references public.businesses(id) on delete cascade,
   email       text not null,
   role        text not null default 'staff' check (role in ('manager','staff')),
-  created_at  timestamptz not null default now(),
-  unique (business_id, lower(email))
+  created_at  timestamptz not null default now()
 );
+-- Unik per (biznes, email pa-rast): index unik i vecante (Postgres s'lejon shprehje ne unique() te CREATE TABLE)
+create unique index if not exists team_members_biz_email_uniq on public.team_members (business_id, lower(email));
 create index if not exists team_business_idx on public.team_members(business_id);
 create index if not exists team_email_idx on public.team_members(lower(email));
 
