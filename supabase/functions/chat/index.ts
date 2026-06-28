@@ -670,14 +670,35 @@ function isAlbanian(raw: string): boolean | null {
   return null;
 }
 
+// KUJTESA E KLIENTIT (CRM): kthen një përmbledhje të historisë së KËTIJ klienti (sipas chat_id)
+// që AI të jetë personal ("Mirëdita Ana, si herën e fundit?") — vetëm lexim, i sigurt.
+async function customerMemory(businessId: string, chat_id: string | null | undefined, services: any[]): Promise<string> {
+  if (!chat_id) return "";
+  try {
+    const { data: past } = await supabase.from("appointments")
+      .select("client_name, appt_date, service_id, status")
+      .eq("business_id", businessId).eq("chat_id", chat_id).neq("status", "cancelled")
+      .order("appt_date", { ascending: false }).limit(5);
+    if (!past || !past.length) return "";
+    const name = (past.find((p: any) => p.client_name) || {}).client_name || "";
+    const last = past[0];
+    const lastSvc = last.service_id ? ((services.find((s: any) => s.id === last.service_id) || {}).name || "") : "";
+    const lastTxt = lastSvc ? `${lastSvc} (${last.appt_date})` : String(last.appt_date);
+    return `RETURNING CUSTOMER (greet warmly by name, reference history naturally, do NOT re-ask what you already know): name=${name || "?"}, past_visits=${past.length}, last=${lastTxt}.`;
+  } catch (_e) { return ""; }
+}
+
 async function runAI(ctx: any) {
   const { biz, services, hMap, svcDur, businessId, text, client_name, history, staff } = ctx;
   const availability = await buildAvailability(businessId, services, hMap, svcDur, staff, ctx.now);
   const todayStr = ctx.todayStr || fmtDate(new Date());
   const bizLang = biz.lang === "en" ? "English" : "Albanian";
   const firstName = (client_name || "").trim().split(" ")[0];
+  const memory = await customerMemory(businessId, ctx.chat_id, services);
   const system = [
     `You are the warm, friendly booking receptionist for "${biz.name}".${firstName ? ` The customer's name is ${firstName}.` : ""}`,
+    memory,
+    `CLARIFY: If you're not sure which service, date, time, or option the customer means, ask ONE short friendly clarifying question instead of guessing. Never assume a service or price when it's ambiguous.`,
     biz.address ? `Address: ${biz.address}.` : "",
     `Today is ${DOW[parseDate(todayStr).getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
     `STYLE: warm, human, 1–2 short sentences, offer only 2–3 times, occasional tasteful emoji, never robotic.`,
@@ -755,8 +776,11 @@ async function runInquiry(ctx: any) {
     if (Array.isArray(s.variants) && s.variants.length) line += " | paketa: " + s.variants.map((v: any) => v.label + "=" + v.price).join(", ");
     return line;
   }).join("\n");
+  const memory = await customerMemory(ctx.businessId, ctx.chat_id, services);
   const system = [
     `You are the warm, friendly assistant for "${biz.name}".${biz.address ? ` (${biz.address})` : ""}`,
+    memory,
+    `CLARIFY: If you're not sure what the customer wants (which product/option), ask ONE short friendly clarifying question instead of guessing. Never assume a price when it's ambiguous.`,
     `WHAT WE OFFER:`,
     catalog || "(see details below)",
     biz.ai_notes ? `DETAILS / packages / prices / delivery times / policies:\n${biz.ai_notes}` : "",
