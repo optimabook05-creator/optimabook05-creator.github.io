@@ -97,6 +97,13 @@ function buildPendingMsg(svc: any, dateStr: string, time: string, biz: any, lang
     ? `📝 Kërkesa u regjistrua! ${svc.name} — ${humanDay(dateStr, true)}, ora ${time}${price}. Pronari do ta konfirmojë shpejt dhe të kthehet te ti. 🙌`
     : `📝 Request received! ${svc.name} — ${humanDay(dateStr, false)}, ${time}${price}. The owner will confirm shortly and get back to you. 🙌`;
 }
+function buildReschedMsg(oldDate: string, oldTime: string, newDate: string, newTime: string, biz: any, lang?: string): string | null {
+  if (!isSqLang(biz, lang) && !isEnLang(biz, lang)) return null;
+  const sq = isSqLang(biz, lang);
+  return sq
+    ? `🔄 U zhvendos! Nga ${humanDay(oldDate, true)} ${oldTime} → ${humanDay(newDate, true)}, ora ${newTime}. Të presim! 🙌`
+    : `🔄 Rescheduled! From ${humanDay(oldDate, false)} ${oldTime} → ${humanDay(newDate, false)}, ${newTime}. See you! 🙌`;
+}
 
 function buildCancellation(dateStr: string, time: string, biz: any, lang?: string): string | null {
   if (!isSqLang(biz, lang) && !isEnLang(biz, lang)) return null;
@@ -345,6 +352,27 @@ async function doCancel(ctx: any, lang?: string) {
   return { cancelled: true, reply: buildCancellation(up.appt_date, hm(up.appt_time), biz, lang) };
 }
 
+// Rishpërndarje: zhvendos takimin ekzistues të klientit në një orar të ri (valido para se ta ndryshosh).
+async function doReschedule(ctx: any, newDate: string, newTime: string, lang?: string) {
+  const { businessId, biz, chat_id, services, svcDur, staff } = ctx;
+  if (!chat_id || !newDate || !newTime) return { rescheduled: false };
+  const today = ctx.todayStr || fmtDate(new Date());
+  const { data: up } = await supabase.from("appointments").select("*")
+    .eq("business_id", businessId).eq("chat_id", chat_id).neq("status", "cancelled")
+    .gte("appt_date", today).order("appt_date").order("appt_time").limit(1).maybeSingle();
+  if (!up) return { rescheduled: false };  // s'ka takim → trajtoje si rezervim i ri
+  const svc = (services || []).find((s: any) => s.id === up.service_id) || { duration_min: up.duration_min || 30 };
+  const { appts, blocks } = await busyFor(businessId, newDate, svcDur);
+  const hoursRow = ctx.hMap[parseDate(newDate).getDay()];
+  const free = freeSlotsUnion(newDate, svc.duration_min || 30, hoursRow, appts, blocks, staff, false, ctx.now);
+  if (!free.includes(newTime)) return { rescheduled: false, alternatives: free.slice(0, 3) };
+  if (ctx.preview) return { rescheduled: true, reply: buildReschedMsg(up.appt_date, hm(up.appt_time), newDate, newTime, biz, lang) };
+  const { error } = await supabase.from("appointments").update({ appt_date: newDate, appt_time: newTime }).eq("id", up.id);
+  if (error) return { rescheduled: false, alternatives: [] };
+  await supabase.from("notifications").insert({ business_id: businessId, text: `🔄 ${up.client_name} zhvendosi: ${up.appt_date} ${hm(up.appt_time)} → ${newDate} ${newTime}` });
+  return { rescheduled: true, reply: buildReschedMsg(up.appt_date, hm(up.appt_time), newDate, newTime, biz, lang) };
+}
+
 // Shton klientin në listën e pritjes (mbushja automatike e orareve bosh).
 async function addWaitlist(ctx: any, svc: any, dateStr: string, period: string | null) {
   const { businessId, channel, chat_id, client_name } = ctx;
@@ -539,6 +567,7 @@ async function askGemini(system: string, contents: any[]) {
           properties: {
             reply: { type: "STRING" }, lang: { type: "STRING" },
             wants_to_book: { type: "BOOLEAN" }, wants_to_cancel: { type: "BOOLEAN" },
+            wants_to_reschedule: { type: "BOOLEAN" }, needs_human: { type: "BOOLEAN" },
             service: { type: "STRING" }, date: { type: "STRING" }, time: { type: "STRING" },
           },
           required: ["reply", "wants_to_book"],
@@ -570,9 +599,10 @@ async function askOpenAI(system: string, contents: any[]) {
             properties: {
               reply: { type: "string" }, lang: { type: "string" },
               wants_to_book: { type: "boolean" }, wants_to_cancel: { type: "boolean" },
+              wants_to_reschedule: { type: "boolean" }, needs_human: { type: "boolean" },
               service: { type: "string" }, date: { type: "string" }, time: { type: "string" },
             },
-            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "service", "date", "time"],
+            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "wants_to_reschedule", "needs_human", "service", "date", "time"],
           },
         },
       },
@@ -721,6 +751,8 @@ async function runAI(ctx: any) {
     `TIMES: "ora 2 pasdite"/"2pm"=14:00, "ora 3" afternoon=15:00.`,
     `BOOKING: when service+date+available time are known, set wants_to_book=true (exact service, date YYYY-MM-DD, time HH:MM) and write a complete warm confirmation in the customer's language.`,
     `CANCELLING: if they want to cancel / can't come, set wants_to_cancel=true.`,
+    `RESCHEDULE: if they want to MOVE/change their existing appointment, set wants_to_reschedule=true with the NEW date (YYYY-MM-DD) and time (HH:MM).`,
+    `HUMAN: if you truly cannot help, or they want a real person / have a complaint / a special request beyond the listed services, set needs_human=true and warmly say the owner will personally get back to them.`,
     `EXAMPLES (messy Albanian → understanding): "a ke nai or neser na 3" → wants_to_book, date=tomorrow, time=15:00. "sa kushton" → reply with prices from SERVICES, no booking. "s'mund te vij neser" → wants_to_cancel=true. "rrofsh/flm" → short thanks, no booking.`,
   ].filter(Boolean).join("\n");
 
@@ -745,8 +777,19 @@ async function runAI(ctx: any) {
     const r = await doCancel(ctx, out.lang);
     if (r.cancelled) { cancelled = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
   }
+  // Rishpërndarje (zhvendos takimin ekzistues)
+  let rescheduled = false;
+  if (out.wants_to_reschedule && out.date && out.time && !booked && !cancelled) {
+    const r = await doReschedule(ctx, out.date, hm(out.time), out.lang);
+    if (r.rescheduled) { rescheduled = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
+    else if (r.alternatives?.length) reply = (reply ? reply + "\n\n" : "") + `(${r.alternatives.join(", ")})`;
+  }
+  // Dorëzim te njeriu: njofto pronarin kur klienti kërkon ndihmë njerëzore/ankesë
+  if (out.needs_human && !ctx.preview) {
+    try { await supabase.from("notifications").insert({ business_id: businessId, text: `🙋 ${client_name || "Klient"} kërkon pronarin: ${String(text).slice(0, 120)}` }); } catch (_e) { /* injoro */ }
+  }
   // Roja: vetëm përgjigjet e gjeneruara nga AI (jo konfirmimet e ndërtuara nga sistemi)
-  if (!booked && !cancelled) reply = guardReply(reply, services, biz, isSqLang(biz));
+  if (!booked && !cancelled && !rescheduled) reply = guardReply(reply, services, biz, isSqLang(biz));
   return { reply, booked, cancelled, via: "ai" };
 }
 
@@ -788,6 +831,7 @@ async function runInquiry(ctx: any) {
     `SCOPE (STRICT): You represent ONLY "${biz.name}". Talk strictly about what we offer above. If asked about a product, category, brand, or topic we do NOT sell, do NOT invent and do NOT pretend to offer it — warmly clarify what "${biz.name}" actually offers and steer back. Never mention or compare other businesses.`,
     `IMPORTANT: this business does NOT take calendar appointments. NEVER offer time slots or bookings.`,
     `When the customer wants to order / proceed / start, warmly confirm and tell them the owner will contact them shortly to finalize.`,
+    `HUMAN: if you truly cannot help, or they want a real person / have a complaint, set needs_human=true and warmly say the owner will personally get back to them.`,
     `EXAMPLES: "a keni parfum per burra?" → answer ONLY from WHAT WE OFFER. "po makina keni?" (not offered) → say what "${biz.name}" actually offers and don't invent. "sa kushton?" → give price ONLY if listed above, otherwise say the owner will confirm. "dua ta marr" → confirm warmly + owner will contact.`,
     `LANGUAGE: Reply in the SAME language as the customer's latest message — mirror it exactly (Albanian→Albanian, English→English, etc.). Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
   ].filter(Boolean).join("\n");
@@ -796,11 +840,15 @@ async function runInquiry(ctx: any) {
   for (const m of (history || []).slice(-10)) contents.push({ role: m.role === "bot" ? "model" : "user", parts: [{ text: String(m.text || "") }] });
   contents.push({ role: "user", parts: [{ text: String(text) }] });
 
-  let reply = "";
-  try { const out = await askAI(harden(system, biz.name, text), contents); reply = out.reply || ""; }
+  let reply = ""; let out: any = null;
+  try { out = await askAI(harden(system, biz.name, text), contents); reply = out.reply || ""; }
   catch (_e) {
     reply = sq ? "Më fal, pata një vështirësi të vogël. Më shkruaj edhe një herë çfarë të duhet? 🙏"
                : "Sorry, a small hiccup. Could you tell me again what you need? 🙏";
+  }
+  // Dorëzim te njeriu: njofto pronarin kur klienti kërkon ndihmë njerëzore/ankesë
+  if (out && out.needs_human && !ctx.preview) {
+    try { await supabase.from("notifications").insert({ business_id: ctx.businessId, text: `🙋 ${client_name || "Klient"} kërkon pronarin: ${String(text).slice(0, 120)}` }); } catch (_e2) { /* injoro */ }
   }
   reply = guardReply(reply, services, biz, sq); // roja anti-çmim-i-shpikur
 
