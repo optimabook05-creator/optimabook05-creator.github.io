@@ -668,7 +668,11 @@ async function runAI(ctx: any) {
     `STYLE: warm, human, 1–2 short sentences, offer only 2–3 times, occasional tasteful emoji, never robotic.`,
     `LANGUAGE: Reply in the SAME language as the customer's latest message — mirror it exactly (Albanian→Albanian, English→English, Italian→Italian, etc.). Only if the message is too short/ambiguous to tell, use ${bizLang}. Set "lang" to the ISO code of your reply.`,
     `SERVICES (name — minutes — price):`,
-    services.map((s: any) => `- ${s.name} — ${s.duration_min} min — ${s.price}${Array.isArray(s.variants) && s.variants.length ? " | PACKAGES (quote per choice): " + s.variants.map((v: any) => `${v.label}=${v.price}`).join(", ") : ""}`).join("\n"),
+    services.map((s: any) => {
+      let line = `- ${s.name} — ${s.duration_min} min — ${s.price}`;
+      if (Array.isArray(s.variants) && s.variants.length) line += " | PACKAGES (quote per choice): " + s.variants.map((v: any) => v.label + "=" + v.price).join(", ");
+      return line;
+    }).join("\n"),
     biz.ai_notes ? `BUSINESS INFO / FAQ (use to answer about packages, prices, delivery times, policies — do NOT book these as calendar slots; instead offer a consultation/meeting):\n${biz.ai_notes}` : "",
     `SCOPE (STRICT): You represent ONLY "${biz.name}". Speak strictly about THIS business and the services/info listed above. If the customer asks about a product, service, brand, or topic this business does NOT offer, do NOT invent anything and do NOT pretend to offer it — warmly clarify what "${biz.name}" actually offers and steer back. Never mention or compare other businesses. If you genuinely don't know, say the owner will follow up.`,
     `AVAILABLE START TIMES (the ONLY source of truth — use ONLY these, never invent):`,
@@ -730,7 +734,12 @@ async function runInquiry(ctx: any) {
   const alb = isAlbanian(text);                      // gjuha e MESAZHIT të klientit
   const sq = (alb === null) ? isSqLang(biz) : alb;   // përgjigju në gjuhën e klientit
   const lang = "the customer's language";
-  const catalog = services.map((s: any) => { const d = durHuman(s, sq); const vr = (Array.isArray(s.variants) && s.variants.length) ? " | paketa: " + s.variants.map((v: any) => `${v.label}=${v.price}`).join(", ") : ""; return `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}${d ? " — gati ~" + d : ""}${vr}`; }).join("\n");
+  const catalog = services.map((s: any) => {
+    const d = durHuman(s, sq);
+    let line = `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}${d ? " — gati ~" + d : ""}`;
+    if (Array.isArray(s.variants) && s.variants.length) line += " | paketa: " + s.variants.map((v: any) => v.label + "=" + v.price).join(", ");
+    return line;
+  }).join("\n");
   const system = [
     `You are the warm, friendly assistant for "${biz.name}".${biz.address ? ` (${biz.address})` : ""}`,
     `WHAT WE OFFER:`,
