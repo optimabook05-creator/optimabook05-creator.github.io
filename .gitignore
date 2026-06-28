@@ -2,8 +2,7 @@
 supabase/SEED-TEST.sql
 
 # Dokumente te brendshme arkitekture/strategjie — vetem lokale, JO publike
-ARCHITECTURE.md
-AI-AGENT.md
-UX-RESEARCH.md
-KIT-SHITJEJE.md
-SI-FUNKSIONON.md
+
+# Te gjitha dokumentet .md jane te brendshme (private) — pervec README
+*.md
+!README.md
