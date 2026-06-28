@@ -1,2 +1,8 @@
 # Skedarë provë me të dhëna personale — s'shkojnë në repo
 supabase/SEED-TEST.sql
+
+# Dokumente te brendshme arkitekture/strategjie — vetem lokale, JO publike
+ARCHITECTURE.md
+AI-AGENT.md
+UX-RESEARCH.md
+KIT-SHITJEJE.md
