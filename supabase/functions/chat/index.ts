@@ -359,6 +359,8 @@ function svcListText(services: any[], sq = true) {
   return services.map((s) => {
     const d = durHuman(s, sq);
     let line = `• ${s.name}${d ? " — " + d : ""} — ${s.price}€`;
+    const vars = Array.isArray(s.variants) ? s.variants : [];
+    for (const v of vars) if (v && v.label) line += `\n   • ${v.label}: ${v.price}€`;
     const adds = Array.isArray(s.addons) ? s.addons : [];
     for (const a of adds) if (a && a.name) line += `\n   + ${a.name} ${a.price}€${a.required ? (sq ? " (e detyrueshme)" : " (required)") : (sq ? " (opsionale)" : " (optional)")}`;
     return line;
