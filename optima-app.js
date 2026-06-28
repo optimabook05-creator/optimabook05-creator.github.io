@@ -194,7 +194,7 @@ const T = {
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
     catalogPointerTxt: "Produktet & shërbimet me përshkrim, çmim, stok dhe çmime shumice menaxhohen te skeda 📦 Catalog lart.", goCatalogBtn: "📦 Hap Katalogun",
     bookableLbl: "📅 Prenotohet me kalendar", svcDesc: "Shto çdo shërbim ose produkt — me lloj, përshkrim, çmim dhe prenotim opsional.",
-    itemCost: "Kosto (për ty)", profitOnLbl: "💰 Llogarit fitimin & marzhet (kërkon koston)", fixedLbl: "Shpenzime mujore fikse (qira, rroga…) — opsionale",
+    itemCost: "Kosto (për ty)", profitOnLbl: "💰 Llogarit fitimin & marzhet (kërkon koston)", approveLbl: "🛡️ Mirato vetë prenotimet (AI propozon → ti aprovon te Takimet)", fixedLbl: "Shpenzime mujore fikse (qira, rroga…) — opsionale",
     fixedHint: "Shtoji një nga një: rroga e secilit punëtor, qira, drita, interneti… emërtoji si të duash. AI ua zbret nga fitimi.",
     addExpense: "Shto shpenzim", expNamePh: "p.sh. Rroga – Ana, Qira, Drita…", expTotal: "Gjithsej:", perMonth: "muaj", fixedDefaultName: "Shpenzim fiks",
     repCogs: "Kosto e mallit", repGross: "Fitim bruto", repMargin: "Marzhi", repNet: "Fitim neto", repNetHint: "(pas shpenzimeve fikse)",
@@ -394,7 +394,7 @@ const T = {
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
     catalogPointerTxt: "Products & services with description, price, stock and wholesale pricing are managed in the 📦 Catalog tab above.", goCatalogBtn: "📦 Open Catalog",
     bookableLbl: "📅 Bookable on calendar", svcDesc: "Add any service or product — with type, description, price and optional booking.",
-    itemCost: "Cost (your cost)", profitOnLbl: "💰 Calculate profit & margins (needs cost)", fixedLbl: "Fixed monthly expenses (rent, salaries…) — optional",
+    itemCost: "Cost (your cost)", profitOnLbl: "💰 Calculate profit & margins (needs cost)", approveLbl: "🛡️ Approve bookings yourself (AI proposes → you approve in Appointments)", fixedLbl: "Fixed monthly expenses (rent, salaries…) — optional",
     fixedHint: "Add them one by one: each worker's salary, rent, electricity, internet… name them however you like. The AI subtracts them from profit.",
     addExpense: "Add expense", expNamePh: "e.g. Salary – Ana, Rent, Electricity…", expTotal: "Total:", perMonth: "month", fixedDefaultName: "Fixed expense",
     repCogs: "Cost of goods", repGross: "Gross profit", repMargin: "Margin", repNet: "Net profit", repNetHint: "(after fixed expenses)",
@@ -1741,6 +1741,7 @@ function renderSettings() {
   setCfg("#bizPhone", "phone"); setCfg("#bizEmail", "email"); setCfg("#bizWebsite", "website");
   setCfg("#bizInstagram", "instagram"); setCfg("#bizCity", "city"); setCfg("#bizAbout", "about");
   const pc = $("#profitOnChk"); if (pc) pc.checked = !!cfg.profitOn;
+  const ac = $("#approveChk"); if (ac) ac.checked = !!cfg.requireApproval;
   const fxf = $("#fixedCostField"); if (fxf) fxf.hidden = !cfg.profitOn;
   renderFixedCosts();
   // Ekipi: vetëm pronari menaxhon qasjen
@@ -2876,6 +2877,7 @@ function wire() {
     cfg.phone = g("#bizPhone"); cfg.email = g("#bizEmail"); cfg.website = g("#bizWebsite");
     cfg.instagram = g("#bizInstagram"); cfg.city = g("#bizCity"); cfg.about = g("#bizAbout");
     cfg.profitOn = $("#profitOnChk") ? $("#profitOnChk").checked : false;
+    cfg.requireApproval = $("#approveChk") ? $("#approveChk").checked : false;
     cfg.fixedCosts = collectFixedCosts();
     cfg.fixedMonthly = cfg.fixedCosts.reduce((a, x) => a + (Number(x.amount) || 0), 0) || null; // përputhshmëri
     const payload = {

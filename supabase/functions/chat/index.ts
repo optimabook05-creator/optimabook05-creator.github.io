@@ -88,6 +88,15 @@ function buildConfirmation(svc: any, dateStr: string, time: string, biz: any, la
     ? `✅ U rezervua! ${svc.name} — ${humanDay(dateStr, true)}, ora ${time}${price}${addr}\nTë presim! 🙌`
     : `✅ Booked! ${svc.name} — ${humanDay(dateStr, false)}, ${time}${price}${addr}\nSee you! 🙌`;
 }
+// Mesazhi kur biznesi kërkon MIRATIM (AI propozon, pronari aprovon) — s'thotë "u rezervua".
+function buildPendingMsg(svc: any, dateStr: string, time: string, biz: any, lang?: string): string | null {
+  if (!isSqLang(biz, lang) && !isEnLang(biz, lang)) return null;
+  const sq = isSqLang(biz, lang);
+  const price = Number(svc.price) ? ` · ${svc.price}€` : "";
+  return sq
+    ? `📝 Kërkesa u regjistrua! ${svc.name} — ${humanDay(dateStr, true)}, ora ${time}${price}. Pronari do ta konfirmojë shpejt dhe të kthehet te ti. 🙌`
+    : `📝 Request received! ${svc.name} — ${humanDay(dateStr, false)}, ${time}${price}. The owner will confirm shortly and get back to you. 🙌`;
+}
 
 function buildCancellation(dateStr: string, time: string, biz: any, lang?: string): string | null {
   if (!isSqLang(biz, lang) && !isEnLang(biz, lang)) return null;
@@ -293,6 +302,7 @@ function parseService(tx: string, services: any[]): any {
 /* ---------------- Veprime (të përbashkëta për rregullat dhe AI) ---------------- */
 async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: string) {
   const { businessId, biz, svcDur, staff, client_name, client_phone, channel, chat_id } = ctx;
+  const needApproval = !!(biz.config && biz.config.requireApproval);   // pronari aprovon vetë çdo prenotim
   const { appts, blocks } = await busyFor(businessId, dateStr, svcDur);
   const hoursRow = ctx.hMap[parseDate(dateStr).getDay()];
   const free = freeSlotsUnion(dateStr, svc.duration_min, hoursRow, appts, blocks, staff, false, ctx.now);
@@ -300,7 +310,7 @@ async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: 
     return { booked: false, reply: null, alternatives: free.slice(0, 3) };
   }
   // PREVIEW: orari u verifikua si i lirë → kthe konfirmimin, por mos shkruaj në kalendar
-  if (ctx.preview) return { booked: true, reply: buildConfirmation(svc, dateStr, time, biz, lang) };
+  if (ctx.preview) return { booked: true, reply: (needApproval ? buildPendingMsg : buildConfirmation)(svc, dateStr, time, biz, lang) };
   // Zgjedh një staf të lirë (null nëse biznes me një person)
   const staffId = pickStaffFor(dateStr, svc.duration_min, hoursRow, appts, blocks, staff, time, ctx.now);
   const st = staffId ? (staff || []).find((x: any) => x.id === staffId) : null;
@@ -314,8 +324,11 @@ async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: 
   if (staffId) { row.staff_id = staffId; row.location_id = st ? st.location_id : null; }
   const { error } = await supabase.from("appointments").insert(row);
   if (error) return { booked: false, reply: null, alternatives: [] };
-  await supabase.from("notifications").insert({ business_id: businessId, text: `✅ ${client_name || "Klient"} — ${svc.name}, ${dateStr} ${time}${st ? " (" + st.name + ")" : ""}` });
-  return { booked: true, reply: buildConfirmation(svc, dateStr, time, biz, lang) };
+  const notifText = needApproval
+    ? `🔔 KËRKESË prenotimi (prit miratim): ${client_name || "Klient"} — ${svc.name}, ${dateStr} ${time}${st ? " (" + st.name + ")" : ""}. Aprovoje te Takimet.`
+    : `✅ ${client_name || "Klient"} — ${svc.name}, ${dateStr} ${time}${st ? " (" + st.name + ")" : ""}`;
+  await supabase.from("notifications").insert({ business_id: businessId, text: notifText });
+  return { booked: true, reply: (needApproval ? buildPendingMsg : buildConfirmation)(svc, dateStr, time, biz, lang) };
 }
 
 async function doCancel(ctx: any, lang?: string) {
