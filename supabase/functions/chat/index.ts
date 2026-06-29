@@ -304,16 +304,26 @@ function parseTime(tx: string): string | null {
       shtate: 7, shtat: 7, tete: 8, tet: 8, nente: 9, nent: 9, dhjete: 10, dhjet: 10, njembedhjete: 11, dymbedhjete: 12,
       one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, noon: 12, mesdite: 12,
     };
+    let w = "";
     const tm = tx.match(/\b(?:ora|oren|ne|at|rreth|nga)\s+([a-z]+)\b/);
-    const w = tm ? tm[1] : (tx.trim().match(/^([a-z]+)$/)?.[1] || "");
+    if (tm) w = tm[1];
+    else { const tw = tx.match(/\b([a-z]+)\s+(?:e|pa)\s/); if (tw && NW[tw[1]] !== undefined) w = tw[1]; }  // "tre pa njëzet", "dy e gjysmë"
+    if (!w) { const so = tx.trim().match(/^([a-z]+)$/); if (so) w = so[1]; }
     if (w && NW[w] !== undefined) h = NW[w];
   }
-  // Minuta me fjalë (tx është i normalizuar: ë→e, ç→c): "e gjysmë"=:30, "e çerek"=:15, "pa çerek"=:45 (ora−1)
-  if (min === 0) {
-    if (/\bpa\s*[cq]erek\b/.test(tx)) { min = 45; if (h !== null) h -= 1; }
-    else if (/\bgjys/.test(tx)) { min = 30; }       // gjys, gjysem, gjysme, gjysme
+  // Minuta (tx i normalizuar: ë→e, ç→c): "e gjysmë"=:30, "e çerek"=:15, "pa çerek"=:45, "e 20"=:20, "pa 20"=:40
+  if (h !== null && min === 0) {
+    const MIN: any = { pese: 5, pes: 5, dhjete: 10, dhjet: 10, pesembedhjete: 15, njezet: 20, njezetepese: 25, gjysme: 30, gjys: 30, tridhjete: 30, tridhjet: 30, dyzet: 40, dyzete: 40, pesedhjete: 50 };
+    let mm: any;
+    if (/\bpa\s*[cq]erek\b/.test(tx)) { min = 45; h -= 1; }
+    else if ((mm = tx.match(/\bpa\s+(\d{1,2})\b/)) && +mm[1] >= 1 && +mm[1] <= 59) { min = 60 - +mm[1]; h -= 1; }
+    else if ((mm = tx.match(/\bpa\s+([a-z]+)\b/)) && MIN[mm[1]]) { min = 60 - MIN[mm[1]]; h -= 1; }
+    else if (/\bgjys/.test(tx)) { min = 30; }
     else if (/\b[cq]erek\b/.test(tx)) { min = 15; }
+    else if ((mm = tx.match(/\be\s+(\d{1,2})\b/)) && +mm[1] >= 1 && +mm[1] <= 59) { min = +mm[1]; }
+    else if ((mm = tx.match(/\be\s+([a-z]+)\b/)) && MIN[mm[1]]) { min = MIN[mm[1]]; }
   }
+  if (h !== null && h < 0) h += 24;
   if (h === null || h > 23 || min > 59) return null;
   const am = /\b(paradite|mengjes|mengjesi|am)\b/.test(tx);
   const pm = /\b(pasdite|mbasdite|dreke|drek|mbrema|mbremje|mbremjes|mbrem|nate|naten|pm|afternoon|evening|night|noon)\b/.test(tx);

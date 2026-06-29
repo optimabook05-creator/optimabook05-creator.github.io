@@ -117,6 +117,13 @@ test("parseTime — kupton orën shqip/dialekt (e gjysmë/çerek/paradite/mbrëm
   assert.strictEqual(OB.parseTime("930"), "09:30");
   assert.strictEqual(OB.parseTime("rreth orës 3"), "15:00");
   assert.strictEqual(OB.parseTime("12 e gjys"), "12:30");
+  // "e N" (minuta pas) / "pa N" (minuta para) — me shifra dhe me fjalë (nga research)
+  assert.strictEqual(OB.parseTime("ora 2 e 20"), "14:20");
+  assert.strictEqual(OB.parseTime("ora 2 e njëzet"), "14:20");
+  assert.strictEqual(OB.parseTime("ora 3 pa 10"), "14:50");
+  assert.strictEqual(OB.parseTime("tre pa njëzet"), "14:40");
+  assert.strictEqual(OB.parseTime("dy e gjysmë"), "14:30");
+  assert.strictEqual(OB.parseTime("ora 2 e dhjetë"), "14:10");
   assert.strictEqual(OB.parseTime("natyrë diçka"), null);       // s'ka orë → null
 });
 
