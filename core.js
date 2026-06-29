@@ -136,7 +136,41 @@
     return toHM(h * 60 + min);
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime };
+  // NLU: kupton DATËN nga teksti shqip/anglisht (nesër, të hënën, "pas 3 ditësh", "15 korrik", "15/7", "datën 20")
+  // Kthen "YYYY-MM-DD" ose null. `todayStr` = baza (timezone i biznesit). Pasqyrohet te `chat`; testohet nga CI.
+  function parseDay(raw, todayStr) {
+    const tx = String(raw || "").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c");
+    const base = todayStr ? (function (s) { const p = String(s).split("-").map(Number); return new Date(p[0], (p[1] || 1) - 1, p[2] || 1); })(todayStr) : new Date();
+    const fmt = (d) => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    const add = (n) => { const d = new Date(base); d.setDate(d.getDate() + n); return fmt(d); };
+    if (/\bpasneser\b|day after tomorrow/.test(tx)) return add(2);
+    if (/\bneser\b|\bnesr\b|tomorrow/.test(tx)) return add(1);
+    if (/\bsot\b|\bsonte\b|\bsont\b|\bsomte\b|\bsonet\b|\btoday\b|\btonight\b/.test(tx)) return fmt(base);
+    let m = tx.match(/\bpas\s+(\d{1,2})\s*dit/);
+    if (m) return add(+m[1]);                                  // "pas 3 ditësh"
+    const MO = { janar: 1, shkurt: 2, mars: 3, prill: 4, maj: 5, qershor: 6, korrik: 7, gusht: 8, shtator: 9, tetor: 10, nentor: 11, dhjetor: 12, january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12 };
+    const mre = Object.keys(MO).join("|");
+    m = tx.match(new RegExp("\\b(\\d{1,2})\\s+(" + mre + ")\\b")) || tx.match(new RegExp("\\b(" + mre + ")\\s+(\\d{1,2})\\b"));
+    if (m) {
+      const dd = +(/^\d/.test(m[1]) ? m[1] : m[2]);
+      const mo = MO[/^\d/.test(m[1]) ? m[2] : m[1]];
+      if (dd >= 1 && dd <= 31) { const d = new Date(base.getFullYear(), mo - 1, dd); if (d < base) d.setFullYear(d.getFullYear() + 1); return fmt(d); }
+    }
+    m = tx.match(/\b(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?\b/);   // 15/7 ose 15.07.2026
+    if (m) { const dd = +m[1], mo = +m[2]; if (dd >= 1 && dd <= 31 && mo >= 1 && mo <= 12) { let y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : base.getFullYear(); const d = new Date(y, mo - 1, dd); if (!m[3] && d < base) d.setFullYear(d.getFullYear() + 1); return fmt(d); } }
+    m = tx.match(/\b(?:daten|diten|date)\s+(\d{1,2})\b/);            // "datën 20" (jo "me 5" — përplaset me 'me 5 faqe')
+    if (m) { const dd = +m[1]; if (dd >= 1 && dd <= 31) { let d = new Date(base.getFullYear(), base.getMonth(), dd); if (d < base) d = new Date(base.getFullYear(), base.getMonth() + 1, dd); return fmt(d); } }
+    const days = [["dielen", 0], ["diel", 0], ["sunday", 0], ["henen", 1], ["hene", 1], ["monday", 1], ["marten", 2], ["marte", 2], ["tuesday", 2], ["merkuren", 3], ["merkure", 3], ["wednesday", 3], ["enjten", 4], ["enjte", 4], ["thursday", 4], ["premten", 5], ["premte", 5], ["friday", 5], ["shtunen", 6], ["shtune", 6], ["saturday", 6]];
+    for (const dn of days) {
+      if (new RegExp("\\b" + dn[0] + "\\b").test(tx)) {
+        const d = new Date(base); let diff = (dn[1] - d.getDay() + 7) % 7; if (diff === 0) diff = 7;
+        d.setDate(d.getDate() + diff); return fmt(d);
+      }
+    }
+    return null;
+  }
+
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);

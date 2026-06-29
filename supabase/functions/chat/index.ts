@@ -236,14 +236,28 @@ function parseDay(tx: string, todayStr?: string): string | null {
   if (tx.includes("neser") || tx.includes("nesr") || tx.includes("tomorrow")) return add(1);
   // "sot/sonte" + gabime të shpeshta drejtshkrimore (sont, somte, sonet)
   if (/\bsot\b|\bsonte\b|\bsont\b|\bsomte\b|\bsonet\b|\btoday\b|\btonight\b/.test(tx)) return fmtDate(base);
+  let m = tx.match(/\bpas\s+(\d{1,2})\s*dit/);
+  if (m) return add(+m[1]);                                   // "pas 3 ditësh"
+  const MO: any = { janar: 1, shkurt: 2, mars: 3, prill: 4, maj: 5, qershor: 6, korrik: 7, gusht: 8, shtator: 9, tetor: 10, nentor: 11, dhjetor: 12, january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12 };
+  const mre = Object.keys(MO).join("|");
+  m = tx.match(new RegExp("\\b(\\d{1,2})\\s+(" + mre + ")\\b")) || tx.match(new RegExp("\\b(" + mre + ")\\s+(\\d{1,2})\\b"));
+  if (m) {
+    const dd = +(/^\d/.test(m[1]) ? m[1] : m[2]);
+    const mo = MO[/^\d/.test(m[1]) ? m[2] : m[1]];
+    if (dd >= 1 && dd <= 31) { const d = new Date(base.getFullYear(), mo - 1, dd); if (d < base) d.setFullYear(d.getFullYear() + 1); return fmtDate(d); }
+  }
+  m = tx.match(/\b(\d{1,2})[\/.](\d{1,2})(?:[\/.](\d{2,4}))?\b/);   // 15/7 ose 15.07.2026
+  if (m) { const dd = +m[1], mo = +m[2]; if (dd >= 1 && dd <= 31 && mo >= 1 && mo <= 12) { let y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : base.getFullYear(); const d = new Date(y, mo - 1, dd); if (!m[3] && d < base) d.setFullYear(d.getFullYear() + 1); return fmtDate(d); } }
+  m = tx.match(/\b(?:daten|diten|date)\s+(\d{1,2})\b/);            // "datën 20"
+  if (m) { const dd = +m[1]; if (dd >= 1 && dd <= 31) { let d = new Date(base.getFullYear(), base.getMonth(), dd); if (d < base) d = new Date(base.getFullYear(), base.getMonth() + 1, dd); return fmtDate(d); } }
   const days: [string, number][] = [
-    ["e diel", 0], ["sunday", 0], ["e hene", 1], ["te henen", 1], ["monday", 1],
-    ["e marte", 2], ["te marten", 2], ["tuesday", 2], ["e merkure", 3], ["te merkuren", 3], ["wednesday", 3],
-    ["e enjte", 4], ["te enjten", 4], ["thursday", 4], ["e premte", 5], ["te premten", 5], ["friday", 5],
-    ["e shtune", 6], ["te shtunen", 6], ["saturday", 6],
+    ["dielen", 0], ["diel", 0], ["sunday", 0], ["henen", 1], ["hene", 1], ["monday", 1],
+    ["marten", 2], ["marte", 2], ["tuesday", 2], ["merkuren", 3], ["merkure", 3], ["wednesday", 3],
+    ["enjten", 4], ["enjte", 4], ["thursday", 4], ["premten", 5], ["premte", 5], ["friday", 5],
+    ["shtunen", 6], ["shtune", 6], ["saturday", 6],
   ];
   for (const [name, dow] of days) {
-    if (tx.includes(name)) {
+    if (new RegExp("\\b" + name + "\\b").test(tx)) {
       const d = new Date(base);
       let diff = (dow - d.getDay() + 7) % 7;
       if (diff === 0) diff = 7;
