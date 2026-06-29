@@ -79,7 +79,7 @@ const T = {
     reviewUrlLbl: "⭐ Linku i vlerësimeve Google (për kërkesa automatike pas takimit)",
     aiNotesLbl: "🧠 Info për AI-në (paketa, çmime, kohë dorëzimi, politika — AI ua thotë klientëve)",
     aiNotesPh: "P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë. Web 4-7 faqe = 200€, ~30 ditë.",
-    aiConvosLbl: "💬 Bisedat e fundit të AI-së (shiko → mëso)", aiConvosEmpty: "Ende pa biseda.", aiConvosEmptyHint: "Kur klientët t'i shkruajnë AI-së, bisedat shfaqen këtu — i sheh dhe e mëson AI-në te 'Info për AI-në'.",
+    aiConvosLbl: "💬 Bisedat e AI-së", goInboxBtn: "Hap \"Bisedat AI\" →", aiConvosEmpty: "Ende pa biseda.", aiConvosEmptyHint: "Kur klientët t'i shkruajnë AI-së, bisedat shfaqen këtu — i sheh dhe e mëson AI-në te 'Info për AI-në'.",
     botMsgs: "mesazhe", botReplies: "përgjigje AI", botConvos: "biseda", botLeads: "kërkesa",
     modeLbl: "⚙️ Mënyra e biznesit (ndize/fike kurdo)",
     tabSettings: "⚙️ Cilësime", settingsDesc: "Ndrysho gjithçka kurdo — pa rifilluar.",
@@ -88,6 +88,7 @@ const T = {
     saveServicesBtn: "Ruaj shërbimet", saveHoursBtn: "Ruaj orarin", deliveryPh: "p.sh. 13 ditë",
     aiActive: "AI aktiv · 24/7",
     tabActivity: "🔔 Aktiviteti", activityDesc: "Çdo gjë që bën AI: rezervime, anulime, kujtesa, kërkesa — live.", emptyActivity: "Ende pa aktivitet.",
+    tabInbox: "💬 Bisedat AI", inboxDesc: "Çdo bisedë e AI-së me klientët — lexo fijet e plota, kërko, filtro sipas kanalit.", inboxSearchPh: "Kërko në biseda…", inboxAll: "Të gjitha kanalet", inboxMsgs: "mesazhe", inboxNoMatch: "Asnjë bisedë s'përputhet me kërkimin.",
     tabCustomers: "👤 Klientët", customersDesc: "Klientët e tu, vizitat dhe të ardhurat — të mbledhura vetë nga AI.", searchPh: "Kërko klient…", emptyCustomers: "Ende pa klientë.",
     crmClients: "klientë", crmReturning: "të kthyer", crmValue: "vlera totale", crmAvg: "mesatare/klient", badgeVip: "⭐ VIP", badgeReturning: "🔁 i kthyer",
     setChannelH: "🔗 Lidh kanalin (Telegram)", channelDesc: "2 minuta: krijo një bot te @BotFather → kopjo token-in → ngjite këtu → Ruaj → kliko \"Aktivizo\".",
@@ -282,7 +283,7 @@ const T = {
     reviewUrlLbl: "⭐ Google review link (for automatic requests after the appointment)",
     aiNotesLbl: "🧠 Info for the AI (packages, prices, delivery times, policies — AI tells customers)",
     aiNotesPh: "E.g. Website 1-3 pages = 100€, delivered in ~13 days. 4-7 pages = 200€, ~30 days.",
-    aiConvosLbl: "💬 Recent AI conversations (review → teach)", aiConvosEmpty: "No conversations yet.", aiConvosEmptyHint: "When customers message the AI, conversations show here — review them and teach the AI in 'Info for the AI'.",
+    aiConvosLbl: "💬 AI conversations", goInboxBtn: "Open \"AI Chats\" →", aiConvosEmpty: "No conversations yet.", aiConvosEmptyHint: "When customers message the AI, conversations show here — review them and teach the AI in 'Info for the AI'.",
     botMsgs: "messages", botReplies: "AI replies", botConvos: "conversations", botLeads: "requests",
     modeLbl: "⚙️ Business mode (turn on/off anytime)",
     tabSettings: "⚙️ Settings", settingsDesc: "Change anything anytime — no need to restart.",
@@ -291,6 +292,7 @@ const T = {
     saveServicesBtn: "Save services", saveHoursBtn: "Save hours", deliveryPh: "e.g. 13 days",
     aiActive: "AI active · 24/7",
     tabActivity: "🔔 Activity", activityDesc: "Everything the AI does: bookings, cancellations, reminders, requests — live.", emptyActivity: "No activity yet.",
+    tabInbox: "💬 AI Chats", inboxDesc: "Every AI conversation with customers — read full threads, search, filter by channel.", inboxSearchPh: "Search conversations…", inboxAll: "All channels", inboxMsgs: "messages", inboxNoMatch: "No conversation matches your search.",
     tabCustomers: "👤 Customers", customersDesc: "Your customers, visits and revenue — gathered automatically by the AI.", searchPh: "Search customer…", emptyCustomers: "No customers yet.",
     crmClients: "clients", crmReturning: "returning", crmValue: "total value", crmAvg: "avg/client", badgeVip: "⭐ VIP", badgeReturning: "🔁 returning",
     setChannelH: "🔗 Connect channel (Telegram)", channelDesc: "2 minutes: create a bot at @BotFather → copy the token → paste here → Save → click \"Activate\".",
@@ -859,43 +861,56 @@ function renderCatalog() {
 }
 
 // Bisedat e fundit të AI-së (cikli i mësimit: pronari sheh → korrigjon te "Info për AI-në")
-async function renderAiConvos() {
-  const box = $("#aiConvos"); if (!box || !biz) return;
-  let data = [];
-  try { const r = await sb.from("messages").select("chat_id, channel, role, content, created_at").eq("business_id", biz.id).order("created_at", { ascending: false }).limit(80); data = r.data || []; } catch (e) { return; }
-  if (!data.length) { box.innerHTML = emptyHTML("💬", tr("aiConvosEmpty"), tr("aiConvosEmptyHint")); return; }
-  const groups = {};
-  for (const m of data) { const k = (m.channel || "") + ":" + (m.chat_id || ""); (groups[k] = groups[k] || []).push(m); }
-  const keys = Object.keys(groups).slice(0, 6); // 6 bisedat e fundit
-  box.innerHTML = "";
-  // Bot-analytics: vëllimi i bisedave + kërkesat e kapura
+// AI Inbox — zemra e produktit: çdo bisedë e AI-së me klientët, fije të plota, kërkim, filtër kanali.
+let inboxCache = null;
+async function renderInbox() {
+  const box = $("#inboxList"); if (!box || !biz) return;
+  box.innerHTML = (typeof skel === "function") ? skel(3) : "";
+  // Bot-analytics: vëllimi i bisedave + përgjigjet + kërkesat e kapura
   try {
     const [tot, rep, lds] = await Promise.all([
       sb.from("messages").select("id", { count: "exact", head: true }).eq("business_id", biz.id),
       sb.from("messages").select("id", { count: "exact", head: true }).eq("business_id", biz.id).eq("role", "bot"),
       sb.from("leads").select("id", { count: "exact", head: true }).eq("business_id", biz.id),
     ]);
-    const st = document.createElement("div");
-    st.className = "settings-block"; st.style.marginBottom = "10px";
-    st.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:16px">
-      <span><strong style="font-size:17px">${tot.count || 0}</strong> <small style="color:var(--ink-soft)">${tr("botMsgs")}</small></span>
-      <span><strong style="font-size:17px">${rep.count || 0}</strong> <small style="color:var(--ink-soft)">${tr("botReplies")}</small></span>
-      <span><strong style="font-size:17px">${lds.count || 0}</strong> <small style="color:var(--ink-soft)">${tr("botLeads")}</small></span>
-    </div>`;
-    box.appendChild(st);
+    const st = $("#inboxStats");
+    if (st) st.innerHTML = `<span><strong>${tot.count || 0}</strong> ${tr("botMsgs")}</span>`
+      + `<span><strong>${rep.count || 0}</strong> ${tr("botReplies")}</span>`
+      + `<span><strong>${lds.count || 0}</strong> ${tr("botLeads")}</span>`;
   } catch (e) { /* injoro */ }
-  for (const k of keys) {
-    const msgs = groups[k].slice().reverse(); // kronologjike
-    const wrap = document.createElement("div");
-    wrap.className = "settings-block"; wrap.style.marginBottom = "10px";
-    const head = `<div style="font-weight:800;font-size:12px;color:var(--ink-soft);margin-bottom:6px">${esc(msgs[0].channel || "chat")} · ${humanDate((msgs[0].created_at || "").slice(0, 10))}</div>`;
-    const body = msgs.slice(-8).map((m) => {
-      const isUser = m.role === "user";
-      return `<div style="margin:3px 0;font-size:13px;color:${isUser ? "var(--ink)" : "var(--accent-deep)"}"><strong>${isUser ? "👤" : "🤖"}</strong> ${esc(m.content || "")}</div>`;
-    }).join("");
-    wrap.innerHTML = head + body;
-    box.appendChild(wrap);
+  // Mesazhet (deri 400 të fundit) — i ruajmë në cache dhe filtrojmë në klient (kërkim/kanal pa rrjet)
+  try {
+    const r = await sb.from("messages").select("chat_id, channel, role, content, created_at")
+      .eq("business_id", biz.id).order("created_at", { ascending: false }).limit(400);
+    inboxCache = r.data || [];
+  } catch (e) { box.innerHTML = emptyHTML("💬", tr("aiConvosEmpty"), tr("aiConvosEmptyHint")); return; }
+  drawInbox();
+}
+function drawInbox() {
+  const box = $("#inboxList"); if (!box) return;
+  const data = inboxCache || [];
+  if (!data.length) { box.innerHTML = emptyHTML("💬", tr("aiConvosEmpty"), tr("aiConvosEmptyHint")); return; }
+  const q = aiNorm(($("#inboxSearch") && $("#inboxSearch").value) || "");
+  const ch = ($("#inboxChannel") && $("#inboxChannel").value) || "";
+  const groups = {};
+  for (const m of data) {
+    if (ch && (m.channel || "") !== ch) continue;
+    const k = (m.channel || "") + ":" + (m.chat_id || "");
+    (groups[k] = groups[k] || []).push(m);
   }
+  let keys = Object.keys(groups);
+  if (q) keys = keys.filter((k) => aiNorm(k).includes(q) || groups[k].some((m) => aiNorm(m.content || "").includes(q)));
+  if (!keys.length) { box.innerHTML = emptyHTML("🔍", tr("inboxNoMatch"), ""); return; }
+  keys.sort((a, b) => ((groups[b][0].created_at || "").localeCompare(groups[a][0].created_at || "")));
+  box.innerHTML = keys.slice(0, 60).map((k) => {
+    const msgs = groups[k].slice().reverse(); // kronologjike
+    const head = `${esc(msgs[0].channel || "chat")} · ${humanDate((groups[k][0].created_at || "").slice(0, 10))} · ${msgs.length} ${tr("inboxMsgs")}`;
+    const body = msgs.map((m) => {
+      const isUser = m.role === "user";
+      return `<div class="cv-row ${isUser ? "u" : "b"}"><span class="cv-ic">${isUser ? "👤" : "🤖"}</span><span class="cv-tx">${esc(m.content || "")}</span></div>`;
+    }).join("");
+    return `<div class="cv-card"><div class="cv-head">${head}</div><div class="cv-body">${body}</div></div>`;
+  }).join("");
 }
 
 /* ---------------- Recepsionisti AI (demo · truri lokal me të dhënat reale) ---------------- */
@@ -2075,7 +2090,7 @@ async function finishOnboard() {
    ===================================================================== */
 async function renderAll() {
   renderStaffPane();
-  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads(), renderActivity(), renderCustomers(), renderAiConvos()]);
+  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads(), renderActivity(), renderCustomers()]);
 }
 
 async function renderCustomers() {
@@ -3060,9 +3075,14 @@ function wire() {
       else if (tab.dataset.tab === "reports") renderReports();
       else if (tab.dataset.tab === "catalog") renderCatalog();
       else if (tab.dataset.tab === "config") renderConfigHub();
+      else if (tab.dataset.tab === "inbox") renderInbox();
       closeSidebarDrawer(); syncBotnav(); // sirtar i telefonit + sinkronizim i barit poshtë
     };
   });
+  // AI Inbox: kërkimi + filtri i kanalit (filtron nga cache, pa rrjet) + shkurtorja nga Cilësimet
+  const ibS = $("#inboxSearch"); if (ibS) ibS.oninput = () => drawInbox();
+  const ibC = $("#inboxChannel"); if (ibC) ibC.onchange = () => drawInbox();
+  const goIb = $("#goInbox"); if (goIb) goIb.onclick = () => { const t = document.querySelector('.tab[data-tab="inbox"]'); if (t) t.click(); };
   if ($("#aiForm")) $("#aiForm").addEventListener("submit", (e) => { e.preventDefault(); aiSend(); });
   $("#blockForm").addEventListener("submit", async (e) => {
     e.preventDefault();
