@@ -6,9 +6,9 @@
 <script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <script src="v.js"></script>
 <title>OptimaBook — Recepsionisti AI që nuk fle kurrë</title>
-<meta name="description" content="AI që i përgjigjet klientëve të tu në WhatsApp, rezervon takime dhe dërgon kujtesa — 24/7, në çdo gjuhë, për çdo biznes. | The AI receptionist that answers your customers on WhatsApp, books appointments and sends reminders — 24/7, in any language.">
+<meta name="description" content="AI që i përgjigjet klientëve të tu në WhatsApp, Telegram e më shumë, rezervon takime dhe dërgon kujtesa — 24/7, në çdo gjuhë, për çdo biznes. | The AI receptionist that answers your customers on WhatsApp, Telegram & more, books appointments and sends reminders — 24/7, in any language.">
 <meta property="og:title" content="OptimaBook — The AI receptionist that never sleeps">
-<meta property="og:description" content="Bookings, reminders and customer chat on WhatsApp — fully automatic, 24/7, in any language.">
+<meta property="og:description" content="Bookings, reminders and customer chat on WhatsApp, Telegram & more — fully automatic, 24/7, in any language.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://optimabook05-creator.github.io/">
 <meta property="og:site_name" content="OptimaBook">
@@ -16,7 +16,7 @@
 <meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OptimaBook — The AI receptionist that never sleeps">
-<meta name="twitter:description" content="Bookings, reminders and customer chat on WhatsApp — fully automatic, 24/7, in any language.">
+<meta name="twitter:description" content="Bookings, reminders and customer chat on WhatsApp, Telegram & more — fully automatic, 24/7, in any language.">
 <link rel="canonical" href="https://optimabook05-creator.github.io/">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.json">
@@ -30,7 +30,7 @@
       "name": "OptimaBook",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Web",
-      "description": "Recepsionisti AI që i përgjigjet klientëve në WhatsApp, rezervon takime dhe dërgon kujtesa — 24/7, në çdo gjuhë, për çdo biznes.",
+      "description": "Recepsionisti AI që i përgjigjet klientëve në WhatsApp, Telegram e më shumë, rezervon takime dhe dërgon kujtesa — 24/7, në çdo gjuhë, për çdo biznes.",
       "url": "https://optimabook05-creator.github.io/",
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "description": "14 ditë provë falas" }
     },
@@ -90,7 +90,9 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
   color:#fff;font-family:var(--fd);font-weight:800;font-size:22px;display:grid;place-items:center;
   box-shadow:0 8px 22px var(--accent-glow),inset 0 1.5px 0 rgba(255,255,255,.45)}
 .brand b{font-family:var(--fd);font-weight:800;font-size:19px;letter-spacing:-.035em}
-.nav-right{display:flex;gap:9px;align-items:center}
+.nav-right{display:flex;gap:11px;align-items:center}
+.nav .btn{white-space:nowrap}
+.nav-right .lang{margin-right:2px}
 .lang{display:flex;padding:3px;background:rgba(22,32,28,.06);border:1px solid rgba(255,255,255,.5);border-radius:999px}
 .lang button{border:none;background:transparent;padding:7px 14px;border-radius:999px;font-family:var(--fb);
   font-size:13px;font-weight:800;color:var(--ink-soft);cursor:pointer;transition:all .2s}
@@ -213,11 +215,13 @@ footer{border-top:1px solid rgba(22,32,28,.08);padding:28px 0 90px;text-align:ce
 footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
 
 @media (max-width:640px){
-  .nav{padding:10px 14px;width:calc(100% - 20px);top:8px}
-  .nav .btn{padding:8px 13px;font-size:13px}
+  .nav{padding:10px 12px;width:calc(100% - 18px);top:8px;gap:10px}
+  #demoLink{display:none}                 /* "Provo demon" hiqet nga nav-i — ndodhet te hero ("Shiko demon live") */
+  .nav-right{gap:8px}
+  .nav .btn{padding:9px 15px;font-size:13.5px}
   .brand b{font-size:16px}
   .logo{width:38px;height:38px;font-size:19px;border-radius:12px}
-  .lang button{padding:6px 10px;font-size:12px}
+  .lang button{padding:6px 11px;font-size:12px}
   .hero{padding:54px 0 40px}
   section{padding:44px 0}
   .stat{min-width:130px;padding:13px 18px}
@@ -491,11 +495,11 @@ footer{border-top:1px solid var(--glass-edge)}
 <section class="wrap">
   <div class="sec-head">
     <h2 data-t="howH">Si funksionon — 3 hapa</h2>
-    <p data-t="howP">Pa instalime të ndërlikuara, pa trajnime, pa IT. Nëse di të përdorësh WhatsApp, di të përdorësh OptimaBook.</p>
+    <p data-t="howP">Pa instalime të ndërlikuara, pa trajnime, pa IT. Nëse di të përdorësh një app mesazhesh (WhatsApp, Telegram…), di të përdorësh OptimaBook.</p>
   </div>
   <div class="steps">
     <div class="step"><div class="n">1</div><h3 data-t="st1h">Regjistrohu për 5 minuta</h3><p data-t="st1p">Zgjedh llojin e biznesit, shërbimet mbushen vetë, vendos orarin e punës. Kaq.</p></div>
-    <div class="step"><div class="n">2</div><h3 data-t="st2h">Lidh WhatsApp-in</h3><p data-t="st2p">Numri yt i biznesit lidhet me AI-në tonë. Klientët s'instalojnë asgjë — shkruajnë si gjithmonë.</p></div>
+    <div class="step"><div class="n">2</div><h3 data-t="st2h">Lidh kanalin</h3><p data-t="st2p">Llogaria jote (WhatsApp, Telegram, Instagram…) lidhet me AI-në tonë. Klientët s'instalojnë asgjë — shkruajnë si gjithmonë.</p></div>
     <div class="step"><div class="n">3</div><h3 data-t="st3h">AI punon për ty</h3><p data-t="st3p">Përgjigjet në çast, rezervon vetëm orare realisht të lira, dërgon kujtesa. Ti vetëm sheh kalendarin të mbushet.</p></div>
   </div>
 </section>
@@ -545,7 +549,7 @@ footer{border-top:1px solid var(--glass-edge)}
         <tr><td data-t="cmpR3">Kupton tekstin e lirë & çdo gjuhë</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="m">~</span></td><td><span class="n">✗</span></td><td><span class="n">✗</span></td></tr>
         <tr><td data-t="cmpR4">Kujtesa + mbush oraret e anuluara</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="m">~</span></td><td><span class="n">✗</span></td><td><span class="m">~</span></td></tr>
         <tr><td data-t="cmpR5">Punon edhe për porosi/kërkesa</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="m">~</span></td><td><span class="n">✗</span></td></tr>
-        <tr><td data-t="cmpR6">Pa app për klientin (vetëm WhatsApp)</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="m">~</span></td></tr>
+        <tr><td data-t="cmpR6">Pa app për klientin (WhatsApp, Telegram…)</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td><td><span class="m">~</span></td></tr>
         <tr><td data-t="cmpR7">Kosto fikse mujore, jo rrogë</td><td class="cmp-us"><span class="y">✓</span></td><td><span class="n">✗</span></td><td><span class="y">✓</span></td><td><span class="y">✓</span></td></tr>
       </tbody>
     </table>
@@ -563,7 +567,7 @@ footer{border-top:1px solid var(--glass-edge)}
       <div class="price">$15<small data-t="mo">/muaj</small></div>
       <div class="for" data-t="p1for">Për biznesin e vogël me një kalendar</div>
       <ul>
-        <li data-t="p1a">Rezervime automatike në WhatsApp</li>
+        <li data-t="p1a">Rezervime automatike (WhatsApp, Telegram…)</li>
         <li data-t="p1b">Kujtesa automatike për klientët</li>
         <li data-t="p1c">Paneli i plotë + statistika</li>
         <li class="dim" data-t="p1d">Instagram & Messenger</li>
@@ -643,13 +647,13 @@ const T = {
     brandTag: "Recepsionisti AI", navFeatures: "Veçoritë", navPricing: "Çmimet", navFaq: "FAQ",
     eyebrow: "Për çdo biznes me takime · Në çdo gjuhë · 24/7",
     h1html: 'Recepsionisti AI që <span class="grad">nuk fle kurrë</span>',
-    sub: "OptimaBook i përgjigjet klientëve të tu në WhatsApp, rezervon takimet në kalendarin tënd dhe u kujton që të vijnë — 24 orë në ditë, pa lëvizur ti gishtin.",
+    sub: "OptimaBook i përgjigjet klientëve të tu në WhatsApp, Telegram e më shumë, rezervon takimet në kalendarin tënd dhe u kujton që të vijnë — 24 orë në ditë, pa lëvizur ti gishtin.",
     ctaStart: "🚀 Fillo falas — 5 min", ctaDemo: "▶ Shiko demon live", ctaPricing: "Shiko çmimet",
     s1: "pa pushim, pa pushime", s2: "saktësi e orareve", s3: "nga regjistrimi te klientët", s4: "gjuhë të botës",
     howH: "Si funksionon — 3 hapa",
-    howP: "Pa instalime të ndërlikuara, pa trajnime, pa IT. Nëse di të përdorësh WhatsApp, di të përdorësh OptimaBook.",
+    howP: "Pa instalime të ndërlikuara, pa trajnime, pa IT. Nëse di të përdorësh një app mesazhesh (WhatsApp, Telegram…), di të përdorësh OptimaBook.",
     st1h: "Regjistrohu për 5 minuta", st1p: "Zgjedh llojin e biznesit, shërbimet mbushen vetë, vendos orarin e punës. Kaq.",
-    st2h: "Lidh WhatsApp-in", st2p: "Numri yt i biznesit lidhet me AI-në tonë. Klientët s'instalojnë asgjë — shkruajnë si gjithmonë.",
+    st2h: "Lidh kanalin", st2p: "Llogaria jote (WhatsApp, Telegram, Instagram…) lidhet me AI-në tonë. Klientët s'instalojnë asgjë — shkruajnë si gjithmonë.",
     st3h: "AI punon për ty", st3p: "Përgjigjet në çast, rezervon vetëm orare realisht të lira, dërgon kujtesa. Ti vetëm sheh kalendarin të mbushet.",
     featH: "Gjithçka që humb klientë, e zgjidhur",
     featP: "Çdo telefonatë pa përgjigje dhe çdo klient që harron orarin janë para të humbura. OptimaBook i kthen.",
@@ -664,7 +668,7 @@ const T = {
     prH: "Çmime të thjeshta, pa befasi", prP: "Më pak se sa të kushton një klient i vetëm i humbur në muaj.",
     mo: "/muaj", popular: "Më i zgjedhuri", planCta: "Provo demon",
     p1for: "Për biznesin e vogël me një kalendar",
-    p1a: "Rezervime automatike në WhatsApp", p1b: "Kujtesa automatike për klientët", p1c: "Paneli i plotë + statistika",
+    p1a: "Rezervime automatike (WhatsApp, Telegram…)", p1b: "Kujtesa automatike për klientët", p1c: "Paneli i plotë + statistika",
     p1d: "Instagram & Messenger", p1e: "Staf i shumtë",
     p2for: "Për biznese me staf dhe rrjete sociale",
     p2a: "Gjithçka nga Start", p2b: "Instagram DM + Messenger", p2c: "Staf i shumtë (deri 10 kalendarë)",
@@ -685,20 +689,20 @@ const T = {
     q7: "A mund të anuloj kurdo?", a7: "Po, kurdo. Fillon me 14 ditë provë falas, pa kartë krediti. Pa kontrata, pa befasi.",
     cmpH: "Pse OptimaBook, e jo alternativat", cmpP: "Krahasim i ndershëm me mënyrat e tjera për t'iu përgjigjur klientëve.",
     cmpStaff: "Recepsionist / staf", cmpBot: "Chatbot i thjeshtë", cmpApp: "App rezervimi",
-    cmpR1: "Përgjigje në çast, 24/7", cmpR2: "Rezervon në kalendar, pa dyfishim", cmpR3: "Kupton tekstin e lirë & çdo gjuhë", cmpR4: "Kujtesa + mbush oraret e anuluara", cmpR5: "Punon edhe për porosi/kërkesa", cmpR6: "Pa app për klientin (vetëm WhatsApp)", cmpR7: "Kosto fikse mujore, jo rrogë",
+    cmpR1: "Përgjigje në çast, 24/7", cmpR2: "Rezervon në kalendar, pa dyfishim", cmpR3: "Kupton tekstin e lirë & çdo gjuhë", cmpR4: "Kujtesa + mbush oraret e anuluara", cmpR5: "Punon edhe për porosi/kërkesa", cmpR6: "Pa app për klientin (WhatsApp, Telegram…)", cmpR7: "Kosto fikse mujore, jo rrogë",
   },
   en: {
     navDemo: "▶ Try the demo", navLogin: "Sign in / Sign up", navPortal: "My panel",
     brandTag: "The AI receptionist", navFeatures: "Features", navPricing: "Pricing", navFaq: "FAQ",
     eyebrow: "For every appointment business · In any language · 24/7",
     h1html: 'The AI receptionist that <span class="grad">never sleeps</span>',
-    sub: "OptimaBook answers your customers on WhatsApp, books appointments into your calendar and reminds them to show up — 24 hours a day, without you lifting a finger.",
+    sub: "OptimaBook answers your customers on WhatsApp, Telegram & more, books appointments into your calendar and reminds them to show up — 24 hours a day, without you lifting a finger.",
     ctaStart: "🚀 Start free — 5 min", ctaDemo: "▶ Watch live demo", ctaPricing: "See pricing",
     s1: "no breaks, no holidays", s2: "scheduling accuracy", s3: "from sign-up to customers", s4: "world languages",
     howH: "How it works — 3 steps",
-    howP: "No complicated installs, no training, no IT. If you can use WhatsApp, you can use OptimaBook.",
+    howP: "No complicated installs, no training, no IT. If you can use a messaging app (WhatsApp, Telegram…), you can use OptimaBook.",
     st1h: "Sign up in 5 minutes", st1p: "Pick your business type, services fill themselves in, set your working hours. Done.",
-    st2h: "Connect WhatsApp", st2p: "Your business number connects to our AI. Customers install nothing — they text like they always do.",
+    st2h: "Connect your channel", st2p: "Your account (WhatsApp, Telegram, Instagram…) connects to our AI. Customers install nothing — they text like they always do.",
     st3h: "The AI works for you", st3p: "Replies instantly, books only genuinely free slots, sends reminders. You just watch the calendar fill up.",
     featH: "Everything that loses you customers, solved",
     featP: "Every missed call and every no-show is money lost. OptimaBook brings it back.",
@@ -713,7 +717,7 @@ const T = {
     prH: "Simple pricing, no surprises", prP: "Less than a single lost customer costs you per month.",
     mo: "/month", popular: "Most popular", planCta: "Try the demo",
     p1for: "For small businesses with one calendar",
-    p1a: "Automatic WhatsApp bookings", p1b: "Automatic customer reminders", p1c: "Full panel + statistics",
+    p1a: "Automatic bookings (WhatsApp, Telegram…)", p1b: "Automatic customer reminders", p1c: "Full panel + statistics",
     p1d: "Instagram & Messenger", p1e: "Multiple staff",
     p2for: "For businesses with staff and social media",
     p2a: "Everything in Start", p2b: "Instagram DM + Messenger", p2c: "Multiple staff (up to 10 calendars)",
@@ -734,7 +738,7 @@ const T = {
     q7: "Can I cancel anytime?", a7: "Yes, anytime. Start with a 14-day free trial, no credit card. No contracts, no surprises.",
     cmpH: "Why OptimaBook, not the alternatives", cmpP: "An honest comparison with the other ways to answer your customers.",
     cmpStaff: "Receptionist / staff", cmpBot: "Basic chatbot", cmpApp: "Booking app",
-    cmpR1: "Instant reply, 24/7", cmpR2: "Books into calendar, no double-booking", cmpR3: "Understands free text & any language", cmpR4: "Reminders + fills cancelled slots", cmpR5: "Works for orders/requests too", cmpR6: "No app for the customer (just WhatsApp)", cmpR7: "Fixed monthly cost, not a salary",
+    cmpR1: "Instant reply, 24/7", cmpR2: "Books into calendar, no double-booking", cmpR3: "Understands free text & any language", cmpR4: "Reminders + fills cancelled slots", cmpR5: "Works for orders/requests too", cmpR6: "No app for the customer (WhatsApp, Telegram…)", cmpR7: "Fixed monthly cost, not a salary",
   },
 };
 
