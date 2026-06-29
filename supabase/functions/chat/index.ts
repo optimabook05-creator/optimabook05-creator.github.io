@@ -467,11 +467,33 @@ async function tryRules(ctx: any): Promise<any | null> {
   const name = (client_name || "").split(" ")[0];
   const hist: any[] = ctx.history || [];
 
+  // ROJA E KONFIRMIMIT: kishim propozuar një orar dhe presim "po/jo" (mbron nga prenotime gabim)
+  const st0 = ctx.state;
+  if (st0 && st0.step === "awaiting_confirm" && st0.service_id && st0.appt_date && st0.appt_time) {
+    const newTime = parseTime(tx), newDay = parseDay(tx, ctx.todayStr);
+    const yes = /^(po|yes|dakord|okay|ok|sure|patjet[eë]r|rezervoje|rezervo|konfirmo|e dua|po ju lutem)\b/.test(tx);
+    const no = /^(jo|no|anulo|jo jo|s'?e dua|jo faleminderit)\b/.test(tx);
+    if (yes && !newTime && !newDay) {
+      const svcC = services.find((s: any) => s.id === st0.service_id);
+      if (svcC) {
+        const r = await doBook(ctx, svcC, st0.appt_date, hm(st0.appt_time));
+        await clearState(businessId, ctx.channel, ctx.chat_id);
+        if (r.booked) return { reply: r.reply, booked: true, via: "rule" };
+        return { reply: sq ? "Më fal, ai orar sapo u zu. Provojmë një tjetër? Më thuaj ditën." : "Sorry, that slot was just taken. Try another? Tell me the day.", via: "rule" };
+      }
+    }
+    if (no && !newTime && !newDay) {
+      await clearState(businessId, ctx.channel, ctx.chat_id);
+      return { reply: sq ? "Në rregull 😊 Kur të duash, më thuaj ditën dhe orën." : "No problem 😊 Tell me the day and time whenever you like.", via: "rule" };
+    }
+    // përndryshe (jep orë/ditë të re) → vazhdon poshtë → ripropozohet me të dhënat e reja
+  }
+
   // Pranim i listës së pritjes (klienti tha "po" pas OFERTËS për mbushje orari).
   // Kërkojmë frazën unike të ofertës (jo thjesht "listën e pritjes"), që mesazhi
   // i konfirmimit ("U shtove në listën e pritjes…") të mos ri-shtojë gabimisht.
   const lastBot = [...hist].reverse().find((m: any) => m.role === "bot");
-  if (lastBot && /(shkruaj "po"|reply "yes")/i.test(lastBot.text || "") &&
+  if (lastBot && /(list[eë]n e pritjes|waiting list)/i.test(lastBot.text || "") &&
       /^(po|yes|dakord|okay|ok|sure|patjet[eë]r|e dua|me intereson|yes please|po ju lutem)\b/.test(tx) && ctx.chat_id) {
     let wDay = parseDay(tx, ctx.todayStr), wPeriod = periodLabel(tx), wSvc = parseService(tx, services);
     for (let i = hist.length - 1; i >= 0 && i >= hist.length - 8; i--) {
@@ -552,8 +574,10 @@ async function tryRules(ctx: any): Promise<any | null> {
       // ka orë konkrete → rezervo nëse e lirë
       const all = freeSlotsUnion(day, svc.duration_min, hMap[parseDate(day).getDay()], appts, blocks, staff, false, ctx.now);
       if (all.includes(time)) {
-        const r = await doBook(ctx, svc, day, time);
-        if (r.booked) { await clearState(businessId, ctx.channel, ctx.chat_id); return { reply: r.reply, booked: true, via: "rule" }; }
+        // Orari i lirë → PROPOZO + prit "po" (mos rezervo pa konfirmim → zero gabime ore)
+        await saveState({ ...st, business_id: businessId, channel: ctx.channel, chat_id: ctx.chat_id, intent: "booking", service_id: svc.id, appt_date: day, appt_time: time, step: "awaiting_confirm" });
+        const pr = Number(svc.price) ? " · " + svc.price + "€" : "";
+        return { reply: sq ? `Të konfirmoj: ${svc.name}, ${humanDay(day, true)}, ora ${time}${pr} — shkruaj "po" për ta rezervuar ✅` : `Confirm: ${svc.name}, ${humanDay(day, false)}, ${time}${pr} — reply "yes" to book ✅`, via: "rule" };
       }
       const alt = all.slice(0, 3);
       if (alt.length) {
@@ -788,7 +812,7 @@ async function runAI(ctx: any) {
       ? `ALREADY KNOWN (use these, do NOT ask again): ${ctx.state.service_id ? "service=" + (services.find((s: any) => s.id === ctx.state.service_id)?.name || "?") + " " : ""}${ctx.state.appt_date ? "date=" + ctx.state.appt_date + " " : ""}${ctx.state.appt_time ? "time=" + hm(ctx.state.appt_time) : ""}. If the customer now gives only the missing piece (e.g. just a time, or "po"/"yes"), set wants_to_book=true and BOOK — do not re-ask.`
       : "",
     `TIMES (output HH:MM 24h): "ora 2 pasdite"/"2pm"=14:00, "ora 3"=15:00 (hours 1–7 default to afternoon). "3 e gjysmë"=15:30, "3 e çerek"=15:15, "pa çerek 4"=15:45, "9 paradite"=09:00, "mesditë"=12:00, "9 mbrëma"=21:00. Always include the exact minutes the customer said.`,
-    `BOOKING: when service+date+available time are known, set wants_to_book=true (exact service, date YYYY-MM-DD, time HH:MM) and write a complete warm confirmation in the customer's language.`,
+    `BOOKING: when service+date+available time are known, set wants_to_book=true (exact service, date YYYY-MM-DD, time HH:MM). The SYSTEM will then ask the customer to confirm the exact day+time before booking — so never claim it is already booked; just provide the details.`,
     `CANCELLING: if they want to cancel / can't come, set wants_to_cancel=true.`,
     `RESCHEDULE: if they want to MOVE/change their existing appointment, set wants_to_reschedule=true with the NEW date (YYYY-MM-DD) and time (HH:MM).`,
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint / a special request beyond the listed services, set needs_human=true and warmly say the owner will personally get back to them.`,
@@ -802,15 +826,32 @@ async function runAI(ctx: any) {
 
   const out = await askAI(harden(system, biz.name, text), contents);
   let reply = out.reply || "";
-  let booked = false, cancelled = false;
+  let booked = false, cancelled = false, proposed = false;
 
   if (out.wants_to_book && out.service && out.date && out.time) {
     const svc = services.find((s: any) => norm(s.name) === norm(out.service))
       || services.find((s: any) => norm(s.name).includes(norm(out.service)) || norm(out.service).includes(norm(s.name)));
     if (svc) {
-      const r = await doBook(ctx, svc, out.date, hm(out.time), out.lang);
-      if (r.booked) { booked = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
-      else if (r.alternatives?.length) reply = (reply ? reply + "\n\n" : "") + `(${r.alternatives.join(", ")})`;
+      const { appts, blocks } = await busyFor(businessId, out.date, svcDur);
+      const t = hm(out.time);
+      const free = freeSlotsUnion(out.date, svc.duration_min, hMap[parseDate(out.date).getDay()], appts, blocks, staff, false, ctx.now);
+      const sqx = isSqLang(biz, out.lang);
+      // A po e KONFIRMON klienti pikërisht orarin që propozuam? → rezervo. Përndryshe → propozo dhe prit "po".
+      const stx = ctx.state || {};
+      const confirming = stx.step === "awaiting_confirm" && stx.appt_date === out.date && stx.appt_time && hm(stx.appt_time) === t && stx.service_id === svc.id;
+      if (confirming) {
+        const r = await doBook(ctx, svc, out.date, t, out.lang);
+        if (r.booked) { booked = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
+      } else if (free.includes(t)) {
+        // PROPOZO + prit "po" (mos rezervo pa konfirmim → zero gabime ore)
+        await saveState({ ...stx, business_id: businessId, channel: ctx.channel, chat_id: ctx.chat_id, intent: "booking", service_id: svc.id, appt_date: out.date, appt_time: t, step: "awaiting_confirm" });
+        const pr = Number(svc.price) ? " · " + svc.price + "€" : "";
+        reply = sqx ? `Të konfirmoj: ${svc.name}, ${humanDay(out.date, true)}, ora ${t}${pr} — shkruaj "po" për ta rezervuar ✅` : `Confirm: ${svc.name}, ${humanDay(out.date, false)}, ${t}${pr} — reply "yes" to book ✅`;
+        proposed = true;
+      } else {
+        const alt = free.slice(0, 3);
+        if (alt.length) reply = (sqx ? `Ai orar është i zënë. Të lira: ${alt.join(", ")} — cila të rri?` : `That time is taken. Free: ${alt.join(", ")} — which works?`);
+      }
     }
   }
   if (out.wants_to_cancel && !booked) {
@@ -830,8 +871,8 @@ async function runAI(ctx: any) {
     try { await supabase.from("notifications").insert({ business_id: businessId, text: `${tag} (${client_name || "Klient"}): ${String(text).slice(0, 120)}` }); } catch (_e) { /* injoro */ }
   }
   // Roja: vetëm përgjigjet e gjeneruara nga AI (jo konfirmimet e ndërtuara nga sistemi)
-  if (!booked && !cancelled && !rescheduled) reply = guardReply(reply, services, biz, isSqLang(biz));
-  return { reply, booked, cancelled, via: "ai" };
+  if (!booked && !cancelled && !rescheduled && !proposed) reply = guardReply(reply, services, biz, isSqLang(biz));
+  return { reply, booked, cancelled, proposed, via: "ai" };
 }
 
 /* ---------------- Mënyra INQUIRY (biznese pa takime: porosi/kërkesa) ---------------- */
