@@ -79,6 +79,7 @@ const T = {
     reviewUrlLbl: "⭐ Linku i vlerësimeve Google (për kërkesa automatike pas takimit)",
     aiNotesLbl: "🧠 Info për AI-në (paketa, çmime, kohë dorëzimi, politika — AI ua thotë klientëve)",
     aiNotesPh: "P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë. Web 4-7 faqe = 200€, ~30 ditë.",
+    aiConvosLbl: "💬 Bisedat e fundit të AI-së (shiko → mëso)", aiConvosEmpty: "Ende pa biseda.", aiConvosEmptyHint: "Kur klientët t'i shkruajnë AI-së, bisedat shfaqen këtu — i sheh dhe e mëson AI-në te 'Info për AI-në'.",
     modeLbl: "⚙️ Mënyra e biznesit (ndize/fike kurdo)",
     tabSettings: "⚙️ Cilësime", settingsDesc: "Ndrysho gjithçka kurdo — pa rifilluar.",
     setBizH: "Biznesi", setNameLbl: "Emri & adresa", setSvcH: "Shërbimet / Produktet",
@@ -280,6 +281,7 @@ const T = {
     reviewUrlLbl: "⭐ Google review link (for automatic requests after the appointment)",
     aiNotesLbl: "🧠 Info for the AI (packages, prices, delivery times, policies — AI tells customers)",
     aiNotesPh: "E.g. Website 1-3 pages = 100€, delivered in ~13 days. 4-7 pages = 200€, ~30 days.",
+    aiConvosLbl: "💬 Recent AI conversations (review → teach)", aiConvosEmpty: "No conversations yet.", aiConvosEmptyHint: "When customers message the AI, conversations show here — review them and teach the AI in 'Info for the AI'.",
     modeLbl: "⚙️ Business mode (turn on/off anytime)",
     tabSettings: "⚙️ Settings", settingsDesc: "Change anything anytime — no need to restart.",
     setBizH: "Business", setNameLbl: "Name & address", setSvcH: "Services / Products",
@@ -852,6 +854,30 @@ function renderCatalog() {
     item.onclick = () => openItem(s);
     list.appendChild(item);
   });
+}
+
+// Bisedat e fundit të AI-së (cikli i mësimit: pronari sheh → korrigjon te "Info për AI-në")
+async function renderAiConvos() {
+  const box = $("#aiConvos"); if (!box || !biz) return;
+  let data = [];
+  try { const r = await sb.from("messages").select("chat_id, channel, role, content, created_at").eq("business_id", biz.id).order("created_at", { ascending: false }).limit(80); data = r.data || []; } catch (e) { return; }
+  if (!data.length) { box.innerHTML = emptyHTML("💬", tr("aiConvosEmpty"), tr("aiConvosEmptyHint")); return; }
+  const groups = {};
+  for (const m of data) { const k = (m.channel || "") + ":" + (m.chat_id || ""); (groups[k] = groups[k] || []).push(m); }
+  const keys = Object.keys(groups).slice(0, 6); // 6 bisedat e fundit
+  box.innerHTML = "";
+  for (const k of keys) {
+    const msgs = groups[k].slice().reverse(); // kronologjike
+    const wrap = document.createElement("div");
+    wrap.className = "settings-block"; wrap.style.marginBottom = "10px";
+    const head = `<div style="font-weight:800;font-size:12px;color:var(--ink-soft);margin-bottom:6px">${esc(msgs[0].channel || "chat")} · ${humanDate((msgs[0].created_at || "").slice(0, 10))}</div>`;
+    const body = msgs.slice(-8).map((m) => {
+      const isUser = m.role === "user";
+      return `<div style="margin:3px 0;font-size:13px;color:${isUser ? "var(--ink)" : "var(--accent-deep)"}"><strong>${isUser ? "👤" : "🤖"}</strong> ${esc(m.content || "")}</div>`;
+    }).join("");
+    wrap.innerHTML = head + body;
+    box.appendChild(wrap);
+  }
 }
 
 /* ---------------- Recepsionisti AI (demo · truri lokal me të dhënat reale) ---------------- */
@@ -2031,7 +2057,7 @@ async function finishOnboard() {
    ===================================================================== */
 async function renderAll() {
   renderStaffPane();
-  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads(), renderActivity(), renderCustomers()]);
+  await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads(), renderActivity(), renderCustomers(), renderAiConvos()]);
 }
 
 async function renderCustomers() {

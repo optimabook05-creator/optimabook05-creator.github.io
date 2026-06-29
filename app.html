@@ -20,9 +20,9 @@
 <link rel="preconnect" href="https://mhbrhrsjlxluxvwjhcne.supabase.co" crossorigin>
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=90">
-<link rel="modulepreload" href="config.js?v=90">
-<link rel="modulepreload" href="optima-app.js?v=90">
+<link rel="stylesheet" href="style.css?v=91">
+<link rel="modulepreload" href="config.js?v=91">
+<link rel="modulepreload" href="optima-app.js?v=91">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -479,6 +479,10 @@
             <button class="btn small primary" id="saveAiNotes" data-t="save">Ruaj</button>
           </div>
         </div>
+        <div class="settings-row" style="display:block">
+          <label data-t="aiConvosLbl">💬 Bisedat e fundit të AI-së (shiko → mëso)</label>
+          <div id="aiConvos" class="block-list" style="margin-top:8px"></div>
+        </div>
         <div class="settings-row">
           <label for="reviewUrl" data-t="reviewUrlLbl">⭐ Linku i vlerësimeve Google</label>
           <div class="settings-input">
@@ -750,7 +754,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=90"></script>
-<script type="module" src="optima-app.js?v=90"></script>
+<script src="core.js?v=91"></script>
+<script type="module" src="optima-app.js?v=91"></script>
 </body>
 </html>
