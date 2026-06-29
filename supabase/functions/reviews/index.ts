@@ -17,14 +17,23 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
+const WA_TOKEN = Deno.env.get("WHATSAPP_TOKEN") || "";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-async function sendTelegram(chatId: string, text: string) {
-  await fetch(`https://api.telegram.org/bot${BOT}/sendMessage`, {
+async function sendTelegram(token: string, chatId: string, text: string) {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: false }),
+  });
+}
+
+async function sendWhatsApp(phoneNumberId: string, to: string, text: string) {
+  await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${WA_TOKEN}` },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, text: { body: text } }),
   });
 }
 
@@ -32,9 +41,9 @@ Deno.serve(async () => {
   try {
     const yesterday = fmtDate(new Date(Date.now() - 864e5));
     const { data, error } = await supabase.from("appointments")
-      .select("id, chat_id, channel, client_name, businesses(name, lang, review_url)")
+      .select("id, chat_id, channel, client_name, businesses(name, lang, review_url, telegram_token, wa_phone_id)")
       .eq("appt_date", yesterday).eq("review_requested", false).neq("status", "cancelled")
-      .eq("channel", "telegram").not("chat_id", "is", null);
+      .in("channel", ["telegram", "whatsapp"]).not("chat_id", "is", null);
     if (error) return json({ error: error.message }, 500);
 
     let sent = 0;
@@ -46,7 +55,9 @@ Deno.serve(async () => {
       const msg = sq
         ? `Faleminderit që zgjodhe ${biz.name}${first ? ", " + first : ""}! 🙏 Nëse ke pasur përvojë të mirë, një vlerësim i vogël na ndihmon shumë:\n${biz.review_url} ⭐`
         : `Thanks for choosing ${biz.name}${first ? ", " + first : ""}! 🙏 If you had a good experience, a quick review helps us a lot:\n${biz.review_url} ⭐`;
-      await sendTelegram(a.chat_id, msg);
+      if (a.channel === "telegram") await sendTelegram(biz.telegram_token || BOT, a.chat_id, msg);
+      else if (a.channel === "whatsapp" && biz.wa_phone_id && WA_TOKEN) await sendWhatsApp(biz.wa_phone_id, a.chat_id, msg);
+      else continue;
       await supabase.from("appointments").update({ review_requested: true }).eq("id", a.id);
       sent++;
     }

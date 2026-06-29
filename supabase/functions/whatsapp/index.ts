@@ -55,6 +55,10 @@ Deno.serve(async (req) => {
     const name = value?.contacts?.[0]?.profile?.name || "WhatsApp";
     if (!text || !phoneNumberId) return new Response("ok");
 
+    // Ruaj phone_number_id të biznesit (që kujtuesit/winback WhatsApp të dinë nga ku të nisen).
+    // Kapet automatikisht nga webhook-u — pa konfigurim manual.
+    try { await supabase.from("businesses").update({ wa_phone_id: phoneNumberId }).eq("id", businessId); } catch (_e) { /* injoro */ }
+
     // P0-4: Idempotency — mos përpuno dy herë të njëjtin mesazh (Meta ridërgon)
     const waId = msg.id ? "wa_" + msg.id : null;
     if (waId) {

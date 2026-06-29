@@ -7,6 +7,10 @@
 
 alter table public.businesses add column if not exists telegram_token text;
 
+-- WhatsApp: phone_number_id i biznesit (kapet automatikisht nga webhook-u i parë
+-- hyrës) — që kujtuesit/winback të dinë nga ku të nisin mesazhin në WhatsApp.
+alter table public.businesses add column if not exists wa_phone_id text;
+
 -- =====================================================================
 -- Gati.
 -- =====================================================================

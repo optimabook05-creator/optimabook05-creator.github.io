@@ -27,6 +27,7 @@ alter table public.businesses   add column if not exists mode              text 
 alter table public.businesses   drop constraint if exists businesses_mode_check;
 alter table public.businesses   add  constraint businesses_mode_check check (mode in ('appointments','inquiry','both'));
 alter table public.businesses   add column if not exists telegram_token    text;
+alter table public.businesses   add column if not exists wa_phone_id       text;
 
 alter table public.services     add column if not exists delivery          text;
 alter table public.services     add column if not exists duration_value    int;

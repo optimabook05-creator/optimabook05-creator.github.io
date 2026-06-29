@@ -17,6 +17,7 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
+const WA_TOKEN = Deno.env.get("WHATSAPP_TOKEN") || "";
 const WINBACK_DAYS = Number(Deno.env.get("WINBACK_DAYS") || "60");   // sa ditë pa ardhur = i humbur
 const MAX_LAPSE_DAYS = 365;                                          // mos prek më të vjetër se 1 vit
 const RESEND_DAYS = 90;                                              // mos ri-lajmëro brenda kësaj kohe
@@ -24,11 +25,25 @@ const RESEND_DAYS = 90;                                              // mos ri-l
 const pad = (n: number) => String(n).padStart(2, "0");
 const fmtDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-async function sendTelegram(chatId: string, text: string) {
-  await fetch(`https://api.telegram.org/bot${BOT}/sendMessage`, {
+async function sendTelegram(token: string, chatId: string, text: string) {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text }),
   });
+}
+
+async function sendWhatsApp(phoneNumberId: string, to: string, text: string) {
+  await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${WA_TOKEN}` },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, text: { body: text } }),
+  });
+}
+
+async function deliver(biz: any, channel: string, chatId: string, text: string): Promise<boolean> {
+  if (channel === "telegram") { await sendTelegram(biz.telegram_token || BOT, chatId, text); return true; }
+  if (channel === "whatsapp" && biz.wa_phone_id && WA_TOKEN) { await sendWhatsApp(biz.wa_phone_id, chatId, text); return true; }
+  return false;
 }
 
 Deno.serve(async () => {
@@ -37,23 +52,23 @@ Deno.serve(async () => {
     const cutoff = fmtDate(new Date(Date.now() - WINBACK_DAYS * 864e5));   // vizita e fundit duhet të jetë para kësaj
     const tooOld = fmtDate(new Date(Date.now() - MAX_LAPSE_DAYS * 864e5));
 
-    // Bizneset (emër + gjuhë)
-    const { data: bizs } = await supabase.from("businesses").select("id, name, lang");
+    // Bizneset (emër + gjuhë + tokenat e kanaleve)
+    const { data: bizs } = await supabase.from("businesses").select("id, name, lang, telegram_token, wa_phone_id");
     const bizMap: Record<string, any> = {};
     for (const b of (bizs || [])) bizMap[b.id] = b;
 
-    // Të gjitha takimet Telegram me chat_id (i grupojmë në kod)
+    // Të gjitha takimet Telegram/WhatsApp me chat_id (i grupojmë në kod)
     const { data: appts } = await supabase.from("appointments")
-      .select("business_id, chat_id, client_name, appt_date, status")
-      .eq("channel", "telegram").not("chat_id", "is", null);
+      .select("business_id, chat_id, channel, client_name, appt_date, status")
+      .in("channel", ["telegram", "whatsapp"]).not("chat_id", "is", null);
 
     // Llogarit për çdo (biznes, klient): vizita e fundit + a ka takim të ardhshëm
-    const agg: Record<string, { biz: string; chat: string; name: string; last: string; future: boolean }> = {};
+    const agg: Record<string, { biz: string; chat: string; channel: string; name: string; last: string; future: boolean }> = {};
     for (const a of (appts || [])) {
       if (a.status === "cancelled") continue;
       const key = `${a.business_id}|${a.chat_id}`;
-      const cur = agg[key] || { biz: a.business_id, chat: a.chat_id, name: a.client_name || "", last: "0000-00-00", future: false };
-      if (a.appt_date > cur.last) { cur.last = a.appt_date; cur.name = a.client_name || cur.name; }
+      const cur = agg[key] || { biz: a.business_id, chat: a.chat_id, channel: a.channel, name: a.client_name || "", last: "0000-00-00", future: false };
+      if (a.appt_date > cur.last) { cur.last = a.appt_date; cur.name = a.client_name || cur.name; cur.channel = a.channel; }
       if (a.appt_date >= today) cur.future = true;
       agg[key] = cur;
     }
@@ -78,7 +93,7 @@ Deno.serve(async () => {
       const msg = sq
         ? `Përshëndetje${first ? " " + first : ""}! 👋 Ka ca kohë që s'të kemi parë te ${biz.name}. Të rezervoj një orar? Vetëm më thuaj ditën dhe e bëjmë. 😊`
         : `Hi${first ? " " + first : ""}! 👋 It's been a while since we saw you at ${biz.name}. Shall I book you a slot? Just tell me the day and we're set. 😊`;
-      await sendTelegram(c.chat, msg);
+      if (!(await deliver(biz, c.channel, c.chat, msg))) continue; // kanal pa rrugë dërgimi → kapërce
       await supabase.from("winback_log").insert({ business_id: c.biz, chat_id: c.chat });
       await supabase.from("notifications").insert({ business_id: c.biz, text: `💌 Ftesë rikthimi dërguar: ${c.name || "një klient"}` });
       sent++;

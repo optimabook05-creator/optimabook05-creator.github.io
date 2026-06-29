@@ -18,6 +18,7 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 const BOT = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
+const WA_TOKEN = Deno.env.get("WHATSAPP_TOKEN") || "";
 const SLOT_STEP = 30;
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -75,10 +76,18 @@ function freeSlotsUnion(dateStr: string, durMin: number, hoursRow: any, appts: a
   return [...set].sort();
 }
 
-async function sendTelegram(chatId: string, text: string) {
-  await fetch(`https://api.telegram.org/bot${BOT}/sendMessage`, {
+async function sendTelegram(token: string, chatId: string, text: string) {
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ chat_id: chatId, text }),
+  });
+}
+
+async function sendWhatsApp(phoneNumberId: string, to: string, text: string) {
+  await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${WA_TOKEN}` },
+    body: JSON.stringify({ messaging_product: "whatsapp", to, text: { body: text } }),
   });
 }
 
@@ -88,7 +97,7 @@ Deno.serve(async (req) => {
     if (!business_id || !date) return json({ error: "business_id and date required" }, 400);
 
     // Biznesi (emër + gjuhë)
-    const { data: biz } = await supabase.from("businesses").select("name, lang").eq("id", business_id).maybeSingle();
+    const { data: biz } = await supabase.from("businesses").select("name, lang, telegram_token, wa_phone_id").eq("id", business_id).maybeSingle();
     if (!biz) return json({ error: "business not found" }, 404);
     const sq = (biz.lang || "sq").toLowerCase().startsWith("sq");
 
@@ -120,7 +129,10 @@ Deno.serve(async (req) => {
 
     let notified = 0;
     for (const w of (waiters || [])) {
-      if (w.channel !== "telegram" || !w.chat_id) continue; // tani vetëm Telegram
+      if (!w.chat_id) continue;
+      const canTg = w.channel === "telegram";
+      const canWa = w.channel === "whatsapp" && biz.wa_phone_id && WA_TOKEN;
+      if (!canTg && !canWa) continue; // kanal pa rrugë dërgimi
       const dur = (w.service_id && svcDur[w.service_id]) ? svcDur[w.service_id] : minDur;
       let slots = freeSlotsUnion(date, dur, hoursRow, busyAppts, blocks || [], staff || []);
       if (w.period && PERIODS[w.period]) {
@@ -134,7 +146,8 @@ Deno.serve(async (req) => {
       const msg = sq
         ? `🎉 U lirua një orar te ${biz.name} për ${humanDay(date, true)}! Të lira: ${times}. E do? Më shkruaj orën dhe ta rezervoj. 😊`
         : `🎉 A slot just opened at ${biz.name} for ${humanDay(date, false)}! Free: ${times}. Want it? Reply with a time and I'll book it. 😊`;
-      await sendTelegram(w.chat_id, msg);
+      if (canTg) await sendTelegram(biz.telegram_token || BOT, w.chat_id, msg);
+      else await sendWhatsApp(biz.wa_phone_id, w.chat_id, msg);
       await supabase.from("waitlist").update({ status: "notified", notified_at: new Date().toISOString() }).eq("id", w.id);
       await supabase.from("notifications").insert({ business_id, text: `🔔 Orar i liruar — lajmërova ${w.client_name || "një klient"} nga lista e pritjes (${date})` });
       notified++;
