@@ -533,7 +533,7 @@ async function tryRules(ctx: any): Promise<any | null> {
   }
 
   // Rezervim: nxjerr ditën/orën/shërbimin nga mesazhi + historiku i afërt
-  const wantsBooking = /(orar|rezervo|prenot|takim|termin|te vij|a ke|a keni|dua|kur ke|\bbook\b|appointment|reserve|slot|availab|do you have|qeth|qethje)/.test(tx);
+  const wantsBooking = /(orar|rezervo|prenot|takim|termin|te vij|a ke|a keni|dua|kur ke|\bbook\b|appointment|reserve|slot|availab|do you have)/.test(tx);
   let day = parseDay(tx, ctx.todayStr);
   const period = parsePeriod(tx);
   const time = parseTime(tx);
@@ -829,7 +829,7 @@ Also set "confidence" = the overall (the minimum of the three). Use LOW scores (
     `RESCHEDULE: if they want to MOVE/change their existing appointment, set wants_to_reschedule=true with the NEW date (YYYY-MM-DD) and time (HH:MM).`,
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint / a special request beyond the listed services, set needs_human=true and warmly say the owner will personally get back to them.`,
     `SENTIMENT: detect the customer's emotion → set "sentiment" to one of: happy, neutral, frustrated. If they seem frustrated/angry/upset, reply with EXTRA empathy and calm, apologize, and set needs_human=true so the owner is alerted.`,
-    `EXAMPLES (messy/dialect → understanding): "a ke nai or neser na 3" → book tomorrow 15:00. "qysh je, a ki kohe me ardh nesr na drek" (Gheg) → book tomorrow ~12:00. "wanna book tmrw 4pm pls" → book tomorrow 16:00. "SA KUSHTON QETHJA" → prices, no booking. "s'mum me ardh nesr" → wants_to_cancel=true. "rrofsh/flm/tnx" → short thanks.`,
+    `EXAMPLES (messy/dialect → understanding): "a ke nai or neser na 3" → book tomorrow 15:00. "qysh je, a ki kohe me ardh nesr na drek" (Gheg) → book tomorrow ~12:00. "wanna book tmrw 4pm pls" → book tomorrow 16:00. "SA KUSHTON SHËRBIMI/PRODUKTI" → answer price, no booking. "s'mum me ardh nesr" → wants_to_cancel=true. "rrofsh/flm/tnx" → short thanks.`,
   ].filter(Boolean).join("\n");
 
   const contents: any[] = [];
