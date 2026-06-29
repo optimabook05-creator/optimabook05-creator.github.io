@@ -733,6 +733,7 @@ async function runAI(ctx: any) {
     `Today is ${DOW[parseDate(todayStr).getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
     `STYLE: warm, human, 1–2 short sentences, offer only 2–3 times, occasional tasteful emoji, never robotic.`,
     `LANGUAGE: Reply in the SAME language as the customer's latest message — mirror it exactly (Albanian→Albanian, English→English, Italian→Italian, etc.). Only if the message is too short/ambiguous to tell, use ${bizLang}. Set "lang" to the ISO code of your reply.`,
+    `UNDERSTANDING: Understand the customer no matter HOW they write — any language or dialect (incl. Gheg & Tosk Albanian, regional slang), abbreviations (flm, pls, ok, s'), typos, missing diacritics (ç→c, ë→e), ALL CAPS, voice-to-text errors, and mixed Albanian-English in one sentence. Always extract the real intent; never reject or confuse a message for being informal or misspelled. If a key detail is truly unclear, ask ONE short question.`,
     `SERVICES (name — minutes — price):`,
     services.map((s: any) => {
       let line = `- ${s.name} — ${s.duration_min} min — ${s.price}`;
@@ -753,7 +754,7 @@ async function runAI(ctx: any) {
     `CANCELLING: if they want to cancel / can't come, set wants_to_cancel=true.`,
     `RESCHEDULE: if they want to MOVE/change their existing appointment, set wants_to_reschedule=true with the NEW date (YYYY-MM-DD) and time (HH:MM).`,
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint / a special request beyond the listed services, set needs_human=true and warmly say the owner will personally get back to them.`,
-    `EXAMPLES (messy Albanian → understanding): "a ke nai or neser na 3" → wants_to_book, date=tomorrow, time=15:00. "sa kushton" → reply with prices from SERVICES, no booking. "s'mund te vij neser" → wants_to_cancel=true. "rrofsh/flm" → short thanks, no booking.`,
+    `EXAMPLES (messy/dialect → understanding): "a ke nai or neser na 3" → book tomorrow 15:00. "qysh je, a ki kohe me ardh nesr na drek" (Gheg) → book tomorrow ~12:00. "wanna book tmrw 4pm pls" → book tomorrow 16:00. "SA KUSHTON QETHJA" → prices, no booking. "s'mum me ardh nesr" → wants_to_cancel=true. "rrofsh/flm/tnx" → short thanks.`,
   ].filter(Boolean).join("\n");
 
   const contents: any[] = [];
@@ -834,6 +835,7 @@ async function runInquiry(ctx: any) {
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint, set needs_human=true and warmly say the owner will personally get back to them.`,
     `EXAMPLES: "a keni parfum per burra?" → answer ONLY from WHAT WE OFFER. "po makina keni?" (not offered) → say what "${biz.name}" actually offers and don't invent. "sa kushton?" → give price ONLY if listed above, otherwise say the owner will confirm. "dua ta marr" → confirm warmly + owner will contact.`,
     `LANGUAGE: Reply in the SAME language as the customer's latest message — mirror it exactly (Albanian→Albanian, English→English, etc.). Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
+    `UNDERSTANDING: Understand the customer no matter HOW they write — any language or dialect (Gheg & Tosk Albanian, slang), abbreviations (flm, pls), typos, missing diacritics, ALL CAPS, voice-to-text errors, mixed Albanian-English. Always extract the real intent; never reject a message for being informal/misspelled. If truly unclear, ask ONE short question.`,
   ].filter(Boolean).join("\n");
 
   const contents: any[] = [];
