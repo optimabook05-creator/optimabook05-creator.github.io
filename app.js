@@ -86,7 +86,7 @@ const I18N = {
       resetConfirm: "Të fshihet gjithçka dhe demo të rifillojë nga zero?",
       hint: "<strong>Kjo është ana e klientit</strong> — shkruaj si klient i biznesit, p.sh.:",
       chips: [
-        "Pershendetje, a ke neser pasdite nje orar per qethje?",
+        "Pershendetje, a ke neser pasdite nje orar?",
         "Sa kushtojne sherbimet?",
         "Dua te anuloj takimin",
       ],
@@ -240,7 +240,7 @@ const I18N = {
       resetConfirm: "Erase everything and restart the demo from scratch?",
       hint: "<strong>This is the customer side</strong> — write as a customer of the business, e.g.:",
       chips: [
-        "Hi, do you have a slot tomorrow afternoon for a haircut?",
+        "Hi, do you have a slot tomorrow afternoon?",
         "How much are your services?",
         "I want to cancel my appointment",
       ],
@@ -1070,9 +1070,9 @@ function renderStats() {
 /* ---------------- Magjistari i regjistrimit ---------------- */
 
 function defaultConfig() {
-  const p = t("presets.barber");
+  const p = t("presets.other");
   return {
-    type: "barber",
+    type: "other",
     businessName: p.nameEx,
     address: lang === "en" ? "12 High Street, London" : "Rruga e Durrësit 12, Tiranë",
     services: p.services.map((s, i) => ({ id: i + 1, ...s })),
@@ -1086,7 +1086,7 @@ function fillTypeSelect(selected) {
   const presets = t("presets");
   sel.innerHTML = Object.keys(presets)
     .map((k) => `<option value="${k}">${presets[k].label}</option>`).join("");
-  sel.value = presets[selected] ? selected : "barber";
+  sel.value = presets[selected] ? selected : "other";
 }
 
 $("#setupType").addEventListener("change", () => {
@@ -1099,7 +1099,7 @@ $("#setupType").addEventListener("change", () => {
 
 function openSetup(prefill) {
   const cfg = prefill || defaultConfig();
-  fillTypeSelect(cfg.type || "barber");
+  fillTypeSelect(cfg.type || "other");
   $("#setupName").value = cfg.businessName;
   $("#setupAddress").value = cfg.address;
 
