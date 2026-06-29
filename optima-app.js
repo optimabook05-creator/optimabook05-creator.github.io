@@ -87,6 +87,7 @@ const T = {
     aiActive: "AI aktiv · 24/7",
     tabActivity: "🔔 Aktiviteti", activityDesc: "Çdo gjë që bën AI: rezervime, anulime, kujtesa, kërkesa — live.", emptyActivity: "Ende pa aktivitet.",
     tabCustomers: "👤 Klientët", customersDesc: "Klientët e tu, vizitat dhe të ardhurat — të mbledhura vetë nga AI.", searchPh: "Kërko klient…", emptyCustomers: "Ende pa klientë.",
+    crmClients: "klientë", crmReturning: "të kthyer", crmValue: "vlera totale", crmAvg: "mesatare/klient", badgeVip: "⭐ VIP", badgeReturning: "🔁 i kthyer",
     setChannelH: "🔗 Lidh kanalin (Telegram)", channelDesc: "2 minuta: krijo një bot te @BotFather → kopjo token-in → ngjite këtu → Ruaj → kliko \"Aktivizo\".",
     tgTokenLbl: "Token-i i bot-it Telegram", tgActivate: "⚡ Aktivizo webhook-un ↗", bizIdLbl: "ID e biznesit (për WhatsApp/Meta):",
     tabStaff: "👥 Stafi", staffDesc: "Shto staf dhe lokacione. Çdo person pret klientë paralelisht në të njëjtën orë.",
@@ -287,6 +288,7 @@ const T = {
     aiActive: "AI active · 24/7",
     tabActivity: "🔔 Activity", activityDesc: "Everything the AI does: bookings, cancellations, reminders, requests — live.", emptyActivity: "No activity yet.",
     tabCustomers: "👤 Customers", customersDesc: "Your customers, visits and revenue — gathered automatically by the AI.", searchPh: "Search customer…", emptyCustomers: "No customers yet.",
+    crmClients: "clients", crmReturning: "returning", crmValue: "total value", crmAvg: "avg/client", badgeVip: "⭐ VIP", badgeReturning: "🔁 returning",
     setChannelH: "🔗 Connect channel (Telegram)", channelDesc: "2 minutes: create a bot at @BotFather → copy the token → paste here → Save → click \"Activate\".",
     tgTokenLbl: "Telegram bot token", tgActivate: "⚡ Activate webhook ↗", bizIdLbl: "Business ID (for WhatsApp/Meta):",
     tabStaff: "👥 Staff", staffDesc: "Add staff and locations. Each person serves customers in parallel at the same time.",
@@ -2061,15 +2063,36 @@ async function renderCustomers() {
       map[key] = c;
     }
   } catch (e) {}
-  let rows = Object.values(map).filter((c) => c.visits > 0).sort((a, b) => (b.last || "").localeCompare(a.last || ""));
+  let rows = Object.values(map).filter((c) => c.visits > 0);
+  // Përmbledhje CRM (mbi të gjithë klientët)
+  const total = rows.length;
+  const returning = rows.filter((c) => c.visits >= 2).length;
+  const totalSpent = rows.reduce((a, c) => a + (c.spent || 0), 0);
+  const avg = total ? totalSpent / total : 0;
+  // VIP = top ~20% sipas vlerës (me shpenzim > 0)
+  const bySpend = [...rows].sort((a, b) => (b.spent || 0) - (a.spent || 0));
+  const vipSet = new Set(bySpend.slice(0, Math.max(1, Math.round(total * 0.2))).filter((c) => c.spent > 0));
+  // Renditje CRM-grade: vlera më e madhe e para
+  rows.sort((a, b) => (b.spent || 0) - (a.spent || 0) || (b.last || "").localeCompare(a.last || ""));
   const q = ($("#custSearch") && $("#custSearch").value.trim().toLowerCase()) || "";
   if (q) rows = rows.filter((c) => (c.name || "").toLowerCase().includes(q));
-  if (!rows.length) { list.innerHTML = emptyHTML("👤", tr("emptyCustomers"), tr("emptyCustomersHint")); return; }
+  if (!total) { list.innerHTML = emptyHTML("👤", tr("emptyCustomers"), tr("emptyCustomersHint")); return; }
   list.innerHTML = "";
+  const sum = document.createElement("div");
+  sum.className = "settings-block"; sum.style.marginBottom = "12px";
+  sum.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:16px">
+    <span><strong style="font-size:18px">${total}</strong> <small style="color:var(--ink-soft)">${tr("crmClients")}</small></span>
+    <span><strong style="font-size:18px">${returning}</strong> <small style="color:var(--ink-soft)">${tr("crmReturning")} (${total ? Math.round(returning / total * 100) : 0}%)</small></span>
+    <span><strong style="font-size:18px">${money(totalSpent)}</strong> <small style="color:var(--ink-soft)">${tr("crmValue")}</small></span>
+    <span><strong style="font-size:18px">${money(avg)}</strong> <small style="color:var(--ink-soft)">${tr("crmAvg")}</small></span>
+  </div>`;
+  list.appendChild(sum);
   for (const c of rows) {
     const item = document.createElement("div");
     item.className = "block-item";
-    item.innerHTML = `<span class="grow">👤 <strong>${esc(c.name)}</strong> <small style="color:var(--ink-faint)">· ${esc(c.channel)}</small></span>
+    const vip = vipSet.has(c) ? ` <span style="color:var(--gold);font-weight:800;font-size:11px">${tr("badgeVip")}</span>` : "";
+    const ret = (!vipSet.has(c) && c.visits >= 2) ? ` <span style="color:var(--accent-deep);font-weight:700;font-size:11px">${tr("badgeReturning")}</span>` : "";
+    item.innerHTML = `<span class="grow">👤 <strong>${esc(c.name)}</strong>${vip}${ret} <small style="color:var(--ink-faint)">· ${esc(c.channel)}</small></span>
       <span style="font-size:12.5px;font-weight:700;color:var(--ink-soft);white-space:nowrap">${c.visits} ${tr("visitsW")} · ${money(c.spent)}${c.last ? " · " + humanDate(c.last) : ""}</span>`;
     list.appendChild(item);
   }
