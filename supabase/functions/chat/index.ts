@@ -290,10 +290,20 @@ function parseTime(tx: string): string | null {
     const w = tm ? tm[1] : (tx.trim().match(/^([a-z]+)$/)?.[1] || "");
     if (w && NW[w] !== undefined) h = NW[w];
   }
+  // Minuta me fjalë (tx është i normalizuar: ë→e, ç→c): "e gjysmë"=:30, "e çerek"=:15, "pa çerek"=:45 (ora−1)
+  if (min === 0) {
+    if (/\bpa\s*[cq]erek\b/.test(tx)) { min = 45; if (h !== null) h -= 1; }
+    else if (/\bgjys/.test(tx)) { min = 30; }       // gjys, gjysem, gjysme, gjysme
+    else if (/\b[cq]erek\b/.test(tx)) { min = 15; }
+  }
   if (h === null || h > 23 || min > 59) return null;
+  const am = /\b(paradite|mengjes|mengjesi|am)\b/.test(tx);
+  const pm = /\b(pasdite|mbasdite|dreke|drek|mbrema|mbremje|mbremjes|mbrem|nate|naten|pm|afternoon|evening|night|noon)\b/.test(tx);
   if (mer === "pm" && h < 12) h += 12;
   else if (mer === "am" && h === 12) h = 0;
-  else if (!mer && h >= 1 && h <= 7) h += 12; // pasdite si parazgjedhje
+  else if (pm && h >= 1 && h <= 11) h += 12;     // pasdite/mbrëma → +12
+  else if (am) { if (h === 12) h = 0; }          // paradite/mëngjes → mbaj AM
+  else if (h >= 1 && h <= 7) h += 12;            // parazgjedhje pasdite
   return toHM(h * 60 + min);
 }
 function parseService(tx: string, services: any[]): any {
@@ -749,7 +759,7 @@ async function runAI(ctx: any) {
     (ctx.state && (ctx.state.service_id || ctx.state.appt_date || ctx.state.appt_time))
       ? `ALREADY KNOWN (use these, do NOT ask again): ${ctx.state.service_id ? "service=" + (services.find((s: any) => s.id === ctx.state.service_id)?.name || "?") + " " : ""}${ctx.state.appt_date ? "date=" + ctx.state.appt_date + " " : ""}${ctx.state.appt_time ? "time=" + hm(ctx.state.appt_time) : ""}. If the customer now gives only the missing piece (e.g. just a time, or "po"/"yes"), set wants_to_book=true and BOOK — do not re-ask.`
       : "",
-    `TIMES: "ora 2 pasdite"/"2pm"=14:00, "ora 3" afternoon=15:00.`,
+    `TIMES (output HH:MM 24h): "ora 2 pasdite"/"2pm"=14:00, "ora 3"=15:00 (hours 1–7 default to afternoon). "3 e gjysmë"=15:30, "3 e çerek"=15:15, "pa çerek 4"=15:45, "9 paradite"=09:00, "mesditë"=12:00, "9 mbrëma"=21:00. Always include the exact minutes the customer said.`,
     `BOOKING: when service+date+available time are known, set wants_to_book=true (exact service, date YYYY-MM-DD, time HH:MM) and write a complete warm confirmation in the customer's language.`,
     `CANCELLING: if they want to cancel / can't come, set wants_to_cancel=true.`,
     `RESCHEDULE: if they want to MOVE/change their existing appointment, set wants_to_reschedule=true with the NEW date (YYYY-MM-DD) and time (HH:MM).`,
