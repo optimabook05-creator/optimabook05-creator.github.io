@@ -80,6 +80,7 @@ const T = {
     aiNotesLbl: "🧠 Info për AI-në (paketa, çmime, kohë dorëzimi, politika — AI ua thotë klientëve)",
     aiNotesPh: "P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë. Web 4-7 faqe = 200€, ~30 ditë.",
     aiConvosLbl: "💬 Bisedat e fundit të AI-së (shiko → mëso)", aiConvosEmpty: "Ende pa biseda.", aiConvosEmptyHint: "Kur klientët t'i shkruajnë AI-së, bisedat shfaqen këtu — i sheh dhe e mëson AI-në te 'Info për AI-në'.",
+    botMsgs: "mesazhe", botReplies: "përgjigje AI", botConvos: "biseda", botLeads: "kërkesa",
     modeLbl: "⚙️ Mënyra e biznesit (ndize/fike kurdo)",
     tabSettings: "⚙️ Cilësime", settingsDesc: "Ndrysho gjithçka kurdo — pa rifilluar.",
     setBizH: "Biznesi", setNameLbl: "Emri & adresa", setSvcH: "Shërbimet / Produktet",
@@ -282,6 +283,7 @@ const T = {
     aiNotesLbl: "🧠 Info for the AI (packages, prices, delivery times, policies — AI tells customers)",
     aiNotesPh: "E.g. Website 1-3 pages = 100€, delivered in ~13 days. 4-7 pages = 200€, ~30 days.",
     aiConvosLbl: "💬 Recent AI conversations (review → teach)", aiConvosEmpty: "No conversations yet.", aiConvosEmptyHint: "When customers message the AI, conversations show here — review them and teach the AI in 'Info for the AI'.",
+    botMsgs: "messages", botReplies: "AI replies", botConvos: "conversations", botLeads: "requests",
     modeLbl: "⚙️ Business mode (turn on/off anytime)",
     tabSettings: "⚙️ Settings", settingsDesc: "Change anything anytime — no need to restart.",
     setBizH: "Business", setNameLbl: "Name & address", setSvcH: "Services / Products",
@@ -866,6 +868,22 @@ async function renderAiConvos() {
   for (const m of data) { const k = (m.channel || "") + ":" + (m.chat_id || ""); (groups[k] = groups[k] || []).push(m); }
   const keys = Object.keys(groups).slice(0, 6); // 6 bisedat e fundit
   box.innerHTML = "";
+  // Bot-analytics: vëllimi i bisedave + kërkesat e kapura
+  try {
+    const [tot, rep, lds] = await Promise.all([
+      sb.from("messages").select("id", { count: "exact", head: true }).eq("business_id", biz.id),
+      sb.from("messages").select("id", { count: "exact", head: true }).eq("business_id", biz.id).eq("role", "bot"),
+      sb.from("leads").select("id", { count: "exact", head: true }).eq("business_id", biz.id),
+    ]);
+    const st = document.createElement("div");
+    st.className = "settings-block"; st.style.marginBottom = "10px";
+    st.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:16px">
+      <span><strong style="font-size:17px">${tot.count || 0}</strong> <small style="color:var(--ink-soft)">${tr("botMsgs")}</small></span>
+      <span><strong style="font-size:17px">${rep.count || 0}</strong> <small style="color:var(--ink-soft)">${tr("botReplies")}</small></span>
+      <span><strong style="font-size:17px">${lds.count || 0}</strong> <small style="color:var(--ink-soft)">${tr("botLeads")}</small></span>
+    </div>`;
+    box.appendChild(st);
+  } catch (e) { /* injoro */ }
   for (const k of keys) {
     const msgs = groups[k].slice().reverse(); // kronologjike
     const wrap = document.createElement("div");

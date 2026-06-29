@@ -605,7 +605,7 @@ async function askGemini(system: string, contents: any[]) {
           properties: {
             reply: { type: "STRING" }, lang: { type: "STRING" },
             wants_to_book: { type: "BOOLEAN" }, wants_to_cancel: { type: "BOOLEAN" },
-            wants_to_reschedule: { type: "BOOLEAN" }, needs_human: { type: "BOOLEAN" },
+            wants_to_reschedule: { type: "BOOLEAN" }, needs_human: { type: "BOOLEAN" }, sentiment: { type: "STRING" },
             service: { type: "STRING" }, date: { type: "STRING" }, time: { type: "STRING" },
           },
           required: ["reply", "wants_to_book"],
@@ -637,10 +637,10 @@ async function askOpenAI(system: string, contents: any[]) {
             properties: {
               reply: { type: "string" }, lang: { type: "string" },
               wants_to_book: { type: "boolean" }, wants_to_cancel: { type: "boolean" },
-              wants_to_reschedule: { type: "boolean" }, needs_human: { type: "boolean" },
+              wants_to_reschedule: { type: "boolean" }, needs_human: { type: "boolean" }, sentiment: { type: "string" },
               service: { type: "string" }, date: { type: "string" }, time: { type: "string" },
             },
-            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "wants_to_reschedule", "needs_human", "service", "date", "time"],
+            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "wants_to_reschedule", "needs_human", "sentiment", "service", "date", "time"],
           },
         },
       },
@@ -792,6 +792,7 @@ async function runAI(ctx: any) {
     `CANCELLING: if they want to cancel / can't come, set wants_to_cancel=true.`,
     `RESCHEDULE: if they want to MOVE/change their existing appointment, set wants_to_reschedule=true with the NEW date (YYYY-MM-DD) and time (HH:MM).`,
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint / a special request beyond the listed services, set needs_human=true and warmly say the owner will personally get back to them.`,
+    `SENTIMENT: detect the customer's emotion → set "sentiment" to one of: happy, neutral, frustrated. If they seem frustrated/angry/upset, reply with EXTRA empathy and calm, apologize, and set needs_human=true so the owner is alerted.`,
     `EXAMPLES (messy/dialect → understanding): "a ke nai or neser na 3" → book tomorrow 15:00. "qysh je, a ki kohe me ardh nesr na drek" (Gheg) → book tomorrow ~12:00. "wanna book tmrw 4pm pls" → book tomorrow 16:00. "SA KUSHTON QETHJA" → prices, no booking. "s'mum me ardh nesr" → wants_to_cancel=true. "rrofsh/flm/tnx" → short thanks.`,
   ].filter(Boolean).join("\n");
 
@@ -824,8 +825,9 @@ async function runAI(ctx: any) {
     else if (r.alternatives?.length) reply = (reply ? reply + "\n\n" : "") + `(${r.alternatives.join(", ")})`;
   }
   // Dorëzim te njeriu: njofto pronarin kur klienti kërkon ndihmë njerëzore/ankesë
-  if (out.needs_human && !ctx.preview) {
-    try { await supabase.from("notifications").insert({ business_id: businessId, text: `🙋 ${client_name || "Klient"} kërkon pronarin: ${String(text).slice(0, 120)}` }); } catch (_e) { /* injoro */ }
+  if (!ctx.preview && (out.needs_human || out.sentiment === "frustrated")) {
+    const tag = out.sentiment === "frustrated" ? "😟 Klient i PAKËNAQUR" : "🙋 Klienti kërkon pronarin";
+    try { await supabase.from("notifications").insert({ business_id: businessId, text: `${tag} (${client_name || "Klient"}): ${String(text).slice(0, 120)}` }); } catch (_e) { /* injoro */ }
   }
   // Roja: vetëm përgjigjet e gjeneruara nga AI (jo konfirmimet e ndërtuara nga sistemi)
   if (!booked && !cancelled && !rescheduled) reply = guardReply(reply, services, biz, isSqLang(biz));
@@ -871,6 +873,7 @@ async function runInquiry(ctx: any) {
     `IMPORTANT: this business does NOT take calendar appointments. NEVER offer time slots or bookings.`,
     `When the customer wants to order / proceed / start, warmly confirm and tell them the owner will contact them shortly to finalize.`,
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint, set needs_human=true and warmly say the owner will personally get back to them.`,
+    `SENTIMENT: detect emotion → set "sentiment" to happy/neutral/frustrated. If frustrated/upset, reply with extra empathy + apology and set needs_human=true.`,
     `EXAMPLES: "a keni parfum per burra?" → answer ONLY from WHAT WE OFFER. "po makina keni?" (not offered) → say what "${biz.name}" actually offers and don't invent. "sa kushton?" → give price ONLY if listed above, otherwise say the owner will confirm. "dua ta marr" → confirm warmly + owner will contact.`,
     `LANGUAGE: Reply in the SAME language as the customer's latest message — mirror it exactly (Albanian→Albanian, English→English, etc.). Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
     `UNDERSTANDING: Understand the customer no matter HOW they write — any language or dialect (Gheg & Tosk Albanian, slang), abbreviations (flm, pls), typos, missing diacritics, ALL CAPS, voice-to-text errors, mixed Albanian-English. Always extract the real intent; never reject a message for being informal/misspelled. If truly unclear, ask ONE short question.`,
@@ -887,8 +890,9 @@ async function runInquiry(ctx: any) {
                : "Sorry, a small hiccup. Could you tell me again what you need? 🙏";
   }
   // Dorëzim te njeriu: njofto pronarin kur klienti kërkon ndihmë njerëzore/ankesë
-  if (out && out.needs_human && !ctx.preview) {
-    try { await supabase.from("notifications").insert({ business_id: ctx.businessId, text: `🙋 ${client_name || "Klient"} kërkon pronarin: ${String(text).slice(0, 120)}` }); } catch (_e2) { /* injoro */ }
+  if (out && !ctx.preview && (out.needs_human || out.sentiment === "frustrated")) {
+    const tag = out.sentiment === "frustrated" ? "😟 Klient i PAKËNAQUR" : "🙋 Klienti kërkon pronarin";
+    try { await supabase.from("notifications").insert({ business_id: ctx.businessId, text: `${tag} (${client_name || "Klient"}): ${String(text).slice(0, 120)}` }); } catch (_e2) { /* injoro */ }
   }
   reply = guardReply(reply, services, biz, sq); // roja anti-çmim-i-shpikur
 
