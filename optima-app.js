@@ -2527,6 +2527,23 @@ function renderTodayGlance(appts) {
   box.querySelectorAll(".ta-btn").forEach((b) => b.onclick = (e) => { e.stopPropagation(); setStatus(b.dataset.id, b.dataset.act, b.dataset.prev); });
 }
 
+// Numra që "numërojnë lart" në ngarkim (delight). Vetëm numra/përqindje të pastra
+// (jo monedha me presje). Gjendja finale = teksti ekzakt → zero rrezik formati.
+function countUp(el, dur) {
+  const txt = el.textContent.trim();
+  const m = txt.match(/^(\D*)(\d+)(\D*)$/);
+  if (!m) return;
+  const target = parseInt(m[2], 10);
+  if (!isFinite(target) || target <= 0) return;
+  const pre = m[1], post = m[3], t0 = performance.now(); dur = dur || 650;
+  function frame(t) {
+    const p = Math.min(1, (t - t0) / dur), eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = pre + Math.round(target * eased) + post;
+    if (p < 1) requestAnimationFrame(frame); else el.textContent = txt;
+  }
+  requestAnimationFrame(frame);
+}
+
 async function renderStats() {
   renderInsights();
   const sg0 = $("#statsGrid"); if (sg0) sg0.innerHTML = skel(4);   // skeleton gjatë ngarkimit
@@ -2698,6 +2715,11 @@ async function renderStats() {
           </div>`).join("")}
       </div>
     </div>`;
+
+  // Count-up i butë i shifrave kryesore (çiftohet me stagger reveal); respekton reduced-motion
+  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    grid.querySelectorAll(".stat-card .num").forEach((el) => countUp(el));
+  }
 }
 
 /* ---------------- Takim manual ---------------- */
