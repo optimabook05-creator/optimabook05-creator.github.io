@@ -60,6 +60,17 @@ create table if not exists public.winback_log (
   chat_id text not null, sent_at timestamptz not null default now()
 );
 
+-- AI observability (log i ndërveprimeve për metrika — shih ai-events.sql)
+create table if not exists public.ai_events (
+  id bigint generated always as identity primary key,
+  business_id uuid not null references public.businesses(id) on delete cascade,
+  channel text, chat_id text, via text, intent text, confidence numeric,
+  booked boolean default false, proposed boolean default false,
+  cancelled boolean default false, escalated boolean default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists ai_events_idx on public.ai_events (business_id, created_at);
+
 create table if not exists public.conversation_state (
   business_id uuid not null references public.businesses(id) on delete cascade,
   channel text not null, chat_id text not null,
@@ -107,6 +118,7 @@ do $$ begin
   execute 'alter table public.staff              enable row level security';
   execute 'alter table public.leads              enable row level security';
   execute 'alter table public.processed_updates  enable row level security';
+  execute 'alter table public.ai_events          enable row level security';
 exception when others then null; end $$;
 
 drop policy if exists "own_messages" on public.messages;
@@ -115,6 +127,8 @@ drop policy if exists "own_waitlist" on public.waitlist;
 create policy "own_waitlist" on public.waitlist for all using (public.is_my_business(business_id)) with check (public.is_my_business(business_id));
 drop policy if exists "own_winback_log" on public.winback_log;
 create policy "own_winback_log" on public.winback_log for select using (public.is_my_business(business_id));
+drop policy if exists "own_ai_events" on public.ai_events;
+create policy "own_ai_events" on public.ai_events for select using (public.is_my_business(business_id));
 drop policy if exists "own_conversation_state" on public.conversation_state;
 create policy "own_conversation_state" on public.conversation_state for select using (public.is_my_business(business_id));
 drop policy if exists "own_locations" on public.locations;
