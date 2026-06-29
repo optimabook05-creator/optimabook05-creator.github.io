@@ -631,6 +631,7 @@ async function askGemini(system: string, contents: any[]) {
             wants_to_book: { type: "BOOLEAN" }, wants_to_cancel: { type: "BOOLEAN" },
             wants_to_reschedule: { type: "BOOLEAN" }, needs_human: { type: "BOOLEAN" }, sentiment: { type: "STRING" },
             service: { type: "STRING" }, date: { type: "STRING" }, time: { type: "STRING" },
+            confidence: { type: "NUMBER" },
           },
           required: ["reply", "wants_to_book"],
         },
@@ -663,8 +664,9 @@ async function askOpenAI(system: string, contents: any[]) {
               wants_to_book: { type: "boolean" }, wants_to_cancel: { type: "boolean" },
               wants_to_reschedule: { type: "boolean" }, needs_human: { type: "boolean" }, sentiment: { type: "string" },
               service: { type: "string" }, date: { type: "string" }, time: { type: "string" },
+              confidence: { type: "number" },
             },
-            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "wants_to_reschedule", "needs_human", "sentiment", "service", "date", "time"],
+            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "wants_to_reschedule", "needs_human", "sentiment", "service", "date", "time", "confidence"],
           },
         },
       },
@@ -813,6 +815,7 @@ async function runAI(ctx: any) {
       : "",
     `TIMES (output HH:MM 24h): "ora 2 pasdite"/"2pm"=14:00, "ora 3"=15:00 (hours 1–7 default to afternoon). "3 e gjysmë"=15:30, "3 e çerek"=15:15, "pa çerek 4"=15:45, "9 paradite"=09:00, "mesditë"=12:00, "9 mbrëma"=21:00. Always include the exact minutes the customer said.`,
     `BOOKING: when service+date+available time are known, set wants_to_book=true (exact service, date YYYY-MM-DD, time HH:MM). The SYSTEM will then ask the customer to confirm the exact day+time before booking — so never claim it is already booked; just provide the details.`,
+    `CONFIDENCE (CRITICAL): always set "confidence" (0.0–1.0) = how SURE you are about BOTH the intent AND every required detail (for booking: service+date+time; for cancel/reschedule: which appointment). Be brutally honest: if the message is vague, ambiguous, has conflicting info, or you are GUESSING any detail, use a LOW value (below 0.7). Use high (above 0.85) ONLY when the customer was explicit and unambiguous. The system will NOT execute book/cancel/reschedule when confidence is low — it will ask the customer to clarify instead. This protects against costly mistakes.`,
     `CANCELLING: if they want to cancel / can't come, set wants_to_cancel=true.`,
     `RESCHEDULE: if they want to MOVE/change their existing appointment, set wants_to_reschedule=true with the NEW date (YYYY-MM-DD) and time (HH:MM).`,
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint / a special request beyond the listed services, set needs_human=true and warmly say the owner will personally get back to them.`,
@@ -828,6 +831,14 @@ async function runAI(ctx: any) {
   let reply = out.reply || "";
   let booked = false, cancelled = false, proposed = false;
 
+  // CONFIDENCE GATING: AI s'kontrollon kurrë veprime kritike kur s'është i sigurt.
+  // Nën pragun → NUK ekzekuton (book/cancel/reschedule), por kërkon sqarim. Konfirmimi i klientit s'bllokohet.
+  const CONF_MIN = 0.7;
+  const conf = typeof out.confidence === "number" ? out.confidence : 1;
+  const aiSq = isSqLang(biz, out.lang);
+  const confirmingNow = !!(ctx.state && ctx.state.step === "awaiting_confirm");
+  const lowConf = conf < CONF_MIN && !confirmingNow;
+
   if (out.wants_to_book && out.service && out.date && out.time) {
     const svc = services.find((s: any) => norm(s.name) === norm(out.service))
       || services.find((s: any) => norm(s.name).includes(norm(out.service)) || norm(out.service).includes(norm(s.name)));
@@ -839,7 +850,10 @@ async function runAI(ctx: any) {
       // A po e KONFIRMON klienti pikërisht orarin që propozuam? → rezervo. Përndryshe → propozo dhe prit "po".
       const stx = ctx.state || {};
       const confirming = stx.step === "awaiting_confirm" && stx.appt_date === out.date && stx.appt_time && hm(stx.appt_time) === t && stx.service_id === svc.id;
-      if (confirming) {
+      if (lowConf) {
+        // Konfidencë e ulët → mos propozo; kërko sqarim (mbron nga rezervime gabim)
+        reply = sqx ? "Që të mos gabojmë — ma konfirmo edhe njëherë: çfarë shërbimi dëshiron, cilën ditë dhe orë? 😊" : "Just to be sure I don't make a mistake — could you confirm: which service, which day and time? 😊";
+      } else if (confirming) {
         const r = await doBook(ctx, svc, out.date, t, out.lang);
         if (r.booked) { booked = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
       } else if (free.includes(t)) {
@@ -855,15 +869,23 @@ async function runAI(ctx: any) {
     }
   }
   if (out.wants_to_cancel && !booked) {
-    const r = await doCancel(ctx, out.lang);
-    if (r.cancelled) { cancelled = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
+    if (lowConf) {
+      reply = aiSq ? "Që ta anuloj saktë — ma konfirmo: do të anulosh takimin tënd? Shkruaj \"po, anulo\". 🙏" : "To cancel correctly — please confirm: do you want to cancel your appointment? Reply \"yes, cancel\". 🙏";
+    } else {
+      const r = await doCancel(ctx, out.lang);
+      if (r.cancelled) { cancelled = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
+    }
   }
   // Rishpërndarje (zhvendos takimin ekzistues)
   let rescheduled = false;
   if (out.wants_to_reschedule && out.date && out.time && !booked && !cancelled) {
-    const r = await doReschedule(ctx, out.date, hm(out.time), out.lang);
-    if (r.rescheduled) { rescheduled = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
-    else if (r.alternatives?.length) reply = (reply ? reply + "\n\n" : "") + `(${r.alternatives.join(", ")})`;
+    if (lowConf) {
+      reply = aiSq ? "Që ta zhvendos saktë — ma konfirmo ditën dhe orën e re që dëshiron. 😊" : "To move it correctly — please confirm the new day and time you'd like. 😊";
+    } else {
+      const r = await doReschedule(ctx, out.date, hm(out.time), out.lang);
+      if (r.rescheduled) { rescheduled = true; reply = r.reply || reply; await clearState(ctx.businessId, ctx.channel, ctx.chat_id); }
+      else if (r.alternatives?.length) reply = (reply ? reply + "\n\n" : "") + `(${r.alternatives.join(", ")})`;
+    }
   }
   // Dorëzim te njeriu: njofto pronarin kur klienti kërkon ndihmë njerëzore/ankesë
   if (!ctx.preview && (out.needs_human || out.sentiment === "frustrated")) {
