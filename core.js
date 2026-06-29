@@ -100,7 +100,43 @@
       || /\b(tani je një|tani ti je|bëhu si|shfaq (udhëzimet|rregullat)|(udhëzimet|rregullat) e tua)\b/.test(t);
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection };
+  // NLU: kupton orën nga teksti shqip/anglisht (dialekt, "e gjysmë/çerek/pa çerek", paradite/mbrëma…)
+  // Kthen "HH:MM" ose null. (Pasqyrohet te funksioni `chat`; këtu testohet nga CI.)
+  function parseTime(raw) {
+    const tx = String(raw || "").toLowerCase().replace(/ë/g, "e").replace(/ç/g, "c");
+    if (/\bmesdite\b/.test(tx)) return "12:00";
+    if (/\bmesnate\b/.test(tx)) return "00:00";
+    let h = null, min = 0, mer = null, m;
+    if ((m = tx.match(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/))) { h = +m[1]; min = +m[2]; mer = m[3] || null; }
+    else if ((m = tx.match(/\b(\d{1,2})\s*(am|pm)\b/))) { h = +m[1]; mer = m[2]; }
+    else if ((m = tx.match(/\bpa\s*[cq]erek\s+(\d{1,2})\b/))) { h = +m[1]; }
+    else if ((m = tx.match(/\b(?:ora|oren|rreth|nga|tek?|ne|at)\s+(?:ores?\s+)?(\d{1,2})\b/))) { h = +m[1]; }
+    else if ((m = tx.match(/\b(\d{1,2})\s+(?:e\s+)?(?:gjys|[cq]erek|paradite|pasdite|mbasdite|mbrem|nate|drek|pm|am)/))) { h = +m[1]; }
+    else if ((m = tx.match(/\b([01]?\d|2[0-3])([0-5]\d)\b/))) { h = +m[1]; min = +m[2]; }
+    else if ((m = tx.match(/^(\d{1,2})$/))) { h = +m[1]; }
+    if (h === null) {
+      const NW = { nje: 1, njesh: 1, dy: 2, tre: 3, tri: 3, kater: 4, kat: 4, pese: 5, pes: 5, gjashte: 6, gjasht: 6, shtate: 7, shtat: 7, tete: 8, tet: 8, nente: 9, nent: 9, dhjete: 10, dhjet: 10, njembedhjete: 11, dymbedhjete: 12, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, noon: 12 };
+      const tm = tx.match(/\b(?:ora|oren|ne|at|rreth|nga)\s+([a-z]+)\b/);
+      const w = tm ? tm[1] : ((tx.trim().match(/^([a-z]+)$/) || [])[1] || "");
+      if (w && NW[w] !== undefined) h = NW[w];
+    }
+    if (min === 0) {
+      if (/\bpa\s*[cq]erek\b/.test(tx)) { min = 45; if (h !== null) h -= 1; }
+      else if (/\bgjys/.test(tx)) { min = 30; }
+      else if (/\b[cq]erek\b/.test(tx)) { min = 15; }
+    }
+    if (h === null || h > 23 || min > 59) return null;
+    const am = /\b(paradite|mengjes|mengjesi|am)\b/.test(tx);
+    const pm = /\b(pasdite|mbasdite|dreke|drek|mbrema|mbremje|mbremjes|mbrem|nate|naten|pm|afternoon|evening|night|noon)\b/.test(tx);
+    if (mer === "pm" && h < 12) h += 12;
+    else if (mer === "am" && h === 12) h = 0;
+    else if (pm && h >= 1 && h <= 11) h += 12;
+    else if (am) { if (h === 12) h = 0; }
+    else if (h >= 1 && h <= 7) h += 12;
+    return toHM(h * 60 + min);
+  }
+
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -272,11 +272,15 @@ function periodLabel(tx: string): string | null {
   return null;
 }
 function parseTime(tx: string): string | null {
+  if (/\bmesdite\b/.test(tx)) return "12:00";
+  if (/\bmesnate\b/.test(tx)) return "00:00";
   let h: number | null = null, min = 0, mer: string | null = null;
   let m = tx.match(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/);          // 11:00 / 11.00
   if (m) { h = +m[1]; min = +m[2]; mer = m[3] || null; }
   else if ((m = tx.match(/\b(\d{1,2})\s*(am|pm)\b/))) { h = +m[1]; mer = m[2]; }   // 11am
-  else if ((m = tx.match(/\b(?:ora|oren|ne|tek?|at)\s+(\d{1,2})\b/))) { h = +m[1]; } // ora 11
+  else if ((m = tx.match(/\bpa\s*[cq]erek\s+(\d{1,2})\b/))) { h = +m[1]; }         // "pa çerek 4"
+  else if ((m = tx.match(/\b(?:ora|oren|rreth|nga|tek?|ne|at)\s+(?:ores?\s+)?(\d{1,2})\b/))) { h = +m[1]; } // "ora 11", "rreth orës 3"
+  else if ((m = tx.match(/\b(\d{1,2})\s+(?:e\s+)?(?:gjys|[cq]erek|paradite|pasdite|mbasdite|mbrem|nate|drek|pm|am)/))) { h = +m[1]; } // "3 e gjys", "5 paradite"
   else if ((m = tx.match(/\b([01]?\d|2[0-3])([0-5]\d)\b/))) { h = +m[1]; min = +m[2]; } // 1100 / 930
   else if ((m = tx.match(/^(\d{1,2})$/))) { h = +m[1]; }            // vetëm "11"
   if (h === null) {
