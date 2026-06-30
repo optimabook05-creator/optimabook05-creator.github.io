@@ -2042,19 +2042,17 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 .fab, .botnav { transform: translateZ(0); }
 
 /* ============================================================
-   ⚡ FIX JANK: bar-i poshtë (botnav) "vinte nga sipër" me ngecje në refresh.
-   Shkaku: #appView hynte me TRANSFORM (translateY/scale), dhe botnav-i është
-   position:fixed BRENDA tij → një transform te paraardhësi e tërheq elementin
-   fixed gjatë animacionit. Zgjidhja: shell-i hyn VETËM me opacity (pa transform)
-   → botnav-i nuk tërhiqet, del menjëherë në vend. Animacionet e brendshme
-   (panel-col / tab-pane) mbeten — ato s'janë paraardhës të botnav-it.
+   ⚡ FIX JANK (v107): HIQ çdo animacion hyrjeje nga shell-i i app-it + botnav.
+   Pse: #appView përmban DHJETËRA elementë me backdrop-filter (xham). Çdo
+   animacion mbi #appView — qoftë TRANSFORM (tërhiqte botnav-in fixed → "nga
+   sipër") qoftë OPACITY (detyron rikompozim të gjithë xhamit kuadër-pas-kuadri
+   → ngecje në tërë app-in) — është i shtrenjtë. Zgjidhja më e sigurt & më e
+   shpejtë: app-i del MENJËHERË, pa animacion hyrjeje → zero ngecje (si iOS).
+   Animacionet e brendshme të dashboard-it (stagger/count-up) mbeten, sepse ato
+   janë per-element të vegjël, jo mbi gjithë shell-in plot xham.
    ============================================================ */
-#appView:not([hidden]) { animation: appShellIn .4s ease both; }
-@keyframes appShellIn { from { opacity: 0; } to { opacity: 1; } }
-/* Bar-i poshtë: hyrje e vetën e butë nga POSHTË (drejtimi i saktë), GPU, pa drag */
-.botnav { animation: botnavIn .34s cubic-bezier(.22,.61,.36,1) both; }
-@keyframes botnavIn { from { opacity: 0; transform: translateZ(0) translateY(12px); } to { opacity: 1; transform: translateZ(0) translateY(0); } }
-@media (prefers-reduced-motion: reduce) { #appView:not([hidden]), .botnav { animation: none !important; } }
+#appView:not([hidden]) { animation: none !important; }
+.botnav { animation: none !important; }
 
 /* ===================================================================
    AI Inbox (Bisedat AI) — zemra e produktit
