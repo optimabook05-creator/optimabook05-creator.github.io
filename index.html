@@ -2,7 +2,7 @@
 <html lang="sq">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <script src="v.js"></script>
 <title>OptimaBook — Recepsionisti AI që nuk fle kurrë</title>
@@ -477,6 +477,37 @@ footer{border-top:1px solid var(--glass-edge)}
 @media(max-width:480px){
   .cta{flex-direction:column;align-items:stretch}
   .cta .btn{width:100%}
+}
+
+/* ============================================================
+   📱 APPLE-GRADE — safe-areas + ritëm fluid në ÇDO ekran
+   ============================================================ */
+/* Ritëm vertikal FLUID (shkallëzohet butë, pa kërcime breakpoint-i) */
+section{padding-top:clamp(54px,8vw,96px);padding-bottom:clamp(54px,8vw,96px)}
+
+/* Safe-areas iPhone: Dynamic Island / notch / home indicator / qoshe të rrumbullakëta / landscape */
+.nav{margin-top:calc(14px + env(safe-area-inset-top));top:calc(12px + env(safe-area-inset-top))}
+.wrap{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right))}
+.hero{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right))}
+.final{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+footer{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
+
+/* Hero — thellësi premium: rrjetë pikash që shuhet butë (subtile, tech) */
+.hero{position:relative;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:-8% -4% 0;z-index:-1;pointer-events:none;
+  background-image:radial-gradient(rgba(12,166,120,.075) 1px,transparent 1.4px);background-size:26px 26px;
+  -webkit-mask-image:radial-gradient(58% 56% at 50% 26%,#000,transparent 76%);
+  mask-image:radial-gradient(58% 56% at 50% 26%,#000,transparent 76%)}
+:root[data-theme="dark"] .hero::before{background-image:radial-gradient(rgba(45,224,166,.08) 1px,transparent 1.4px)}
+
+/* Mbrojtje totale kundër overflow-it horizontal në çdo pajisje */
+html,body{max-width:100%;overflow-x:hidden}
+img,svg,video,table{max-width:100%}
+
+/* Telefon i vogël (≤640): safe-areas anësore më të ngushta + nav më afër majës */
+@media(max-width:640px){
+  .nav{margin-top:calc(10px + env(safe-area-inset-top));top:calc(8px + env(safe-area-inset-top))}
+  .hero{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
 }
 </style>
 </head>
