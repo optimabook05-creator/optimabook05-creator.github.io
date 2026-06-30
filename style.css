@@ -2074,6 +2074,24 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 /* Kartat shtesë që scroll-ojnë → browser-i i kapërcen jashtë ekranit (Safari 18+) */
 .cv-card, .ins-card, .bi-box { content-visibility: auto; contain-intrinsic-size: auto 110px; }
 
+/* ============================================================
+   🍎 NAV BAR iOS-STYLE në telefon: i NGJITUR sipër (flush, edge-to-edge),
+   përmbajtja rrëshqet NËN të (frosted), respekton Dynamic Island/notch.
+   (Në desktop mbetet "pill"-i pluskues premium.)
+   ============================================================ */
+@media (max-width: 640px) {
+  .topbar {
+    position: sticky; top: 0; margin: 0; width: 100%; max-width: none;
+    border-radius: 0; border-top: 0; border-left: 0; border-right: 0;
+    border-bottom: 1px solid var(--glass-edge);
+    padding: calc(9px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-left)) 10px max(14px, env(safe-area-inset-right));
+    flex-wrap: nowrap; gap: 8px;
+    box-shadow: 0 1px 0 var(--glass-line), 0 10px 24px -18px rgba(22,32,28,.35);
+  }
+  .topbar .brand-tag { display: none; }   /* kursen hapësirë → nav qëndron një rresht, i pastër */
+  .sidebar.open { max-height: 86dvh; }     /* dvh: lartësi e saktë në iOS Safari */
+}
+
 /* ===================================================================
    AI Inbox (Bisedat AI) — zemra e produktit
    =================================================================== */
