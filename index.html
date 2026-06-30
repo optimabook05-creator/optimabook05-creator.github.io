@@ -109,7 +109,7 @@ body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opa
 .btn.primary:hover{box-shadow:0 10px 30px var(--accent-glow),inset 0 1.5px 0 rgba(255,255,255,.4)}
 .btn.big{padding:15px 32px;font-size:17px;border-radius:16px}
 
-.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.wrap{max-width:1200px;margin:0 auto;padding-left:24px;padding-right:24px}
 
 .hero{display:grid;grid-template-columns:1.05fr .92fr;gap:46px;align-items:center;padding:72px 0 56px}
 .hero-copy{text-align:left}
@@ -462,7 +462,7 @@ footer{border-top:1px solid var(--glass-edge)}
 
 <header class="hero wrap">
   <div class="hero-copy">
-    <div class="eyebrow" data-t="eyebrow">Për çdo biznes me takime · Në çdo gjuhë · 24/7</div>
+    <div class="eyebrow" data-t="eyebrow">Për çdo biznes · Në çdo gjuhë · 24/7</div>
     <h1 data-t="h1html"></h1>
     <p class="sub" data-t="sub"></p>
     <div class="cta">
@@ -521,8 +521,8 @@ footer{border-top:1px solid var(--glass-edge)}
 
 <section class="wrap">
   <div class="sec-head">
-    <h2 data-t="bizH">Për çdo biznes që punon me orare</h2>
-    <p data-t="bizP">Nëse klientët të zënë kohë, OptimaBook të zë klientë.</p>
+    <h2 data-t="bizH">Ndërtuar për çdo biznes në botë</h2>
+    <p data-t="bizP">Takime, porosi ose kërkesa — nëse ke klientë, OptimaBook t'i kthen në para.</p>
   </div>
   <div class="biz-chips" id="bizChips"></div>
 </section>
@@ -645,7 +645,7 @@ const T = {
   sq: {
     navDemo: "▶ Provo demon", navLogin: "Hyr / Regjistrohu", navPortal: "Paneli im",
     brandTag: "Recepsionisti AI", navFeatures: "Veçoritë", navPricing: "Çmimet", navFaq: "FAQ",
-    eyebrow: "Për çdo biznes me takime · Në çdo gjuhë · 24/7",
+    eyebrow: "Për çdo biznes · Në çdo gjuhë · 24/7",
     h1html: 'Recepsionisti AI që <span class="grad">nuk fle kurrë</span>',
     sub: "OptimaBook i përgjigjet klientëve të tu në WhatsApp, Telegram e më shumë, rezervon takimet në kalendarin tënd dhe u kujton që të vijnë — 24 orë në ditë, pa lëvizur ti gishtin.",
     ctaStart: "🚀 Fillo falas — 5 min", ctaDemo: "▶ Shiko demon live", ctaPricing: "Shiko çmimet",
@@ -663,8 +663,8 @@ const T = {
     f4h: "Çdo gjuhë e botës", f4p: "Klienti të shkruan në çfarëdo gjuhe — AI i përgjigjet në gjuhën e tij. Turistët bëhen klientë.",
     f5h: "Panel që kuptohet në 30 sekonda", f5p: "Kalendari, takimet, bllokimet, njoftimet — gjithçka në një vend, e thjeshtë sa s'ka nevojë për shpjegim.",
     f6h: "Statistika që flasin para", f6p: "Sa rezervoi AI, sa mungesa u shmangën, sa të ardhura u siguruan — e sheh me shifra çdo muaj.",
-    bizH: "Për çdo biznes që punon me orare", bizP: "Nëse klientët të zënë kohë, OptimaBook të zë klientë.",
-    chips: ["💈 Berberë","💅 Sallone bukurie","🦷 Dentistë","💆 Fizioterapi","🏋️ Palestra","🚗 Servise makinash","🩺 Klinika","🍽 Restorante","🐾 Veterinerë","⚖️ Avokatë","🎨 Studio tatuazhesh","📸 Fotografë","📚 Mësues & kurse","✨ Dhe çdo biznes tjetër"],
+    bizH: "Ndërtuar për çdo biznes në botë", bizP: "Takime, porosi ose kërkesa — nëse ke klientë, OptimaBook t'i kthen në para.",
+    chips: ["💈 Berberë","💅 Sallone bukurie","🦷 Dentistë","💆 Fizioterapi","🏋️ Palestra","🚗 Servise makinash","🩺 Klinika","🍽 Restorante","🐾 Veterinerë","⚖️ Avokatë","🎨 Studio tatuazhesh","📸 Fotografë","📚 Mësues & kurse","🛍 Dyqane & e-commerce","💻 Freelancerë & agjenci","✨ Dhe çdo biznes tjetër"],
     prH: "Çmime të thjeshta, pa befasi", prP: "Më pak se sa të kushton një klient i vetëm i humbur në muaj.",
     mo: "/muaj", popular: "Më i zgjedhuri", planCta: "Provo demon",
     p1for: "Për biznesin e vogël me një kalendar",
@@ -694,7 +694,7 @@ const T = {
   en: {
     navDemo: "▶ Try the demo", navLogin: "Sign in / Sign up", navPortal: "My panel",
     brandTag: "The AI receptionist", navFeatures: "Features", navPricing: "Pricing", navFaq: "FAQ",
-    eyebrow: "For every appointment business · In any language · 24/7",
+    eyebrow: "For every business · In any language · 24/7",
     h1html: 'The AI receptionist that <span class="grad">never sleeps</span>',
     sub: "OptimaBook answers your customers on WhatsApp, Telegram & more, books appointments into your calendar and reminds them to show up — 24 hours a day, without you lifting a finger.",
     ctaStart: "🚀 Start free — 5 min", ctaDemo: "▶ Watch live demo", ctaPricing: "See pricing",
@@ -712,8 +712,8 @@ const T = {
     f4h: "Any language on Earth", f4p: "Customers write in any language — the AI replies in theirs. Tourists become customers.",
     f5h: "A panel you understand in 30 seconds", f5p: "Calendar, appointments, time blocks, notifications — all in one place, simple enough to need no manual.",
     f6h: "Statistics that talk money", f6p: "How much the AI booked, how many no-shows were prevented, how much revenue was secured — in numbers, every month.",
-    bizH: "For every business that runs on appointments", bizP: "If customers take your time, OptimaBook gets you customers.",
-    chips: ["💈 Barbershops","💅 Beauty salons","🦷 Dentists","💆 Physiotherapy","🏋️ Gyms","🚗 Car services","🩺 Clinics","🍽 Restaurants","🐾 Veterinarians","⚖️ Lawyers","🎨 Tattoo studios","📸 Photographers","📚 Tutors & courses","✨ And every other business"],
+    bizH: "Built for every business on Earth", bizP: "Appointments, orders or requests — if you have customers, OptimaBook turns them into revenue.",
+    chips: ["💈 Barbershops","💅 Beauty salons","🦷 Dentists","💆 Physiotherapy","🏋️ Gyms","🚗 Car services","🩺 Clinics","🍽 Restaurants","🐾 Veterinarians","⚖️ Lawyers","🎨 Tattoo studios","📸 Photographers","📚 Tutors & courses","🛍 Shops & e-commerce","💻 Freelancers & agencies","✨ And every other business"],
     prH: "Simple pricing, no surprises", prP: "Less than a single lost customer costs you per month.",
     mo: "/month", popular: "Most popular", planCta: "Try the demo",
     p1for: "For small businesses with one calendar",
