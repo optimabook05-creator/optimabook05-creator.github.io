@@ -2,7 +2,7 @@
 <html lang="sq">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <script src="v.js"></script>
 <title>OptimaBook — Rezervo / Porosit</title>
@@ -11,8 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script>(function(){var v=new URLSearchParams(location.search).get('v');document.write('<link rel="stylesheet" href="style.css'+(v?'?v='+encodeURIComponent(v):'')+'">');})();</script>
-<noscript><link rel="stylesheet" href="style.css"></noscript>
+<link rel="stylesheet" href="style.css?v=105">
 <style>
   .pub-wrap { max-width: 560px; margin: 30px auto 80px; padding: 0 16px; }
   .pub-card { background: var(--glass); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6);
@@ -79,7 +78,7 @@
 
   @media (max-width: 560px) {
     .pub-wrap { margin: 0 auto; padding: 0; max-width: 100%; }
-    .pub-card { border-radius: 0; min-height: 100vh; padding: 24px 16px calc(94px + env(safe-area-inset-bottom)); border-left: 0; border-right: 0; box-shadow: none; }
+    .pub-card { border-radius: 0; min-height: 100dvh; padding: calc(24px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-left)) calc(94px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right)); border-left: 0; border-right: 0; box-shadow: none; }
     .pub-biz { font-size: 22px; }
     .slots { grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 9px; }
     .slot-btn { padding: 13px 6px; font-size: 14.5px; }

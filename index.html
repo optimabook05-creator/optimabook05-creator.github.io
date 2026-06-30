@@ -251,9 +251,9 @@ footer a{color:var(--accent-deep);font-weight:800;text-decoration:none}
 .cmp .m{color:#c98a1e;font-size:17px;font-weight:800}
 
 /* ---------- Scroll-reveal ---------- */
-.reveal{opacity:0;transform:translateY(24px);will-change:opacity,transform;
+.reveal{opacity:0;transform:translateY(24px);
   transition:opacity .7s cubic-bezier(.22,.61,.36,1),transform .7s cubic-bezier(.22,.61,.36,1)}
-.reveal.in{opacity:1;transform:none}
+.reveal.in{opacity:1;transform:none;will-change:auto}
 @media (prefers-reduced-motion: reduce){.reveal{opacity:1;transform:none;transition:none}}
 
 /* ---------- Toggle i temës ---------- */
@@ -509,6 +509,16 @@ img,svg,video,table{max-width:100%}
   .nav{margin-top:calc(10px + env(safe-area-inset-top));top:calc(8px + env(safe-area-inset-top))}
   .hero{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
 }
+
+/* ============================================================
+   ⚡ PERFORMANCË — scroll i lëmuar si iOS (zero ndryshim pamje)
+   ============================================================ */
+/* Browser-i kapërcen renderimin (përfshi backdrop-filter) e kartave JASHTË ekranit */
+.step,.feat,.faq details,.bchip,.cmp-scroll{content-visibility:auto;contain-intrinsic-size:auto 180px}
+/* Pa "scroll-chaining" (jank kur arrin fundin e listës/tabelës) */
+.cmp-scroll{overscroll-behavior:contain}
+/* Promovim GPU për elementët pluskues (s'riboëjnë faqen kur scroll-on) */
+.nav,.chat{transform:translateZ(0)}
 </style>
 </head>
 <body>
