@@ -2054,6 +2054,26 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 #appView:not([hidden]) { animation: none !important; }
 .botnav { animation: none !important; }
 
+/* ============================================================
+   ⚡ PERFORMANCË NË TELEFON (pointer:coarse) — "materiale" si Apple
+   Research: WebKit → "backdrop-filter forces more rendering passes, use only
+   where most necessary"; iOS 26 "Liquid Glass" ngadalësoi iPhone 11 ~18%.
+   Në ekran të vogël blur-i i lartë S'DUKET ndryshe, por kushton shumë GPU.
+   Zgjidhja Apple-style: blur më i lehtë VETËM në prekje (telefon/tablet);
+   desktop-i i fuqishëm mban xhamin e plotë. + content-visibility kudo.
+   ============================================================ */
+@media (pointer: coarse) {
+  .topbar, .nav { -webkit-backdrop-filter: blur(16px) saturate(1.6); backdrop-filter: blur(16px) saturate(1.6); }
+  .botnav      { -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6); }
+  .modal       { -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); }
+  .modal-backdrop { -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px); }
+  .sidebar.open { -webkit-backdrop-filter: blur(20px) saturate(1.7); backdrop-filter: blur(20px) saturate(1.7); }
+  .today-card  { -webkit-backdrop-filter: none; backdrop-filter: none; }   /* sfond gradient i mjafton */
+  body::before { filter: blur(46px) saturate(1.4); }                        /* aurora: blur më i vogël në telefon */
+}
+/* Kartat shtesë që scroll-ojnë → browser-i i kapërcen jashtë ekranit (Safari 18+) */
+.cv-card, .ins-card, .bi-box { content-visibility: auto; contain-intrinsic-size: auto 110px; }
+
 /* ===================================================================
    AI Inbox (Bisedat AI) — zemra e produktit
    =================================================================== */
