@@ -499,8 +499,10 @@ footer{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
   mask-image:radial-gradient(58% 56% at 50% 26%,#000,transparent 76%)}
 :root[data-theme="dark"] .hero::before{background-image:radial-gradient(rgba(45,224,166,.08) 1px,transparent 1.4px)}
 
-/* Mbrojtje totale kundër overflow-it horizontal në çdo pajisje */
-html,body{max-width:100%;overflow-x:hidden}
+/* Mbrojtje totale kundër overflow-it horizontal në çdo pajisje.
+   KUJDES: overflow-x:hidden te <html> VRET position:sticky (navbar-i s'ngjitej më)
+   → clip: e njëjta mbrojtje, por sticky mbetet funksional. */
+html,body{max-width:100%;overflow-x:clip}
 img,svg,video,table{max-width:100%}
 
 /* Telefon i vogël (≤640): safe-areas anësore më të ngushta + nav më afër majës */
@@ -523,7 +525,7 @@ img,svg,video,table{max-width:100%}
    ✦ REDESIGN 2026 — "më e mira e Apple × Stripe × Linear" mbi Milk Glass
    ============================================================ */
 /* 1) TIPOGRAFI EDITORIALE (Apple): gjigante, e mprehtë, që merr frymë */
-.hero-copy h1,h1{font-size:clamp(42px,8.5vw,88px);letter-spacing:-.055em;line-height:.98}
+.hero-copy h1,h1{font-size:clamp(40px,7.5vw,78px);letter-spacing:-.05em;line-height:1.02}
 h2{font-size:clamp(30px,5vw,52px);letter-spacing:-.05em;line-height:1.05}
 .sub{font-size:clamp(17px,2.6vw,21px)}
 .sec-head{max-width:720px}
