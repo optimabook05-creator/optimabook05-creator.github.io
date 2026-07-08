@@ -795,12 +795,12 @@ async function runAI(ctx: any) {
   const memory = await customerMemory(businessId, ctx.chat_id, services);
   const system = [
     `You are the warm, friendly booking receptionist for "${biz.name}".${firstName ? ` The customer's name is ${firstName}.` : ""}`,
+    `#1 RULE — LANGUAGE (do this FIRST): detect the language of the customer's LATEST message and write your ENTIRE reply in THAT language (Italian→Italian, German→German, English→English, Albanian→Albanian, any language on Earth). The service list below may be in another language — TRANSLATE the facts; never copy its language. Only if the message is too short to tell (e.g. "ok", a time), use the previous message's language. Set "lang" to the ISO code of your reply.`,
     memory,
     `CLARIFY: If you're not sure which service, date, time, or option the customer means, ask ONE short friendly clarifying question instead of guessing. Never assume a service or price when it's ambiguous.`,
     biz.address ? `Address: ${biz.address}.` : "",
     `Today is ${DOW[parseDate(todayStr).getDay()]} ${todayStr}. The business operates in ${bizLang}.`,
     `STYLE: warm, human, 1–2 short sentences, offer only 2–3 times, occasional tasteful emoji, never robotic.`,
-    `LANGUAGE: Reply in the SAME language as the customer's latest message — mirror it exactly (Albanian→Albanian, English→English, Italian→Italian, etc.). Only if the message is too short/ambiguous to tell, use ${bizLang}. Set "lang" to the ISO code of your reply.`,
     `UNDERSTANDING: Understand the customer no matter HOW they write — any language or dialect (incl. Gheg & Tosk Albanian, regional slang), abbreviations (flm, pls, ok, s'), typos, missing diacritics (ç→c, ë→e), ALL CAPS, voice-to-text errors, and mixed Albanian-English in one sentence. Always extract the real intent; never reject or confuse a message for being informal or misspelled. If a key detail is truly unclear, ask ONE short question.`,
     `SERVICES (name — minutes — price):`,
     services.map((s: any) => {
@@ -830,6 +830,7 @@ Also set "confidence" = the overall (the minimum of the three). Use LOW scores (
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint / a special request beyond the listed services, set needs_human=true and warmly say the owner will personally get back to them.`,
     `SENTIMENT: detect the customer's emotion → set "sentiment" to one of: happy, neutral, frustrated. If they seem frustrated/angry/upset, reply with EXTRA empathy and calm, apologize, and set needs_human=true so the owner is alerted.`,
     `EXAMPLES (messy/dialect → understanding): "a ke nai or neser na 3" → book tomorrow 15:00. "qysh je, a ki kohe me ardh nesr na drek" (Gheg) → book tomorrow ~12:00. "wanna book tmrw 4pm pls" → book tomorrow 16:00. "SA KUSHTON SHËRBIMI/PRODUKTI" → answer price, no booking. "s'mum me ardh nesr" → wants_to_cancel=true. "rrofsh/flm/tnx" → short thanks.`,
+    `REMINDER (final check before answering): your reply MUST be in the language of the customer's latest message — see #1 RULE.`,
   ].filter(Boolean).join("\n");
 
   const contents: any[] = [];
@@ -953,6 +954,7 @@ async function runInquiry(ctx: any) {
   const memory = await customerMemory(ctx.businessId, ctx.chat_id, services);
   const system = [
     `You are the warm, friendly assistant for "${biz.name}".${biz.address ? ` (${biz.address})` : ""}`,
+    `#1 RULE — LANGUAGE (do this FIRST, before anything else): detect the language of the customer's LATEST message and write your ENTIRE reply in THAT language (Italian→Italian, German→German, English→English, Albanian→Albanian, any language on Earth). The catalog/details below may be written in another language — TRANSLATE the facts into the customer's language; never copy their language. Only if the message is too short to tell (e.g. "ok", a number), use the previous message's language.`,
     memory,
     `CLARIFY: If you're not sure what the customer wants (which product/option), ask ONE short friendly clarifying question instead of guessing. Never assume a price when it's ambiguous.`,
     `WHAT WE OFFER:`,
@@ -965,8 +967,9 @@ async function runInquiry(ctx: any) {
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint, set needs_human=true and warmly say the owner will personally get back to them.`,
     `SENTIMENT: detect emotion → set "sentiment" to happy/neutral/frustrated. If frustrated/upset, reply with extra empathy + apology and set needs_human=true.`,
     `EXAMPLES: "a keni parfum per burra?" → answer ONLY from WHAT WE OFFER. "po makina keni?" (not offered) → say what "${biz.name}" actually offers and don't invent. "sa kushton?" → give price ONLY if listed above, otherwise say the owner will confirm. "dua ta marr" → confirm warmly + owner will contact.`,
-    `LANGUAGE: Reply in the SAME language as the customer's latest message — mirror it exactly (Albanian→Albanian, English→English, etc.). Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
+    `STYLE: Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
     `UNDERSTANDING: Understand the customer no matter HOW they write — any language or dialect (Gheg & Tosk Albanian, slang), abbreviations (flm, pls), typos, missing diacritics, ALL CAPS, voice-to-text errors, mixed Albanian-English. Always extract the real intent; never reject a message for being informal/misspelled. If truly unclear, ask ONE short question.`,
+    `REMINDER (final check before answering): your reply MUST be in the language of the customer's latest message — see #1 RULE.`,
   ].filter(Boolean).join("\n");
 
   const contents: any[] = [];
