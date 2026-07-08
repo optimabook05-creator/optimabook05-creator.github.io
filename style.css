@@ -2107,6 +2107,19 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
   .sidebar.open { max-height: 86dvh; }     /* dvh: lartësi e saktë në iOS Safari */
 }
 
+/* ============================================================
+   📐 TIPOGRAFI & HAPËSIRA FLUIDE (si iOS) — shkallëzim i VAZHDUESHËM
+   me clamp() në çdo gjerësi ekrani, jo kërcime breakpoint-i.
+   Në skajet (telefon i vogël / desktop) vlerat = ato ekzistuese → zero
+   ndryshim pamjeje aty; fiton çdo madhësi NDËRMJET (fold, mini, tablet…).
+   ============================================================ */
+.panel-head h2 { font-size: clamp(18px, 4.2vw, 25px); }
+.stat-card .num { font-size: clamp(25px, 6vw, 32px); }
+.auth-card h1 { font-size: clamp(20px, 5vw, 23px); }
+.pub-biz { font-size: clamp(22px, 5.5vw, 24px); }
+.app-shell { padding-left: max(clamp(12px, 3vw, 18px), env(safe-area-inset-left));
+             padding-right: max(clamp(12px, 3vw, 18px), env(safe-area-inset-right)); }
+
 /* ===================================================================
    AI Inbox (Bisedat AI) — zemra e produktit
    =================================================================== */
