@@ -3,7 +3,8 @@
    I projektuar që të MOS shkaktojë kurrë "nuk shoh ndryshimet":
      • HTML (navigime)            → network-first (gjithmonë i freskët; cache vetëm fallback offline)
      • version.txt                → gjithmonë rrjeti (që auto-versioni të punojë)
-     • Supabase / esm.sh / fontet → gjithmonë rrjeti (cross-origin, s'i prekim)
+     • Supabase / esm.sh (cross-origin) → gjithmonë rrjeti
+     • fonts/*.woff2 (të pandryshueshme, same-origin) → cache-first
      • asetet lokale ME ?v=N      → cache-first (URL ndryshon kur ndryshon versioni ⇒ i freskët vetvetiu)
      • asetet lokale PA version    → network-first (qëndrojnë të freskëta; cache vetëm offline)
 */
@@ -43,6 +44,14 @@ self.addEventListener("fetch", (e) => {
   if (req.mode === "navigate") {
     e.respondWith(
       fetch(req).then((res) => putInCache(req, res)).catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Fontet e self-hostuara (të pandryshueshme) → cache-first (të çastit + offline)
+  if (url.pathname.startsWith("/fonts/")) {
+    e.respondWith(
+      caches.match(req).then((cached) => cached || fetch(req).then((res) => putInCache(req, res)))
     );
     return;
   }
