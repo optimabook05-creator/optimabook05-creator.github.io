@@ -518,6 +518,51 @@ img,svg,video,table{max-width:100%}
 .cmp-scroll{overscroll-behavior:contain}
 /* Promovim GPU për elementët pluskues (s'riboëjnë faqen kur scroll-on) */
 .nav,.chat{transform:translateZ(0)}
+
+/* ============================================================
+   ✦ REDESIGN 2026 — "më e mira e Apple × Stripe × Linear" mbi Milk Glass
+   ============================================================ */
+/* 1) TIPOGRAFI EDITORIALE (Apple): gjigante, e mprehtë, që merr frymë */
+.hero-copy h1,h1{font-size:clamp(42px,8.5vw,88px);letter-spacing:-.055em;line-height:.98}
+h2{font-size:clamp(30px,5vw,52px);letter-spacing:-.05em;line-height:1.05}
+.sub{font-size:clamp(17px,2.6vw,21px)}
+.sec-head{max-width:720px}
+.sec-head p{font-size:clamp(15px,2.2vw,18px)}
+.eyebrow{text-transform:uppercase;font-size:12px;letter-spacing:.14em;font-weight:800}
+
+/* 2) STATISTIKAT E HERO-s si Apple: numra të mëdhenj, PA kuti */
+.stats{gap:clamp(26px,5vw,60px);margin-top:54px}
+.stat{background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;min-width:0;text-align:left}
+.stat:hover{transform:none;box-shadow:none}
+.stat b{font-size:clamp(30px,4.5vw,42px)}
+.stat span{font-size:12.5px;letter-spacing:.02em}
+@media(max-width:900px){.stat{text-align:center}}
+
+/* 3) BUTONAT KRYESORË si pilula Apple */
+.btn.big{border-radius:999px;padding:17px 36px}
+
+/* 4) BANDA E ERRËT SMERALD (Stripe/Linear) — krahasimi, full-bleed, dramatik */
+#compare{position:relative;isolation:isolate;padding-top:clamp(70px,9vw,116px);padding-bottom:clamp(70px,9vw,116px)}
+#compare::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:100vw;transform:translateX(-50%);z-index:-1;
+  background:
+    radial-gradient(72% 60% at 18% 0%,rgba(32,201,151,.17),transparent 62%),
+    radial-gradient(58% 52% at 86% 100%,rgba(13,148,136,.15),transparent 62%),
+    linear-gradient(170deg,#082a20,#04150f 58%,#03110d)}
+#compare .sec-head h2{color:#fff}
+#compare .sec-head p{color:rgba(255,255,255,.72)}
+#compare .cmp{background:rgba(255,255,255,.96);backdrop-filter:none;-webkit-backdrop-filter:none;
+  box-shadow:0 44px 100px -34px rgba(0,0,0,.65)}
+:root[data-theme="dark"] #compare .cmp{background:rgba(24,34,30,.98)}
+:root[data-theme="dark"] #compare::before{background:
+  radial-gradient(72% 60% at 18% 0%,rgba(32,201,151,.13),transparent 62%),
+  linear-gradient(170deg,#0a2a20,#051a13 58%,#03110d)}
+
+/* 5) KARTAT — më të mprehta, hover më i thellë smerald */
+.step,.feat,.plan,.faq details{border-radius:22px}
+.step:hover,.feat:hover{box-shadow:0 30px 60px -24px rgba(8,127,91,.30)}
+
+/* 6) PLANI I ZGJEDHUR — unazë smerald + ngritje (fokusi i çmimeve) */
+.plan.featured{box-shadow:0 0 0 2px var(--accent),0 26px 64px -20px var(--accent-glow)}
 </style>
 </head>
 <body>
