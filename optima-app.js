@@ -2887,6 +2887,12 @@ function applyLang() {
   document.querySelectorAll("[data-t-ph]").forEach((el) => {
     const v = T[lang][el.dataset.tPh]; if (v !== undefined) el.placeholder = v;
   });
+  // Etiketë specifike për çdo buton "i" (lexuesit e ekranit): "Shpjegim: <titulli i seksionit>"
+  document.querySelectorAll(".info-dot").forEach((d) => {
+    const head = d.closest(".opt-title, .commerce-toggle, label");
+    const t = head ? head.textContent.replace(/\s*i\s*$/, "").trim() : "";
+    d.setAttribute("aria-label", (lang === "sq" ? "Shpjegim: " : "Info: ") + t);
+  });
   decorateMenuIcons();
   renderAuthMode();
 }

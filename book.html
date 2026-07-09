@@ -339,7 +339,15 @@ function wireOrder() {
 function done(title, p, trackUrl) {
   $("#card").innerHTML = `<div class="pub-msg"><div class="big">✅</div><h2>${title}</h2><p>${p}</p>
     ${trackUrl ? `<a class="btn primary" style="margin-top:16px;text-decoration:none" href="${trackUrl}">${tr("track")}</a>` : ""}
-    <button class="btn" style="margin-top:10px" onclick="location.reload()">${tr("another")}</button></div>`;
+    <button class="btn" style="margin-top:10px" id="againBtn">${tr("another")}</button></div>`;
+  // "Bëj një tjetër" pa rifreskim faqeje (SPA): pastro zgjedhjet + rimerr
+  // disponibilitetin e freskët nga serveri (orari i sapo-zënë s'del më i lirë).
+  $("#againBtn").onclick = () => {
+    for (const k in cart) delete cart[k];
+    for (const k in cartAddons) delete cartAddons[k];
+    selDate = ""; selTime = "";
+    init();
+  };
 }
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {
