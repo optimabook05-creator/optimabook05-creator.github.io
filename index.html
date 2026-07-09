@@ -499,10 +499,10 @@ footer{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
   mask-image:radial-gradient(58% 56% at 50% 26%,#000,transparent 76%)}
 :root[data-theme="dark"] .hero::before{background-image:radial-gradient(rgba(45,224,166,.08) 1px,transparent 1.4px)}
 
-/* Mbrojtje totale kundër overflow-it horizontal në çdo pajisje.
-   KUJDES: overflow-x:hidden te <html> VRET position:sticky (navbar-i s'ngjitej më)
-   → clip: e njëjta mbrojtje, por sticky mbetet funksional. */
-html,body{max-width:100%;overflow-x:clip}
+/* Mbrojtje nga overflow horizontal: VETËM te body (e ka rreshti 71 që në fillim).
+   KUJDES: mos i vendos overflow-x te <html> — hidden vret position:sticky
+   (navbar-i s'ngjitej), clip e zbraz render-in në Chromium. Body-only = propagohet
+   te viewport-i → sticky punon DHE s'ka overflow anësor. */
 img,svg,video,table{max-width:100%}
 
 /* Telefon i vogël (≤640): safe-areas anësore më të ngushta + nav më afër majës */
