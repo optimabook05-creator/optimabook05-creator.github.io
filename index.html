@@ -14,6 +14,10 @@
 <meta property="og:site_name" content="OptimaBook">
 <meta property="og:locale" content="sq_AL">
 <meta property="og:locale:alternate" content="en_US">
+<meta property="og:image" content="https://optimabook05-creator.github.io/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://optimabook05-creator.github.io/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OptimaBook — The AI receptionist that never sleeps">
 <meta name="twitter:description" content="Bookings, reminders and customer chat on WhatsApp, Telegram & more — fully automatic, 24/7, in any language.">
@@ -1091,6 +1095,16 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
     g.style.background="radial-gradient(560px circle at "+x.toFixed(1)+"px "+y.toFixed(1)+"px, rgba(16,185,129,.085), transparent 62%)";
     requestAnimationFrame(loop);
   })();
+})();
+/* Analytics minimal (Supabase, pa cookies): 1 beacon anonim per vizitë */
+(function(){
+  try{
+    fetch("https://mhbrhrsjlxluxvwjhcne.supabase.co/rest/v1/page_views",{
+      method:"POST",keepalive:true,
+      headers:{"Content-Type":"application/json","apikey":"sb_publishable_pwtiVjYqEYLYPZXfgponIg_YC3xSIgs","Authorization":"Bearer sb_publishable_pwtiVjYqEYLYPZXfgponIg_YC3xSIgs","Prefer":"return=minimal"},
+      body:JSON.stringify({path:location.pathname,ref:document.referrer.slice(0,180)||null,lang:navigator.language||null,w:innerWidth})
+    }).catch(function(){});
+  }catch(e){}
 })();
 /* Shiriti i progresit — përditësohet me scroll (rAF, i lirë) */
 (function(){
