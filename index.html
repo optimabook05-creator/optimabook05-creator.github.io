@@ -644,6 +644,38 @@ body{background:radial-gradient(120% 130% at 50% -10%,rgba(255,255,255,.34),tran
 #compare::after{content:"";position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);z-index:-1;pointer-events:none;
   width:min(920px,92%);height:55%;border-radius:50%;
   background:radial-gradient(closest-side,rgba(32,201,151,.30),transparent 72%);filter:blur(34px)}
+
+/* ============================================================
+   🖤 "PSE OPTIMABOOK" — XHAM I ERRËT mbi shkëlqim neoni
+   (nga referencat: dark frosted glass + glow — fintech/Adobe style)
+   ============================================================ */
+/* Banda: dritë e pasur brenda errësirës */
+#compare::before{background:
+  radial-gradient(46% 40% at 20% 10%,rgba(45,224,166,.30),transparent 60%),
+  radial-gradient(40% 36% at 84% 90%,rgba(34,211,238,.24),transparent 62%),
+  radial-gradient(28% 24% at 72% 18%,rgba(250,200,110,.12),transparent 65%),
+  linear-gradient(170deg,#07231b,#04150f 58%,#020d0a)}
+/* Orb-i i shkëlqimit PAS xhamit — i gjallë (si referencat) */
+#compare::after{width:min(880px,90%);height:62%;
+  background:radial-gradient(closest-side,rgba(16,185,129,.5),rgba(34,211,238,.20) 55%,transparent 75%);
+  filter:blur(46px);opacity:.92}
+/* Tabela → XHAM I ERRËT I NGRIRË pluskues mbi orb-in */
+#compare .cmp{background:linear-gradient(165deg,rgba(22,34,29,.72),rgba(10,18,15,.55));
+  -webkit-backdrop-filter:blur(26px) saturate(1.6);backdrop-filter:blur(26px) saturate(1.6);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 50px 110px -38px rgba(0,0,0,.8)}
+#compare .cmp th,#compare .cmp td{border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.82)}
+#compare .cmp thead th,#compare .cmp thead th:first-child,#compare .cmp tbody td:first-child{color:#fff}
+#compare .cmp tbody tr:last-child td{border-bottom:none}
+/* Kolona jonë — smerald që NDRIÇON (si karta VISA në referencë) */
+#compare .cmp .cmp-us{background:rgba(16,185,129,.14)}
+#compare .cmp thead th.cmp-us{color:#2de0a6;background:linear-gradient(160deg,rgba(16,185,129,.32),rgba(16,185,129,.12));
+  text-shadow:0 0 18px rgba(45,224,166,.6)}
+#compare .cmp .y{color:#2de0a6;text-shadow:0 0 12px rgba(45,224,166,.55)}
+#compare .cmp .n{color:rgba(255,255,255,.35)}
+#compare .cmp .m{color:#f4c450}
+/* Telefon: xham më i lehtë (performancë) */
+@media(pointer:coarse){#compare .cmp{-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4)}}
 /* d) Thjerrëzat e xhamit "notojnë" butë (liquid float) */
 .hero::after{animation:lensFloat 11s ease-in-out infinite alternate}
 .hero-demo::before{animation:lensFloat 8s ease-in-out infinite alternate-reverse}
