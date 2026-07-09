@@ -6,3 +6,6 @@ supabase/SEED-TEST.sql
 # Te gjitha dokumentet .md jane te brendshme (private) — pervec README
 *.md
 !README.md
+
+# Cilesime lokale te Claude Code — vetem lokale, JO publike
+.claude/

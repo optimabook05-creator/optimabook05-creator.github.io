@@ -481,6 +481,7 @@ const PRESETS = {
 
 /* ---------------- Helpers ---------------- */
 const $ = (s) => document.querySelector(s);
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const pad = (n) => String(n).padStart(2, "0");
 const hm = (t) => (t ? t.slice(0, 5) : t);                 // "09:00:00" -> "09:00"
 const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
@@ -2186,6 +2187,7 @@ async function renderAll() {
   await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads(), renderActivity(), renderCustomers()]);
 }
 
+let customersCache = null;
 async function renderCustomers() {
   const list = $("#customerList"); if (!list) return;
   const map = {};
@@ -2226,6 +2228,14 @@ async function renderCustomers() {
   const vipSet = new Set(bySpend.slice(0, Math.max(1, Math.round(total * 0.2))).filter((c) => c.spent > 0));
   // Renditje CRM-grade: vlera më e madhe e para
   rows.sort((a, b) => (b.spent || 0) - (a.spent || 0) || (b.last || "").localeCompare(a.last || ""));
+  // Ruaj në cache — kërkimi më pas filtron LOKALISHT, pa rikërkuar rrjetin çdo shkronjë
+  customersCache = { rows, total, returning, totalSpent, avg, vipSet };
+  drawCustomers();
+}
+function drawCustomers() {
+  const list = $("#customerList"); if (!list || !customersCache) return;
+  const { total, returning, totalSpent, avg, vipSet } = customersCache;
+  let rows = customersCache.rows;
   const q = ($("#custSearch") && $("#custSearch").value.trim().toLowerCase()) || "";
   if (q) rows = rows.filter((c) => (c.name || "").toLowerCase().includes(q));
   if (!total) { list.innerHTML = emptyHTML("👤", tr("emptyCustomers"), tr("emptyCustomersHint")); return; }
@@ -2877,6 +2887,12 @@ function applyLang() {
   document.querySelectorAll("[data-t-ph]").forEach((el) => {
     const v = T[lang][el.dataset.tPh]; if (v !== undefined) el.placeholder = v;
   });
+  // Etiketë specifike për çdo buton "i" (lexuesit e ekranit): "Shpjegim: <titulli i seksionit>"
+  document.querySelectorAll(".info-dot").forEach((d) => {
+    const head = d.closest(".opt-title, .commerce-toggle, label");
+    const t = head ? head.textContent.replace(/\s*i\s*$/, "").trim() : "";
+    d.setAttribute("aria-label", (lang === "sq" ? "Shpjegim: " : "Info: ") + t);
+  });
   decorateMenuIcons();
   renderAuthMode();
 }
@@ -2953,6 +2969,7 @@ function closeSidebarDrawer() {
   const s = document.querySelector(".sidebar"); if (s) { s.classList.remove("open"); s.style.transform = ""; s.style.transition = ""; }
   const b = $("#sidebarBackdrop"); if (b) b.hidden = true;
   document.body.classList.remove("menu-open");
+  const more = $("#botMore"); if (more) more.setAttribute("aria-expanded", "false");
 }
 // Tërhiq fletën poshtë për ta mbyllur (ndjesi native iOS) — vetëm nga koka/dorezimi
 function setupSheetDrag() {
@@ -2988,7 +3005,7 @@ function setupMobileNav() {
     b.onclick = () => { haptic(); const t = document.querySelector('.tab[data-tab="' + b.dataset.go + '"]'); if (t) t.click(); window.scrollTo({ top: 0, behavior: "smooth" }); };
   });
   const more = $("#botMore");
-  if (more) more.onclick = () => { const s = document.querySelector(".sidebar"); if (!s) return; const open = !s.classList.contains("open"); s.classList.toggle("open", open); document.body.classList.toggle("menu-open", open); const b = $("#sidebarBackdrop"); if (b) b.hidden = !open; };
+  if (more) more.onclick = () => { const s = document.querySelector(".sidebar"); if (!s) return; const open = !s.classList.contains("open"); s.classList.toggle("open", open); document.body.classList.toggle("menu-open", open); const b = $("#sidebarBackdrop"); if (b) b.hidden = !open; more.setAttribute("aria-expanded", open ? "true" : "false"); };
   const cl = $("#sidebarClose"); if (cl) cl.onclick = closeSidebarDrawer;
   const bd = $("#sidebarBackdrop"); if (bd) bd.onclick = closeSidebarDrawer;
   setupSheetDrag();
@@ -3053,7 +3070,7 @@ function wire() {
     } catch (ex) { errToast(ex); }
   };
   // (Mënyra, emri/adresa, tregtia ruhen tani me një buton të vetëm "Ruaj gjithçka" te General → #saveGeneral)
-  if ($("#custSearch")) $("#custSearch").oninput = renderCustomers;
+  if ($("#custSearch")) $("#custSearch").oninput = debounce(drawCustomers, 150);
   const tgBtn = $("#saveTgToken");
   if (tgBtn) tgBtn.onclick = async () => {
     const t = $("#tgToken").value.trim();
@@ -3199,7 +3216,7 @@ function wire() {
   const mc = $("#mfaCode"); if (mc) mc.addEventListener("keydown", (e) => { if (e.key === "Enter") mfaGateVerify(); });
   const mcb = $("#mfaConfirmBtn"); if (mcb) mcb.onclick = mfaConfirm;
   // AI Inbox: kërkimi + filtri i kanalit (filtron nga cache, pa rrjet) + shkurtorja nga Cilësimet
-  const ibS = $("#inboxSearch"); if (ibS) ibS.oninput = () => drawInbox();
+  const ibS = $("#inboxSearch"); if (ibS) ibS.oninput = debounce(() => drawInbox(), 150);
   const ibC = $("#inboxChannel"); if (ibC) ibC.onchange = () => drawInbox();
   const goIb = $("#goInbox"); if (goIb) goIb.onclick = () => { const t = document.querySelector('.tab[data-tab="inbox"]'); if (t) t.click(); };
   if ($("#aiForm")) $("#aiForm").addEventListener("submit", (e) => { e.preventDefault(); aiSend(); });

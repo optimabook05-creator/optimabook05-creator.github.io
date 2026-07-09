@@ -10,7 +10,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=126">
+<link rel="stylesheet" href="style.css?v=127">
 <style>
   .pub-wrap { max-width: 560px; margin: 30px auto 80px; padding: 0 16px; }
   .pub-card { background: var(--glass); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6);
@@ -339,7 +339,15 @@ function wireOrder() {
 function done(title, p, trackUrl) {
   $("#card").innerHTML = `<div class="pub-msg"><div class="big">✅</div><h2>${title}</h2><p>${p}</p>
     ${trackUrl ? `<a class="btn primary" style="margin-top:16px;text-decoration:none" href="${trackUrl}">${tr("track")}</a>` : ""}
-    <button class="btn" style="margin-top:10px" onclick="location.reload()">${tr("another")}</button></div>`;
+    <button class="btn" style="margin-top:10px" id="againBtn">${tr("another")}</button></div>`;
+  // "Bëj një tjetër" pa rifreskim faqeje (SPA): pastro zgjedhjet + rimerr
+  // disponibilitetin e freskët nga serveri (orari i sapo-zënë s'del më i lirë).
+  $("#againBtn").onclick = () => {
+    for (const k in cart) delete cart[k];
+    for (const k in cartAddons) delete cartAddons[k];
+    selDate = ""; selTime = "";
+    init();
+  };
 }
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {
