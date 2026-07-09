@@ -522,8 +522,9 @@ img,svg,video,table{max-width:100%}
 /* KUJDES: mos i vër content-visibility .bchip-ave — me karuselin (marquee) u jepte
    lartësi rezervë 180px chips-ave jashtë ekranit → balona gjigante */
 .step,.feat,.faq details,.cmp-scroll{content-visibility:auto;contain-intrinsic-size:auto 180px}
-/* Pa "scroll-chaining" (jank kur arrin fundin e listës/tabelës) */
-.cmp-scroll{overscroll-behavior:contain}
+/* KUJDES: overscroll-behavior:contain (të dy akset) mbi tabelën BLLOKONTE scroll-in
+   vertikal të faqes kur mausi/gishti ishte mbi të → vetëm aksi X kufizohet */
+.cmp-scroll{overscroll-behavior-x:contain;overscroll-behavior-y:auto}
 /* Promovim GPU për elementët pluskues (s'riboëjnë faqen kur scroll-on) */
 .nav,.chat{transform:translateZ(0)}
 
@@ -651,12 +652,18 @@ body{background:radial-gradient(120% 130% at 50% -10%,rgba(255,255,255,.34),tran
    🖤 "PSE OPTIMABOOK" — XHAM I ERRËT mbi shkëlqim neoni
    (nga referencat: dark frosted glass + glow — fintech/Adobe style)
    ============================================================ */
-/* Banda: dritë e pasur brenda errësirës */
+/* Banda: aurora e gjallë brenda errësirës (si referencat — glow shumëngjyrësh) */
 #compare::before{background:
-  radial-gradient(46% 40% at 20% 10%,rgba(45,224,166,.30),transparent 60%),
-  radial-gradient(40% 36% at 84% 90%,rgba(34,211,238,.24),transparent 62%),
-  radial-gradient(28% 24% at 72% 18%,rgba(250,200,110,.12),transparent 65%),
-  linear-gradient(170deg,#07231b,#04150f 58%,#020d0a)}
+  radial-gradient(46% 40% at 18% 8%,rgba(45,224,166,.36),transparent 60%),
+  radial-gradient(38% 34% at 86% 88%,rgba(34,211,238,.30),transparent 62%),
+  radial-gradient(26% 24% at 74% 16%,rgba(250,200,110,.16),transparent 65%),
+  radial-gradient(30% 26% at 6% 84%,rgba(168,85,247,.13),transparent 66%),
+  radial-gradient(22% 20% at 50% 100%,rgba(236,72,153,.09),transparent 70%),
+  linear-gradient(170deg,#082a20,#04150f 55%,#020d0a)}
+/* Orb-i merr frymë butë (vetëm transform → i lirë në GPU) */
+#compare::after{animation:orbPulse 9s ease-in-out infinite alternate}
+@keyframes orbPulse{from{transform:translate(-50%,-50%) scale(1)}to{transform:translate(-50%,-50%) scale(1.12)}}
+@media(prefers-reduced-motion:reduce){#compare::after{animation:none}}
 /* Orb-i i shkëlqimit PAS xhamit — i gjallë (si referencat) */
 #compare::after{width:min(880px,90%);height:62%;
   background:radial-gradient(closest-side,rgba(16,185,129,.5),rgba(34,211,238,.20) 55%,transparent 75%);
