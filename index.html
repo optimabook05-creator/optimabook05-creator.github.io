@@ -645,10 +645,41 @@ body{background:radial-gradient(120% 130% at 50% -10%,rgba(255,255,255,.34),tran
 .hero-demo::before{animation:lensFloat 8s ease-in-out infinite alternate-reverse}
 @keyframes lensFloat{from{transform:translateY(0)}to{transform:translateY(-16px)}}
 @media(prefers-reduced-motion:reduce){.hero::after,.hero-demo::before{animation:none}.step:hover::before,.feat:hover::before{animation:none}.cursor-glow{display:none}}
+
+/* ============================================================
+   ✨ PREKJET FINALE — karusel i gjallë · progres smerald · detaje
+   ============================================================ */
+/* a) Karusel i pafund i bizneseve (rrëshqet vetë, pushon në hover, skajet shuhen) */
+.biz-chips{overflow:hidden;max-width:1060px;flex-wrap:nowrap;justify-content:flex-start;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)}
+.biz-track{display:flex;gap:9px;width:max-content;animation:bizMarq 38s linear infinite}
+.biz-track:hover{animation-play-state:paused}
+.biz-track .bchip{white-space:nowrap}
+@keyframes bizMarq{to{transform:translateX(-50%)}}
+@media(prefers-reduced-motion:reduce){
+  .biz-track{animation:none;flex-wrap:wrap;justify-content:center;width:auto}
+  .biz-chips{-webkit-mask-image:none;mask-image:none}
+}
+/* b) Shirit progresi smerald lart (sa ke lexuar) */
+.scroll-progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;pointer-events:none;
+  background:linear-gradient(90deg,var(--accent-bright),var(--accent-deep));
+  box-shadow:0 0 12px var(--accent-glow);border-radius:0 3px 3px 0}
+/* c) Scrollbar i hollë smerald (Chrome/Edge/Brave) */
+::-webkit-scrollbar{width:11px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--accent-bright),var(--accent-deep));border-radius:8px;border:3px solid var(--milk)}
+::-webkit-scrollbar-thumb:hover{background:var(--accent-deep)}
+/* d) Footer elegant — vijë floku me gradient smerald */
+footer{border-top:0;position:relative;padding-top:40px}
+footer::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:min(680px,82%);height:1px;
+  background:linear-gradient(90deg,transparent,rgba(12,166,120,.55),transparent)}
 </style>
 </head>
 <body>
 <div class="cursor-glow" aria-hidden="true"></div>
+<div class="scroll-progress" aria-hidden="true"></div>
 
 <nav class="nav">
   <a class="brand" href="#"><span class="logo">O</span><span class="brand-txt"><b>OptimaBook</b><small class="brand-tag" data-t="brandTag">Recepsionisti AI</small></span></a>
@@ -967,12 +998,16 @@ function apply() {
   });
   const chips = document.getElementById("bizChips");
   chips.innerHTML = "";
-  for (const c of T[lang].chips) {
+  // Karusel i pafund (marquee): lista dyfishohet → rrëshqet pa fund, pushon në hover
+  const track = document.createElement("div");
+  track.className = "biz-track";
+  for (let r = 0; r < 2; r++) for (const c of T[lang].chips) {
     const s = document.createElement("span");
     s.className = "bchip";
     s.textContent = c;
-    chips.appendChild(s);
+    track.appendChild(s);
   }
+  chips.appendChild(track);
   updatePortalLink();
 }
 
@@ -1056,6 +1091,15 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
     g.style.background="radial-gradient(560px circle at "+x.toFixed(1)+"px "+y.toFixed(1)+"px, rgba(16,185,129,.085), transparent 62%)";
     requestAnimationFrame(loop);
   })();
+})();
+/* Shiriti i progresit — përditësohet me scroll (rAF, i lirë) */
+(function(){
+  var p=document.querySelector(".scroll-progress");if(!p)return;
+  var t=false;
+  function upd(){t=false;var h=document.documentElement,m=h.scrollHeight-innerHeight;
+    p.style.width=(m>0?(h.scrollTop/m*100):0)+"%"}
+  addEventListener("scroll",function(){if(!t){t=true;requestAnimationFrame(upd)}},{passive:true});
+  upd();
 })();
 </script>
 </body>
