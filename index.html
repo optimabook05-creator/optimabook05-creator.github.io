@@ -519,7 +519,9 @@ img,svg,video,table{max-width:100%}
    ⚡ PERFORMANCË — scroll i lëmuar si iOS (zero ndryshim pamje)
    ============================================================ */
 /* Browser-i kapërcen renderimin (përfshi backdrop-filter) e kartave JASHTË ekranit */
-.step,.feat,.faq details,.bchip,.cmp-scroll{content-visibility:auto;contain-intrinsic-size:auto 180px}
+/* KUJDES: mos i vër content-visibility .bchip-ave — me karuselin (marquee) u jepte
+   lartësi rezervë 180px chips-ave jashtë ekranit → balona gjigante */
+.step,.feat,.faq details,.cmp-scroll{content-visibility:auto;contain-intrinsic-size:auto 180px}
 /* Pa "scroll-chaining" (jank kur arrin fundin e listës/tabelës) */
 .cmp-scroll{overscroll-behavior:contain}
 /* Promovim GPU për elementët pluskues (s'riboëjnë faqen kur scroll-on) */
@@ -689,7 +691,8 @@ body{background:radial-gradient(120% 130% at 50% -10%,rgba(255,255,255,.34),tran
 .biz-chips{overflow:hidden;max-width:1060px;flex-wrap:nowrap;justify-content:flex-start;
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);
   mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)}
-.biz-track{display:flex;gap:9px;width:max-content;animation:bizMarq 38s linear infinite}
+.biz-track{display:flex;gap:9px;width:max-content;align-items:center;animation:bizMarq 38s linear infinite}
+.biz-track .bchip{content-visibility:visible;contain-intrinsic-size:auto}
 .biz-track:hover{animation-play-state:paused}
 .biz-track .bchip{white-space:nowrap}
 @keyframes bizMarq{to{transform:translateX(-50%)}}
