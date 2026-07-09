@@ -623,9 +623,32 @@ body{background:radial-gradient(120% 130% at 50% -10%,rgba(255,255,255,.34),tran
   -webkit-backdrop-filter:blur(16px) saturate(1.8);backdrop-filter:blur(16px) saturate(1.8);
   border:1px solid rgba(255,255,255,.65);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.85),0 8px 22px -10px var(--accent-glow)}
 .chat{box-shadow:0 0 0 1px rgba(255,255,255,.6),inset 0 1.5px 0 rgba(255,255,255,.7),0 40px 90px -30px rgba(8,127,91,.45)}
+
+/* ============================================================
+   🌟 MREKULLI PASS — firmat e site-ve më të bukur në botë
+   ============================================================ */
+/* a) Dritë që ndjek kursorin (si Linear/Vercel) — vetëm maus, jo prekje */
+.cursor-glow{position:fixed;inset:0;z-index:1;pointer-events:none}
+@media(pointer:coarse){.cursor-glow{display:none}}
+/* b) Shkëlqim që PËRSHKON kartën në hover (sheen sweep) */
+.step::before,.feat::before{content:"";position:absolute;top:-10%;bottom:-10%;left:-75%;width:55%;z-index:1;pointer-events:none;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:skewX(-18deg);opacity:0}
+.step:hover::before,.feat:hover::before{animation:sheen .85s cubic-bezier(.3,.6,.3,1)}
+@keyframes sheen{0%{left:-75%;opacity:1}100%{left:125%;opacity:0}}
+/* c) Aureolë smerald nën tabelën pluskuese të bandës së errët */
+#compare::after{content:"";position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);z-index:-1;pointer-events:none;
+  width:min(920px,92%);height:55%;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(32,201,151,.30),transparent 72%);filter:blur(34px)}
+/* d) Thjerrëzat e xhamit "notojnë" butë (liquid float) */
+.hero::after{animation:lensFloat 11s ease-in-out infinite alternate}
+.hero-demo::before{animation:lensFloat 8s ease-in-out infinite alternate-reverse}
+@keyframes lensFloat{from{transform:translateY(0)}to{transform:translateY(-16px)}}
+@media(prefers-reduced-motion:reduce){.hero::after,.hero-demo::before{animation:none}.step:hover::before,.feat:hover::before{animation:none}.cursor-glow{display:none}}
 </style>
 </head>
 <body>
+<div class="cursor-glow" aria-hidden="true"></div>
 
 <nav class="nav">
   <a class="brand" href="#"><span class="logo">O</span><span class="brand-txt"><b>OptimaBook</b><small class="brand-tag" data-t="brandTag">Recepsionisti AI</small></span></a>
@@ -1020,6 +1043,20 @@ apply();
 if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
+</script>
+<script>
+/* Drita që ndjek kursorin — e butë, me inerci (rAF), vetëm maus + jo reduced-motion */
+(function(){
+  var g=document.querySelector(".cursor-glow");
+  if(!g||!matchMedia("(pointer:fine)").matches||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  var x=innerWidth/2,y=innerHeight/3,tx=x,ty=y;
+  addEventListener("pointermove",function(e){tx=e.clientX;ty=e.clientY},{passive:true});
+  (function loop(){
+    x+=(tx-x)*.10;y+=(ty-y)*.10;
+    g.style.background="radial-gradient(560px circle at "+x.toFixed(1)+"px "+y.toFixed(1)+"px, rgba(16,185,129,.085), transparent 62%)";
+    requestAnimationFrame(loop);
+  })();
+})();
 </script>
 </body>
 </html>
