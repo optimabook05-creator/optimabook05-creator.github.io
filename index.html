@@ -661,9 +661,11 @@ body{background:radial-gradient(120% 130% at 50% -10%,rgba(255,255,255,.34),tran
 #compare::after{width:min(880px,90%);height:62%;
   background:radial-gradient(closest-side,rgba(16,185,129,.5),rgba(34,211,238,.20) 55%,transparent 75%);
   filter:blur(46px);opacity:.92}
-/* Tabela → XHAM I ERRËT I NGRIRË pluskues mbi orb-in */
-#compare .cmp{background:linear-gradient(165deg,rgba(22,34,29,.72),rgba(10,18,15,.55));
-  -webkit-backdrop-filter:blur(26px) saturate(1.6);backdrop-filter:blur(26px) saturate(1.6);
+/* Tabela → XHAM I ERRËT pluskues mbi orb-in.
+   PERF: PA backdrop-filter — element i madh me blur ri-llogaritet në çdo scroll = lag.
+   Gradient gjysmë-transparent i errët → pamje identike mbi bandën e errët, kosto zero. */
+#compare .cmp{background:linear-gradient(165deg,rgba(24,36,31,.90),rgba(12,20,17,.82));
+  -webkit-backdrop-filter:none;backdrop-filter:none;
   border:1px solid rgba(255,255,255,.14);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 50px 110px -38px rgba(0,0,0,.8)}
 #compare .cmp th,#compare .cmp td{border-bottom:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.82)}
@@ -676,8 +678,6 @@ body{background:radial-gradient(120% 130% at 50% -10%,rgba(255,255,255,.34),tran
 #compare .cmp .y{color:#2de0a6;text-shadow:0 0 12px rgba(45,224,166,.55)}
 #compare .cmp .n{color:rgba(255,255,255,.35)}
 #compare .cmp .m{color:#f4c450}
-/* Telefon: xham më i lehtë (performancë) */
-@media(pointer:coarse){#compare .cmp{-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4)}}
 /* d) Thjerrëzat e xhamit "notojnë" butë (liquid float) */
 .hero::after{animation:lensFloat 11s ease-in-out infinite alternate}
 .hero-demo::before{animation:lensFloat 8s ease-in-out infinite alternate-reverse}
@@ -691,8 +691,13 @@ body{background:radial-gradient(120% 130% at 50% -10%,rgba(255,255,255,.34),tran
 .biz-chips{overflow:hidden;max-width:1060px;flex-wrap:nowrap;justify-content:flex-start;
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);
   mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)}
-.biz-track{display:flex;gap:9px;width:max-content;align-items:center;animation:bizMarq 38s linear infinite}
-.biz-track .bchip{content-visibility:visible;contain-intrinsic-size:auto}
+.biz-track{display:flex;gap:9px;width:max-content;align-items:center;will-change:transform;animation:bizMarq 38s linear infinite}
+/* PERF: chips-at që LËVIZIN s'duhet të kenë backdrop-filter (ri-kampionim çdo kuadër = lag).
+   Sfond solid gradient — duket njësoj, kushton zero. */
+.biz-track .bchip{content-visibility:visible;contain-intrinsic-size:auto;
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  background:linear-gradient(165deg,rgba(255,255,255,.92),rgba(255,255,255,.72))}
+:root[data-theme="dark"] .biz-track .bchip{background:linear-gradient(165deg,rgba(44,58,52,.95),rgba(28,38,34,.85))}
 .biz-track:hover{animation-play-state:paused}
 .biz-track .bchip{white-space:nowrap}
 @keyframes bizMarq{to{transform:translateX(-50%)}}
@@ -1126,10 +1131,22 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   var x=innerWidth/2,y=innerHeight/3,tx=x,ty=y;
   addEventListener("pointermove",function(e){tx=e.clientX;ty=e.clientY},{passive:true});
   (function loop(){
-    x+=(tx-x)*.10;y+=(ty-y)*.10;
-    g.style.background="radial-gradient(560px circle at "+x.toFixed(1)+"px "+y.toFixed(1)+"px, rgba(16,185,129,.085), transparent 62%)";
+    var dx=tx-x,dy=ty-y;
+    if(dx*dx+dy*dy>.3){ // PERF: rilyej VETËM kur mausi lëviz vërtet (jo çdo kuadër)
+      x+=dx*.10;y+=dy*.10;
+      g.style.background="radial-gradient(560px circle at "+x.toFixed(1)+"px "+y.toFixed(1)+"px, rgba(16,185,129,.085), transparent 62%)";
+    }
     requestAnimationFrame(loop);
   })();
+})();
+/* PERF: karuseli i bizneseve punon VETËM kur duket në ekran */
+(function(){
+  var el=document.getElementById("bizChips");
+  if(!el||!("IntersectionObserver" in window))return;
+  new IntersectionObserver(function(en){
+    var t=el.querySelector(".biz-track");
+    if(t)t.style.animationPlayState=en[0].isIntersecting?"running":"paused";
+  },{rootMargin:"100px"}).observe(el);
 })();
 /* Analytics minimal (Supabase, pa cookies): 1 beacon anonim per vizitë */
 (function(){
