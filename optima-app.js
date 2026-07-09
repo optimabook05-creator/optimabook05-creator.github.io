@@ -211,6 +211,11 @@ const T = {
     setPubH: "🌐 Faqe vetë-shërbimi (OPSIONALE)", pubDesc: "S'të duhet detyrimisht. Klientët thjesht të shkruajnë normalisht në WhatsApp/Instagram/Telegram dhe AI u përgjigjet aty. Ky link është vetëm një shtesë — nëse do, vendose në bio që klientët të rezervojnë edhe vetë (si Calendly).",
     copyLink: "Kopjo", openLink: "Hap ↗", copied: "✅ U kopjua",
     teamH: "👥 Ekipi (qasja për punonjësit)", teamDesc: "Shto punonjës me email. Kur regjistrohen me atë email te OptimaBook, hyjnë në KËTË biznes. Pa email-e — thjesht thuaju email-in.",
+    mfaH: "🔐 Siguria — Verifikimi me 2 hapa (2FA)", mfaDesc: "Edhe nëse dikush ta vjedh fjalëkalimin, s'hyn dot pa kodin nga telefoni yt. E rekomanduar fort.",
+    mfaOn: "✅ 2FA është AKTIV — llogaria jote është e mbrojtur.", mfaOff: "2FA nuk është aktiv.", mfaEnable: "🔐 Aktivizo 2FA", mfaDisableBtn: "Çaktivizo 2FA",
+    mfaScan: "1) Skano këtë QR me Google Authenticator / Authy · 2) Shkruaj kodin 6-shifror më poshtë:", mfaSecretLbl: "Ose fut me dorë:", mfaCodePh: "Kodi 6-shifror", mfaConfirm: "Aktivizo ✓",
+    mfaOkOn: "2FA u aktivizua! 🔐", mfaOkOff: "2FA u çaktivizua.", mfaBad: "Kod i pasaktë — provo përsëri.",
+    mfaGateT: "🔐 Verifikimi 2FA", mfaGateD: "Shkruaj kodin 6-shifror nga aplikacioni yt i verifikimit (Google Authenticator etj.)", mfaCodeLbl: "Kodi", mfaGo: "Vazhdo →",
     teamEmailPh: "email i punonjësit", roleStaff: "Staf", roleManager: "Manaxher", addTeamBtn: "+ Shto",
     teamEmpty: "Ende pa anëtarë ekipi.", teamEmptyHint: "Vetëm ti (pronari) ke qasje tani. Shto punonjës që ta menaxhojnë biznesin bashkë.",
     dangerH: "⚠️ Zona e rrezikut", dangerDesc: "Fshirja heq përgjithmonë biznesin dhe të gjitha të dhënat e tij (shërbime, takime, porosi, klientë). S'kthehet mbrapsht.",
@@ -415,6 +420,11 @@ const T = {
     setPubH: "🌐 Self-service page (OPTIONAL)", pubDesc: "Not required. Customers just message you normally on WhatsApp/Instagram/Telegram and the AI replies there. This link is only an extra — if you want, put it in your bio so customers can also book themselves (like Calendly).",
     copyLink: "Copy", openLink: "Open ↗", copied: "✅ Copied",
     teamH: "👥 Team (employee access)", teamDesc: "Add employees by email. When they sign up with that email on OptimaBook, they get into THIS business. No emails sent — just tell them the address.",
+    mfaH: "🔐 Security — Two-factor authentication (2FA)", mfaDesc: "Even if someone steals your password, they can't get in without the code from your phone. Strongly recommended.",
+    mfaOn: "✅ 2FA is ON — your account is protected.", mfaOff: "2FA is not enabled.", mfaEnable: "🔐 Enable 2FA", mfaDisableBtn: "Disable 2FA",
+    mfaScan: "1) Scan this QR with Google Authenticator / Authy · 2) Enter the 6-digit code below:", mfaSecretLbl: "Or enter manually:", mfaCodePh: "6-digit code", mfaConfirm: "Enable ✓",
+    mfaOkOn: "2FA enabled! 🔐", mfaOkOff: "2FA disabled.", mfaBad: "Wrong code — try again.",
+    mfaGateT: "🔐 2FA verification", mfaGateD: "Enter the 6-digit code from your authenticator app (Google Authenticator etc.)", mfaCodeLbl: "Code", mfaGo: "Continue →",
     teamEmailPh: "employee email", roleStaff: "Staff", roleManager: "Manager", addTeamBtn: "+ Add",
     teamEmpty: "No team members yet.", teamEmptyHint: "Only you (owner) have access now. Add employees to run the business together.",
     dangerH: "⚠️ Danger zone", dangerDesc: "Deleting permanently removes the business and all its data (services, appointments, orders, customers). This cannot be undone.",
@@ -684,10 +694,92 @@ async function handleAuth(e) {
 }
 
 async function afterLogin() {
+  // PORTA 2FA: nëse llogaria ka 2FA aktiv dhe sesioni s'është verifikuar ende → kërko kodin
+  try {
+    const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") { showMfaGate(); return; }
+  } catch (e) { /* MFA i padisponueshëm → vazhdo normalisht */ }
   try { const { data } = await sb.auth.getUser(); myUserId = data.user ? data.user.id : null; myEmail = data.user ? (data.user.email || "") : ""; } catch (e) {}
   await loadBusiness();
   if (biz) { renderBizSwitch(); showView("app"); await loadAll(); }   // shfaq panelin së pari → s'mbetet kurrë bosh
   else { openOnboard(); showView("onboard"); }
+}
+
+/* ---------------- 2FA (TOTP) — porta e login-it + aktivizimi te Cilësimet ---------------- */
+function showMfaGate() {
+  showView("auth");
+  const f = $("#authForm"), t = $("#authToggle"), b = $("#mfaBox");
+  if (f) f.hidden = true; if (t) t.hidden = true; if (b) b.hidden = false;
+  const ttl = $("#authTitle"); if (ttl) ttl.textContent = tr("mfaGateT");
+  setTimeout(() => { const c = $("#mfaCode"); if (c) { c.value = ""; c.focus(); } }, 60);
+}
+async function mfaGateVerify() {
+  const err = $("#mfaErr"); err.textContent = "";
+  const code = ($("#mfaCode").value || "").trim();
+  if (code.length !== 6) { err.textContent = tr("mfaBad"); return; }
+  try {
+    const { data: lf } = await sb.auth.mfa.listFactors();
+    const f = (lf && lf.totp || []).find((x) => x.status === "verified");
+    if (!f) throw new Error("no factor");
+    const { data: ch, error: e1 } = await sb.auth.mfa.challenge({ factorId: f.id });
+    if (e1) throw e1;
+    const { error: e2 } = await sb.auth.mfa.verify({ factorId: f.id, challengeId: ch.id, code });
+    if (e2) { err.textContent = tr("mfaBad"); return; }
+    const b = $("#mfaBox"); if (b) b.hidden = true;
+    const fo = $("#authForm"), t = $("#authToggle"); if (fo) fo.hidden = false; if (t) t.hidden = false;
+    await afterLogin();
+  } catch (ex) { err.textContent = ex.message || tr("mfaBad"); }
+}
+let mfaFactorId = null;
+async function renderMfa() {
+  const box = $("#mfaStatus"); if (!box) return;
+  let on = false;
+  try {
+    const { data: lf } = await sb.auth.mfa.listFactors();
+    on = !!((lf && lf.totp || []).find((x) => x.status === "verified"));
+  } catch (e) { box.innerHTML = ""; return; }
+  const eb = $("#mfaEnrollBox"); if (eb) eb.hidden = true;
+  box.innerHTML = on
+    ? `<p style="font-weight:800;color:var(--accent-deep);margin-bottom:10px">${tr("mfaOn")}</p><button class="btn small ghost danger" id="mfaOffBtn">${tr("mfaDisableBtn")}</button>`
+    : `<p style="font-weight:700;color:var(--ink-soft);margin-bottom:10px">${tr("mfaOff")}</p><button class="btn small primary" id="mfaOnBtn">${tr("mfaEnable")}</button>`;
+  const onBtn = $("#mfaOnBtn"); if (onBtn) onBtn.onclick = mfaEnroll;
+  const offBtn = $("#mfaOffBtn"); if (offBtn) offBtn.onclick = mfaDisable;
+}
+async function mfaEnroll() {
+  try {
+    // pastro faktorë të lënë përgjysmë nga tentativa të vjetra
+    const { data: lf } = await sb.auth.mfa.listFactors();
+    for (const f of (lf && lf.totp || [])) if (f.status !== "verified") { try { await sb.auth.mfa.unenroll({ factorId: f.id }); } catch (e) {} }
+    const { data, error } = await sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "OptimaBook " + Date.now() });
+    if (error) throw error;
+    mfaFactorId = data.id;
+    $("#mfaQr").innerHTML = data.totp.qr_code;           // SVG i gatshëm nga Supabase
+    $("#mfaSecret").textContent = data.totp.secret;
+    $("#mfaEnrollBox").hidden = false;
+    $("#mfaEnrollErr").textContent = "";
+    setTimeout(() => { const c = $("#mfaEnrollCode"); if (c) { c.value = ""; c.focus(); } }, 60);
+  } catch (ex) { toast(ex.message || String(ex)); }
+}
+async function mfaConfirm() {
+  const err = $("#mfaEnrollErr"); err.textContent = "";
+  const code = ($("#mfaEnrollCode").value || "").trim();
+  if (!mfaFactorId || code.length !== 6) { err.textContent = tr("mfaBad"); return; }
+  try {
+    const { data: ch, error: e1 } = await sb.auth.mfa.challenge({ factorId: mfaFactorId });
+    if (e1) throw e1;
+    const { error: e2 } = await sb.auth.mfa.verify({ factorId: mfaFactorId, challengeId: ch.id, code });
+    if (e2) { err.textContent = tr("mfaBad"); return; }
+    toast(tr("mfaOkOn"));
+    await renderMfa();
+  } catch (ex) { err.textContent = ex.message || tr("mfaBad"); }
+}
+async function mfaDisable() {
+  try {
+    const { data: lf } = await sb.auth.mfa.listFactors();
+    for (const f of (lf && lf.totp || [])) { try { await sb.auth.mfa.unenroll({ factorId: f.id }); } catch (e) {} }
+    toast(tr("mfaOkOff"));
+    await renderMfa();
+  } catch (ex) { toast(ex.message || String(ex)); }
 }
 
 async function logout() {
@@ -786,6 +878,7 @@ async function loadAll() {
   setupStaffUI();
   applyModeUI();
   renderSettings();
+  renderMfa();
   await renderAll();
   renderCatalog();
   if (commerceOn()) renderOrders();
@@ -3101,6 +3194,10 @@ function wire() {
       closeSidebarDrawer(); syncBotnav(); // sirtar i telefonit + sinkronizim i barit poshtë
     };
   });
+  // 2FA: porta e login-it + konfirmimi i aktivizimit
+  const mg = $("#mfaGo"); if (mg) mg.onclick = mfaGateVerify;
+  const mc = $("#mfaCode"); if (mc) mc.addEventListener("keydown", (e) => { if (e.key === "Enter") mfaGateVerify(); });
+  const mcb = $("#mfaConfirmBtn"); if (mcb) mcb.onclick = mfaConfirm;
   // AI Inbox: kërkimi + filtri i kanalit (filtron nga cache, pa rrjet) + shkurtorja nga Cilësimet
   const ibS = $("#inboxSearch"); if (ibS) ibS.oninput = () => drawInbox();
   const ibC = $("#inboxChannel"); if (ibC) ibC.onchange = () => drawInbox();

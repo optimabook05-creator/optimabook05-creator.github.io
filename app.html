@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=121">
-<link rel="modulepreload" href="config.js?v=121">
-<link rel="modulepreload" href="optima-app.js?v=121">
+<link rel="stylesheet" href="style.css?v=122">
+<link rel="modulepreload" href="config.js?v=122">
+<link rel="modulepreload" href="optima-app.js?v=122">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -89,6 +89,14 @@
       <button type="submit" class="btn primary big" id="authSubmit">Regjistrohu</button>
     </form>
     <button class="auth-toggle" id="authToggle">Ke llogari? Hyr</button>
+    <div id="mfaBox" hidden>
+      <h1 data-t="mfaGateT" style="font-family:var(--font-display);font-size:20px;margin-bottom:6px">🔐 Verifikimi 2FA</h1>
+      <p class="lead" data-t="mfaGateD">Shkruaj kodin 6-shifror nga aplikacioni yt i verifikimit (Google Authenticator etj.)</p>
+      <label data-t="mfaCodeLbl">Kodi</label>
+      <input type="text" id="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+      <div class="auth-error" id="mfaErr"></div>
+      <button type="button" class="btn primary big" id="mfaGo" data-t="mfaGo" style="width:100%">Vazhdo →</button>
+    </div>
   </div>
 </section>
 
@@ -506,6 +514,22 @@
           </div>
         </div>
       </div>
+
+      <div class="settings-block">
+        <h3 class="set-h" data-t="mfaH">🔐 Siguria — Verifikimi me 2 hapa (2FA)</h3>
+        <p class="pane-desc" data-t="mfaDesc">Edhe nëse dikush ta vjedh fjalëkalimin, s'hyn dot pa kodin nga telefoni yt. E rekomanduar fort.</p>
+        <div id="mfaStatus"></div>
+        <div id="mfaEnrollBox" hidden>
+          <p class="pane-desc" data-t="mfaScan">1) Skano këtë QR me Google Authenticator / Authy · 2) Shkruaj kodin 6-shifror më poshtë:</p>
+          <div id="mfaQr" style="background:#fff;border-radius:14px;padding:10px;width:190px;margin-bottom:8px"></div>
+          <p style="font-size:12px;color:var(--ink-soft);font-weight:700;margin-bottom:10px"><span data-t="mfaSecretLbl">Ose fut me dorë:</span> <code id="mfaSecret" class="biz-id"></code></p>
+          <div class="settings-input">
+            <input type="text" id="mfaEnrollCode" inputmode="numeric" maxlength="6" data-t-ph="mfaCodePh" placeholder="Kodi 6-shifror">
+            <button class="btn small primary" id="mfaConfirmBtn" data-t="mfaConfirm">Aktivizo ✓</button>
+          </div>
+          <div class="auth-error" id="mfaEnrollErr"></div>
+        </div>
+      </div>
     </div>
     </div><!-- /panel-content -->
     </div><!-- /panel-body -->
@@ -769,7 +793,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=121"></script>
-<script type="module" src="optima-app.js?v=121"></script>
+<script src="core.js?v=122"></script>
+<script type="module" src="optima-app.js?v=122"></script>
 </body>
 </html>
