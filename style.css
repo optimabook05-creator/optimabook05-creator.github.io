@@ -1059,6 +1059,25 @@ body::after {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ---------- Banderola "pa internet" (Faza 1) — e qetë, lart, jo bllokuese ---------- */
+#netBanner {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 74px); left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  z-index: 118; pointer-events: none;
+  background: rgba(22, 32, 28, .92);
+  color: #fff; font-family: var(--font-body); font-weight: 700; font-size: 13px;
+  padding: 9px 18px; border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  box-shadow: 0 10px 30px rgba(22, 32, 28, .3);
+  opacity: 0; transition: opacity .25s ease, transform .25s cubic-bezier(.2, 1, .35, 1);
+  max-width: calc(100vw - 32px); text-align: center;
+}
+#netBanner.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+:root[data-theme="dark"] #netBanner { background: rgba(240, 244, 242, .95); color: #16201c; border-color: rgba(0, 0, 0, .08); }
+
+/* Rifreskimet e heshtura të statistikave s'duhet t'i rianimojnë kartat (dridhje e lirë) */
+.no-replay > *, .no-replay .stat-card { animation: none !important; }
+
 /* ---------- Navigimi mobile: pilulë xhami pezull ---------- */
 .view-switch {
   display: none;

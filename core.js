@@ -181,7 +181,61 @@
     return null;
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay };
+  /* -------------------------------------------------------------------
+     KUJTESA E TË DHËNAVE (Faza 1 — paneli i menjëhershëm si aplikacion nativ)
+     Tri copëza të pastra, pa DOM e pa rrjet, që paneli i thur bashkë:
+
+     makeCache() — mban listat në kujtesë me "rev" (numër versioni).
+       rev rritet sa herë të dhënat ndryshojnë → pamja e di nëse duhet
+       rivizatuar apo jo (asnjë rivizatim = asnjë dridhje e kotë).
+
+     makeSeq() — roje kundër garave (race): çdo kërkesë merr një biletë;
+       nëse ndërkohë ndodhi një ndryshim lokal (bump), përgjigjet e vjetra
+       hidhen poshtë — s'mund të mbishkruajnë kurrë gjendjen më të re.
+
+     listChanged(a,b) — a ndryshoi vërtet lista? (krahasim i thellë, i lirë
+       për listat tona ≤ qindra rreshta). Përdoret që rifreskimi në sfond
+       të mos prekë DOM-in fare kur asgjë s'ka ndryshuar.
+     ------------------------------------------------------------------- */
+  function makeCache() {
+    const m = new Map(); // key -> { data, rev, at }
+    return {
+      get(key) { return m.get(key) || null; },
+      set(key, data) {
+        const e = m.get(key);
+        m.set(key, { data, rev: (e ? e.rev + 1 : 1), at: Date.now() });
+      },
+      /* Ndryshim lokal (optimist): transformo të dhënat + rrit rev.
+         Kthen funksionin e rikthimit (rollback) po refuzoi serveri. */
+      mutate(key, fn) {
+        const e = m.get(key);
+        if (!e) return null;
+        const before = e.data;
+        this.set(key, fn(JSON.parse(JSON.stringify(before))));
+        return () => this.set(key, before);
+      },
+      del(key) { m.delete(key); },
+      clear() { m.clear(); },
+    };
+  }
+
+  function makeSeq() {
+    const s = new Map(); // key -> numri aktual i biletës
+    return {
+      begin(key) { const n = (s.get(key) || 0) + 1; s.set(key, n); return n; },
+      valid(key, ticket) { return s.get(key) === ticket; },
+      bump(key) { s.set(key, (s.get(key) || 0) + 1); },
+    };
+  }
+
+  function listChanged(a, b) {
+    if (a === b) return false;
+    if (a == null || b == null) return true;
+    try { return JSON.stringify(a) !== JSON.stringify(b); }
+    catch (e) { return true; }
+  }
+
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);

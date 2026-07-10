@@ -157,3 +157,43 @@ test("looksLikeInjection — kap përpjekjet e manipulimit (SQ + EN)", () => {
   assert.strictEqual(OB.looksLikeInjection("sa kushton qethja nesër?"), false);
   assert.strictEqual(OB.looksLikeInjection("are you now open?"), false);
 });
+
+test("makeCache — get/set/rev + mutate me rollback (Faza 1)", () => {
+  const c = OB.makeCache();
+  assert.strictEqual(c.get("x"), null);
+  c.set("x", [{ id: 1, s: "a" }]);
+  assert.strictEqual(c.get("x").rev, 1);
+  c.set("x", [{ id: 1, s: "b" }]);
+  assert.strictEqual(c.get("x").rev, 2);                    // rev rritet në çdo set
+  // mutate: ndryshim optimist + rikthim (rollback)
+  const undo = c.mutate("x", (d) => { d[0].s = "c"; return d; });
+  assert.strictEqual(c.get("x").data[0].s, "c");
+  assert.strictEqual(c.get("x").rev, 3);
+  undo();                                                    // serveri refuzoi → rikthe
+  assert.strictEqual(c.get("x").data[0].s, "b");
+  assert.strictEqual(c.get("x").rev, 4);                    // rikthimi është edhe vetë ndryshim
+  assert.strictEqual(c.mutate("mungon", (d) => d), null);   // çelës i panjohur → null, pa crash
+  c.del("x"); assert.strictEqual(c.get("x"), null);
+});
+
+test("makeSeq — roja e garave: bump i heq vlefshmërinë biletës në fluturim", () => {
+  const q = OB.makeSeq();
+  const t1 = q.begin("a");
+  assert.ok(q.valid("a", t1));            // asgjë s'ka ndodhur → e vlefshme
+  q.bump("a");                            // ndryshim lokal ndërkohë
+  assert.ok(!q.valid("a", t1));           // përgjigja e vjetër hidhet poshtë
+  const t2 = q.begin("a");
+  assert.ok(q.valid("a", t2));            // kërkesa e re → e vlefshme
+  const t3 = q.begin("a");
+  assert.ok(!q.valid("a", t2));           // kërkesë më e re e zëvendëson të parën
+  assert.ok(q.valid("a", t3));
+});
+
+test("listChanged — vetëm ndryshimet reale shkaktojnë rivizatim", () => {
+  assert.strictEqual(OB.listChanged([{ id: 1 }], [{ id: 1 }]), false);
+  assert.strictEqual(OB.listChanged([{ id: 1 }], [{ id: 2 }]), true);
+  assert.strictEqual(OB.listChanged([], []), false);
+  assert.strictEqual(OB.listChanged(null, []), true);
+  assert.strictEqual(OB.listChanged([{ a: { b: 1 } }], [{ a: { b: 1 } }]), false); // e thellë
+  assert.strictEqual(OB.listChanged([{ a: { b: 1 } }], [{ a: { b: 2 } }]), true);
+});

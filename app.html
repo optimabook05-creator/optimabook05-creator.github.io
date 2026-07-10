@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=128">
-<link rel="modulepreload" href="config.js?v=128">
-<link rel="modulepreload" href="optima-app.js?v=128">
+<link rel="stylesheet" href="style.css?v=129">
+<link rel="modulepreload" href="config.js?v=129">
+<link rel="modulepreload" href="optima-app.js?v=129">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -551,6 +551,8 @@
 
 <!-- toast + modal -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<!-- Banderola "pa internet" — shfaqet vetëm offline; të dhënat e fundit mbeten të dukshme -->
+<div id="netBanner" role="status" aria-live="polite" hidden></div>
 <div class="modal-backdrop" id="manModal" role="dialog" aria-modal="true" hidden>
   <div class="modal small-modal">
     <div class="modal-head"><h2 data-t="manTitle">Takim manual</h2></div>
@@ -793,7 +795,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=128"></script>
-<script type="module" src="optima-app.js?v=128"></script>
+<script src="core.js?v=129"></script>
+<script type="module" src="optima-app.js?v=129"></script>
 </body>
 </html>

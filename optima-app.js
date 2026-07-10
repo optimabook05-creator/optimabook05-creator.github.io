@@ -149,6 +149,8 @@ const T = {
     addonReq: "e detyrueshme", addonOpt: "opsionale", addonOne: "shtesë", addonMany: "shtesa", addonsTitle: "Shto me të:", itemAddonsShort: "Shtesa",
     customizeFields: "⚙ Përshtat fushat për këtë artikull", customizeHint: "Hiq ato që s'i duhen pikërisht këtij artikulli (p.sh. një shërbim s'ka stok). Ndikon vetëm këtë artikull.",
     errGeneric: "Diçka shkoi keq. Provo sërish.", itemDescTitle: "📝 Përshkrimi",
+    errLoadT: "S'u ngarkua dot", errLoadH: "Kontrollo internetin dhe provo sërish.", retry: "Provo sërish",
+    netOffline: "📡 Pa internet — po shfaqen të dhënat e fundit",
     infoDesc: "Detaje që i shfaqen klientit dhe i përdor AI-ja për t'iu përgjigjur pyetjeve (p.sh. përbërësit, madhësia, ngjyra).",
     infoTime: "Sa zgjat shërbimi dhe a zë një orar në kalendar. Vetëm për shërbime.",
     infoBook: "Nëse aktiv, klientët e rezervojnë vetë në një orar të lirë. Fike për gjëra që s'kanë orar.",
@@ -358,6 +360,8 @@ const T = {
     addonReq: "required", addonOpt: "optional", addonOne: "add-on", addonMany: "add-ons", addonsTitle: "Add with it:", itemAddonsShort: "Add-ons",
     customizeFields: "⚙ Customize fields for this item", customizeHint: "Turn off what this specific item doesn't need (e.g. a service has no stock). Affects only this item.",
     errGeneric: "Something went wrong. Try again.", itemDescTitle: "📝 Description",
+    errLoadT: "Couldn't load", errLoadH: "Check your internet connection and try again.", retry: "Try again",
+    netOffline: "📡 Offline — showing your latest data",
     infoDesc: "Details shown to the customer and used by the AI to answer questions (e.g. ingredients, size, color).",
     infoTime: "How long the service takes and whether it books a calendar slot. Services only.",
     infoBook: "If on, customers can self-book a free slot. Turn off for things without a schedule.",
@@ -527,6 +531,106 @@ function logClientError(type, msg, err) {
 }
 window.addEventListener("error", (e) => logClientError("window.error", (e && e.message) || "error", e && e.error));
 window.addEventListener("unhandledrejection", (e) => logClientError("unhandledrejection", (e && e.reason && e.reason.message) || String(e && e.reason), e && e.reason));
+
+/* =====================================================================
+   KUJTESA E TË DHËNAVE (Faza 1) — paneli i menjëhershëm si aplikacion nativ
+
+   Si punon (stale-while-revalidate):
+   1. Hapja e një skede vizaton MENJËHERË nga kujtesa (0 rrjet, 0 pritje).
+   2. Në sfond rimerren të dhënat nga Supabase; DOM-i preket VETËM nëse
+      diçka ndryshoi vërtet (OB.listChanged) → zero dridhje, zero flicker.
+   3. Veprimet e pronarit (anulim, bllokim…) e ndryshojnë kujtesën PARA
+      serverit (UI optimiste) → përgjigje nën 100ms; nëse serveri refuzon,
+      ndryshimi kthehet mbrapsht dhe del njoftim gabimi.
+   4. OB.makeSeq mbron nga garat: përgjigjet e vjetra në fluturim s'mund
+      të mbishkruajnë kurrë një gjendje më të re.
+   ===================================================================== */
+const dataCache = OB.makeCache();
+const dataSeq = OB.makeSeq();
+const drawnRev = {}; // key -> rev i fundit i vizatuar (mos rivizato pa nevojë)
+const ck = (name) => (biz ? biz.id + ":" : "") + name; // çelës për biznes
+
+/* Karta gabimi e dizajnuar (kur s'kemi as kujtesë, as rrjet) — kurrë tekst i thatë.
+   Përdor të njëjtat klasa si emptyHTML → pamje konsistente në çdo pane. */
+function errorHTML(retryId) {
+  return `<div class="empty"><span class="e-ic">📡</span><div class="e-title">${tr("errLoadT")}</div>
+    <div class="e-hint">${tr("errLoadH")}</div>
+    <button class="btn small" id="${retryId}" type="button" style="margin-top:10px">↻ ${tr("retry")}</button></div>`;
+}
+
+/* Motori stale-while-revalidate. draw(data) duhet të mbulojë:
+   null → skeleton; {__error} → kartë gabimi me retry; [] → bosh; listë → përmbajtje. */
+async function swr(name, fetcher, draw) {
+  const key = ck(name);
+  const cached = dataCache.get(key);
+  if (!cached) {
+    // Hera e parë: skeleton (kurrë ekran bosh)
+    draw(null);
+  } else if (drawnRev[key] !== cached.rev) {
+    // Kujtesa ka ndryshuar që nga vizatimi i fundit (p.sh. veprim optimist) → rivizato
+    draw(cached.data); drawnRev[key] = cached.rev;
+  }
+  const ticket = dataSeq.begin(key);
+  let fresh;
+  try { fresh = await fetcher(); }
+  catch (e) {
+    // Edhe gabimi respekton biletën: një dështim i VJETËR s'mbulon dot një sukses më të ri
+    if (!cached && dataSeq.valid(key, ticket)) {
+      draw({ __error: true, retry: () => swr(name, fetcher, draw) });
+    }
+    return; // kemi kujtesë → mbaje pamjen; banderola offline njofton vetë
+  }
+  if (!dataSeq.valid(key, ticket)) return;          // ndodhi diçka më e re → hidhe
+  if (!biz || key !== ck(name)) return;             // u ndërrua biznesi ndërkohë
+  const changed = !cached || OB.listChanged(cached.data, fresh);
+  dataCache.set(key, fresh);
+  const rev = dataCache.get(key).rev;
+  if (changed) { draw(fresh); }
+  drawnRev[key] = rev; // edhe kur s'ndryshoi: pamja përfaqëson rev-in aktual
+}
+
+/* Detyro rivizatim në thirrjen e ardhshme (p.sh. ndryshoi një filtër lokal ose gjuha,
+   jo të dhënat) — pamja duhet rindërtuar edhe pse kujtesa s'ka lëvizur */
+function forceDraw(name) { delete drawnRev[ck(name)]; }
+function forceDrawAll() { for (const k of Object.keys(drawnRev)) delete drawnRev[k]; }
+
+/* Ndryshim optimist: transformo kujtesën + rivizato + kthe funksionin e rollback-ut.
+   Pa kujtesë (pane e pahapur ende) s'ka çfarë mbrohet → asnjë bump, që fetch-i
+   në fluturim të mos vritet kot (paneli do ngelej në skeleton). */
+function mutateData(name, fn, draw) {
+  const key = ck(name);
+  const undo = dataCache.mutate(key, fn);
+  if (!undo) return null;
+  dataSeq.bump(key); // përgjigjet e vjetra në fluturim vdesin këtu
+  const e = dataCache.get(key);
+  draw(e.data); drawnRev[key] = e.rev;
+  return () => { undo(); const u = dataCache.get(key); dataSeq.bump(key); draw(u.data); drawnRev[key] = u.rev; };
+}
+
+/* Banderola "pa internet" + rifreskim automatik kur kthehet lidhja/vëmendja */
+function netBanner(showIt) {
+  const b = $("#netBanner"); if (!b) return;
+  if (showIt) { b.textContent = tr("netOffline"); b.hidden = false; requestAnimationFrame(() => b.classList.add("show")); }
+  else { b.classList.remove("show"); setTimeout(() => { b.hidden = true; }, 250); }
+}
+window.addEventListener("offline", () => netBanner(true));
+window.addEventListener("online", () => { netBanner(false); revalidateVisible(); });
+if (!navigator.onLine) netBanner(true); // faqja u hap TASHMË offline → eventi s'vjen kurrë, kontrollo tani
+let hiddenAt = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { hiddenAt = Date.now(); return; }
+  // U kthye pas >60s larg → rifresko në heshtje pamjen aktive (të dhëna të freskëta pa asnjë veprim)
+  if (hiddenAt && Date.now() - hiddenAt > 60000) revalidateVisible();
+});
+function revalidateVisible() {
+  if (!biz || !$("#appView") || $("#appView").hidden) return;
+  const active = document.querySelector(".tab.active");
+  const t = active ? active.dataset.tab : "stats";
+  const m = { stats: renderStats, calendar: renderCalendar, appointments: renderAppointments,
+    orders: renderOrders, blocks: renderBlocks, waitlist: renderWaitlist, leads: renderLeads,
+    customers: renderCustomers, activity: renderActivity, inbox: renderInbox, reports: renderReports };
+  if (m[t]) m[t]();
+}
 function humanDate(ds) {
   const d = parseDate(ds), today = fmtDate(new Date());
   const tom = fmtDate(new Date(Date.now() + 864e5));
@@ -1347,23 +1451,34 @@ const paidLabel = (s) => tr(PAID_KEY[s] || "paidUnpaid");
 const plainNum = (n) => { const v = Number(n) || 0; return String(v); };
 
 async function renderOrders() {
-  const list = $("#ordersList");
-  if (!list || !biz || !commerceOn()) return;
+  if (!biz || !commerceOn()) return;
+  return swr("orders", async () => {
+    // 300 të fundit mjaftojnë për listën (raportet kanë marrjen e vet sipas periudhës)
+    const { data, error } = await sb.from("orders").select("*").eq("business_id", biz.id)
+      .order("placed_at", { ascending: false }).limit(300);
+    if (error) throw error;
+    const orders = data || [];
+    const itemsByOrder = {};
+    if (orders.length) {
+      // Artikujt për përmbledhje — opsionalë (mos e prish listën po dështoi vetëm kjo)
+      try {
+        const { data: its } = await sb.from("order_items").select("*").in("order_id", orders.map((o) => o.id));
+        (its || []).forEach((it) => { (itemsByOrder[it.order_id] = itemsByOrder[it.order_id] || []).push(it); });
+      } catch (e) {}
+    }
+    return { orders, itemsByOrder };
+  }, drawOrders);
+}
+function drawOrders(data) {
+  const list = $("#ordersList"); if (!list) return;
+  if (data === null) { list.innerHTML = skel(4); return; }
+  if (data.__error) { list.innerHTML = errorHTML("ordersRetry"); const r = $("#ordersRetry"); if (r) r.onclick = data.retry; return; }
   const filter = ($("#orderFilter") && $("#orderFilter").value) || "open";
-  let orders = [];
-  try {
-    const { data } = await sb.from("orders").select("*").eq("business_id", biz.id).order("placed_at", { ascending: false });
-    orders = data || [];
-  } catch (e) { return; }
+  let orders = data.orders;
+  const itemsByOrder = data.itemsByOrder || {};
   if (filter === "open") orders = orders.filter((o) => o.status !== "completed" && o.status !== "cancelled");
   else if (filter !== "all") orders = orders.filter((o) => o.status === filter);
   if (!orders.length) { list.innerHTML = emptyHTML("🧾", tr("emptyOrders"), tr("emptyOrdersHint")); return; }
-  // Artikujt për përmbledhje
-  const itemsByOrder = {};
-  try {
-    const { data: its } = await sb.from("order_items").select("*").in("order_id", orders.map((o) => o.id));
-    (its || []).forEach((it) => { (itemsByOrder[it.order_id] = itemsByOrder[it.order_id] || []).push(it); });
-  } catch (e) {}
   list.innerHTML = "";
   orders.forEach((o) => {
     const items = itemsByOrder[o.id] || [];
@@ -1386,8 +1501,8 @@ async function renderOrders() {
 }
 
 function openOrder(o, items) {
-  editingOrderId = o ? o.id : null;
-  $("#orderTitle").textContent = o ? tr("orderEdit") : tr("orderNew");
+  editingOrderId = (o && o.id) || null; // id null → porosi e re (edhe kur rihapet pas gabimi me vlera të plotësuara)
+  $("#orderTitle").textContent = editingOrderId ? tr("orderEdit") : tr("orderNew");
   $("#orderCustomer").value = o ? (o.customer_name || "") : "";
   $("#orderContact").value = o ? (o.customer_contact || "") : "";
   $("#orderType").value = o && o.order_type === "wholesale" ? "wholesale" : "retail";
@@ -1401,7 +1516,7 @@ function openOrder(o, items) {
   if (o && items && items.length) items.forEach((it) => addOrderLine(it.service_id, it.qty, it.unit_price));
   else addOrderLine();
   recomputeOrder();
-  $("#orderDelete").hidden = !o;
+  $("#orderDelete").hidden = !editingOrderId;
   $("#orderModal").hidden = false;
   setTimeout(() => $("#orderCustomer").focus(), 60);
 }
@@ -1470,10 +1585,27 @@ async function saveOrder() {
     subtotal: sub, discount: disc, total: round2(Math.max(0, sub - disc)),
     notes: $("#orderNotes").value.trim() || null,
   };
+  // UI OPTIMISTE: modali mbyllet MENJËHERË dhe porosia duket në listë;
+  // serveri punon në sfond. Po dështoi: lista kthehet + modali rihapet me vlerat e tua.
+  const wasEditing = editingOrderId;
+  const tmpId = wasEditing || "tmp-" + Date.now();
+  const localOrder = { ...order, id: tmpId, placed_at: new Date().toISOString(), created_by: "manual" };
+  const localItems = lines.map((l) => ({ order_id: tmpId, name: l.name, qty: l.qty, unit_price: l.unit_price, line_total: l.line_total }));
+  const undo = mutateData("orders", (d) => {
+    if (wasEditing) {
+      const i = d.orders.findIndex((o) => o.id === wasEditing);
+      if (i >= 0) d.orders[i] = { ...d.orders[i], ...order };
+    } else d.orders.unshift(localOrder);
+    d.itemsByOrder[tmpId] = localItems;
+    return d;
+  }, drawOrders);
+  $("#orderModal").hidden = true;
+  toast(tr("toastSaved"));
   try {
-    let oid = editingOrderId;
+    let oid = wasEditing;
     if (oid) {
-      await sb.from("orders").update(order).eq("id", oid);
+      const { error } = await sb.from("orders").update(order).eq("id", oid);
+      if (error) throw error;
       await sb.from("order_items").delete().eq("order_id", oid);
     } else {
       order.created_by = "manual";
@@ -1483,21 +1615,31 @@ async function saveOrder() {
     const items = lines.map((l) => ({ order_id: oid, business_id: biz.id, service_id: l.service_id, name: l.name, qty: l.qty, unit_price: l.unit_price, line_total: l.line_total, cost: l.cost }));
     try { await sb.from("order_items").insert(items); }
     catch (e) { await sb.from("order_items").insert(items.map(({ cost, ...x }) => x)); } // fallback pa kolonën cost
-    $("#orderModal").hidden = true;
-    toast(tr("toastSaved"));
-    await renderOrders();
-  } catch (ex) { errToast(ex); }
+    renderOrders(); // pajtim i heshtur: id-ja reale zëvendëson të përkohshmen
+  } catch (ex) {
+    if (undo) undo();
+    errToast(ex);
+    // Rihap modalin me po ato vlera — pronari s'humb asgjë nga puna e vet
+    openOrder(wasEditing ? { ...order, id: wasEditing } : { ...localOrder, id: null }, localItems.map((l, i) => ({ ...l, service_id: lines[i].service_id })));
+  }
 }
 
 async function deleteOrder() {
   if (!editingOrderId) return;
   if (!confirm(tr("confirmDelete"))) return;
-  try {
-    await sb.from("orders").delete().eq("id", editingOrderId);
-    $("#orderModal").hidden = true;
-    toast(tr("toastSaved"));
-    await renderOrders();
-  } catch (ex) { errToast(ex); }
+  const oid = editingOrderId;
+  if (String(oid).startsWith("tmp-")) return; // sapo u krijua, serveri s'e ka ende
+  // UI OPTIMISTE: hiqet nga lista menjëherë; rikthehet po refuzoi serveri
+  const undo = mutateData("orders", (d) => {
+    d.orders = d.orders.filter((o) => o.id !== oid);
+    delete d.itemsByOrder[oid];
+    return d;
+  }, drawOrders);
+  $("#orderModal").hidden = true;
+  toast(tr("toastSaved"));
+  const { error } = await sb.from("orders").delete().eq("id", oid);
+  if (error) { if (undo) undo(); errToast(error); return; }
+  renderOrders(); // pajtim i heshtur
 }
 
 // Faturë / Ofertë e printueshme (PDF nëpërmjet "Print → Save as PDF") nga porosia e hapur
@@ -1619,30 +1761,48 @@ async function renderReports() {
   if ($("#repApply")) $("#repApply").onclick = () => { reportFrom = $("#repFrom").value || null; reportTo = $("#repTo").value || null; reportPeriod = "custom"; renderReports(); };
 
   const { from, to } = periodRange(reportPeriod);
-  const results = $("#repResults");
-  let orders = [], items = [];
-  if (commerceOn()) {
-    try {
-      const { data } = await sb.from("orders").select("*").eq("business_id", biz.id)
-        .gte("placed_at", from.toISOString()).lte("placed_at", to.toISOString());
-      orders = (data || []).filter((o) => o.status !== "cancelled");
-      if (orders.length) { const { data: it } = await sb.from("order_items").select("*").in("order_id", orders.map((o) => o.id)); items = it || []; }
-    } catch (e) {}
-  }
-  // Takimet trajtohen si "shitje" → Ekonomia punon edhe për biznese me takime (jo vetëm tregti)
-  let bookedMin = 0;
-  try {
-    const { data } = await sb.from("appointments").select("appt_date, status, client_name, services(name, price, duration_min, cost)")
-      .eq("business_id", biz.id).gte("appt_date", fmtDate(from)).lte("appt_date", fmtDate(to));
-    for (const a of (data || [])) {
-      if (a.status === "cancelled" || a.status === "no_show") continue;
-      const p = a.services ? Number(a.services.price) || 0 : 0;
-      const c = (a.services && a.services.cost != null) ? Number(a.services.cost) : null;
-      orders.push({ total: p, amount_paid: p, customer_name: a.client_name, order_type: "retail" });
-      items.push({ name: a.services ? a.services.name : "—", qty: 1, line_total: p, cost: c });
-      bookedMin += (a.services && a.services.duration_min) ? Number(a.services.duration_min) : 30;
+  // Çelësi përfshin periudhën → çdo periudhë kujtohet më vete; kapet TANI që
+  // ndërrimi i shpejtë i periudhave të mos përziejë përgjigjet (garë)
+  const rkey = "reports:" + reportPeriod + ":" + (reportFrom || "") + ":" + (reportTo || "");
+  forceDraw(rkey); // gëzhoja u rindërtua tani → #repResults është bosh, duhet vizatuar patjetër
+  return swr(rkey, async () => {
+    let orders = [], items = [], ordersFailed = false, apptsFailed = false;
+    if (commerceOn()) {
+      try {
+        const { data, error } = await sb.from("orders").select("*").eq("business_id", biz.id)
+          .gte("placed_at", from.toISOString()).lte("placed_at", to.toISOString());
+        if (error) throw error;
+        orders = (data || []).filter((o) => o.status !== "cancelled");
+        if (orders.length) { const { data: it } = await sb.from("order_items").select("*").in("order_id", orders.map((o) => o.id)); items = it || []; }
+      } catch (e) { ordersFailed = true; }
     }
-  } catch (e) {}
+    // Takimet trajtohen si "shitje" → Ekonomia punon edhe për biznese me takime (jo vetëm tregti)
+    let bookedMin = 0;
+    try {
+      const { data, error } = await sb.from("appointments").select("appt_date, status, client_name, services(name, price, duration_min, cost)")
+        .eq("business_id", biz.id).gte("appt_date", fmtDate(from)).lte("appt_date", fmtDate(to));
+      if (error) throw error;
+      for (const a of (data || [])) {
+        if (a.status === "cancelled" || a.status === "no_show") continue;
+        const p = a.services ? Number(a.services.price) || 0 : 0;
+        const c = (a.services && a.services.cost != null) ? Number(a.services.cost) : null;
+        orders.push({ total: p, amount_paid: p, customer_name: a.client_name, order_type: "retail" });
+        items.push({ name: a.services ? a.services.name : "—", qty: 1, line_total: p, cost: c });
+        bookedMin += (a.services && a.services.duration_min) ? Number(a.services.duration_min) : 30;
+      }
+    } catch (e) { apptsFailed = true; }
+    // Dështuan burimet kryesore → kartë gabimi, JO "s'ka të dhëna" (s'gënjejmë kurrë)
+    if (apptsFailed && (ordersFailed || !commerceOn())) throw new Error(tr("errLoadT"));
+    return { orders, items, bookedMin };
+  }, (d) => drawReports(d, from, to, rkey));
+}
+function drawReports(d, from, to, rkey) {
+  // Periudha u ndërrua ndërkohë → kjo pamje s'i përket më asaj që shihet
+  if (rkey !== "reports:" + reportPeriod + ":" + (reportFrom || "") + ":" + (reportTo || "")) return;
+  const results = $("#repResults"); if (!results) return;
+  if (d === null) { results.innerHTML = skel(4); return; }
+  if (d.__error) { results.innerHTML = errorHTML("repRetry"); const r = $("#repRetry"); if (r) r.onclick = d.retry; return; }
+  const orders = d.orders, items = d.items, bookedMin = d.bookedMin;
   if (!orders.length) { results.innerHTML = emptyHTML("💰", tr("repNoData"), tr("repNoDataHint")); return; }
 
   // Kapaciteti i mbushur për periudhën (orë pune − pushime, × staf) + orët e zëna
@@ -2006,7 +2166,10 @@ async function saveHoursEdit() {
   try { await sb.from("businesses").update({ config: cfg }).eq("id", biz.id); biz.config = cfg; } catch (e) {}
   await loadHours();
   renderSettingsHours();
-  await renderAll();
+  // Orari ndikon vizatimin e kalendarit/statistikave (dita pushim, kapaciteti) edhe
+  // pa ndryshuar të dhënat e takimeve → detyro rivizatim nga kujtesa
+  forceDraw("cal:" + calDate); forceDraw("statsAppts");
+  renderCalendar(); renderStats();
   toast(tr("toastSaved"));
 }
 
@@ -2187,57 +2350,58 @@ async function renderAll() {
   await Promise.all([renderCalendar(), renderAppointments(), renderBlocks(), renderStats(), renderWaitlist(), renderLeads(), renderActivity(), renderCustomers()]);
 }
 
-let customersCache = null;
 async function renderCustomers() {
-  const list = $("#customerList"); if (!list) return;
-  const map = {};
-  const keyFor = (name, fallback) => ((name && name.trim().toLowerCase()) || fallback || "?");
-  // Nga takimet
-  const { data } = await sb.from("appointments")
-    .select("client_name, chat_id, channel, appt_date, status, services(price)").eq("business_id", biz.id);
-  for (const a of (data || [])) {
-    if (a.status === "cancelled") continue;
-    const key = keyFor(a.client_name, a.chat_id);
-    const c = map[key] || { name: a.client_name || "Klient", channel: a.channel || "manual", visits: 0, last: "", spent: 0 };
-    if (a.client_name) c.name = a.client_name;
-    c.visits++; c.spent += a.services ? Number(a.services.price) || 0 : 0;
-    if (a.appt_date > c.last) c.last = a.appt_date;
-    map[key] = c;
-  }
-  // Nga porositë (biznese tregtie/të dyja)
-  try {
-    const { data: od } = await sb.from("orders").select("customer_name, total, status, placed_at, channel").eq("business_id", biz.id);
-    for (const o of (od || [])) {
-      if (o.status === "cancelled") continue;
-      const key = keyFor(o.customer_name, null);
-      const c = map[key] || { name: o.customer_name || "Klient", channel: o.channel || "order", visits: 0, last: "", spent: 0 };
-      if (o.customer_name) c.name = o.customer_name;
-      c.visits++; c.spent += Number(o.total) || 0;
-      const d = (o.placed_at || "").slice(0, 10); if (d > c.last) c.last = d;
+  return swr("customers", async () => {
+    const map = {};
+    const keyFor = (name, fallback) => ((name && name.trim().toLowerCase()) || fallback || "?");
+    // Nga takimet
+    const { data, error } = await sb.from("appointments")
+      .select("client_name, chat_id, channel, appt_date, status, services(price)").eq("business_id", biz.id);
+    if (error) throw error;
+    for (const a of (data || [])) {
+      if (a.status === "cancelled") continue;
+      const key = keyFor(a.client_name, a.chat_id);
+      const c = map[key] || { name: a.client_name || "Klient", channel: a.channel || "manual", visits: 0, last: "", spent: 0 };
+      if (a.client_name) c.name = a.client_name;
+      c.visits++; c.spent += a.services ? Number(a.services.price) || 0 : 0;
+      if (a.appt_date > c.last) c.last = a.appt_date;
       map[key] = c;
     }
-  } catch (e) {}
-  let rows = Object.values(map).filter((c) => c.visits > 0);
-  // Përmbledhje CRM (mbi të gjithë klientët)
-  const total = rows.length;
-  const returning = rows.filter((c) => c.visits >= 2).length;
-  const totalSpent = rows.reduce((a, c) => a + (c.spent || 0), 0);
+    // Nga porositë (biznese tregtie/të dyja) — opsionale (tabela mund të mos ekzistojë)
+    try {
+      const { data: od } = await sb.from("orders").select("customer_name, total, status, placed_at, channel").eq("business_id", biz.id);
+      for (const o of (od || [])) {
+        if (o.status === "cancelled") continue;
+        const key = keyFor(o.customer_name, null);
+        const c = map[key] || { name: o.customer_name || "Klient", channel: o.channel || "order", visits: 0, last: "", spent: 0 };
+        if (o.customer_name) c.name = o.customer_name;
+        c.visits++; c.spent += Number(o.total) || 0;
+        const d = (o.placed_at || "").slice(0, 10); if (d > c.last) c.last = d;
+        map[key] = c;
+      }
+    } catch (e) {}
+    const rows = Object.values(map).filter((c) => c.visits > 0);
+    // Renditje CRM-grade: vlera më e madhe e para
+    rows.sort((a, b) => (b.spent || 0) - (a.spent || 0) || (b.last || "").localeCompare(a.last || ""));
+    return rows;
+  }, drawCustomers);
+}
+/* Thirret edhe nga kërkimi (me Event si argument) → atëherë lexon nga kujtesa dhe filtron lokalisht */
+function drawCustomers(arg) {
+  const list = $("#customerList"); if (!list) return;
+  if (arg && arg.__error) { list.innerHTML = errorHTML("custRetry"); const r = $("#custRetry"); if (r) r.onclick = arg.retry; return; }
+  const allRows = Array.isArray(arg) ? arg : (dataCache.get(ck("customers")) || { data: null }).data;
+  if (allRows === null || allRows === undefined) { list.innerHTML = skel(4); return; }
+  // Përmbledhja CRM llogaritet mbi TË GJITHË klientët (kërkimi filtron vetëm listën poshtë)
+  const total = allRows.length;
+  const returning = allRows.filter((c) => c.visits >= 2).length;
+  const totalSpent = allRows.reduce((a, c) => a + (c.spent || 0), 0);
   const avg = total ? totalSpent / total : 0;
   // VIP = top ~20% sipas vlerës (me shpenzim > 0)
-  const bySpend = [...rows].sort((a, b) => (b.spent || 0) - (a.spent || 0));
+  const bySpend = [...allRows].sort((a, b) => (b.spent || 0) - (a.spent || 0));
   const vipSet = new Set(bySpend.slice(0, Math.max(1, Math.round(total * 0.2))).filter((c) => c.spent > 0));
-  // Renditje CRM-grade: vlera më e madhe e para
-  rows.sort((a, b) => (b.spent || 0) - (a.spent || 0) || (b.last || "").localeCompare(a.last || ""));
-  // Ruaj në cache — kërkimi më pas filtron LOKALISHT, pa rikërkuar rrjetin çdo shkronjë
-  customersCache = { rows, total, returning, totalSpent, avg, vipSet };
-  drawCustomers();
-}
-function drawCustomers() {
-  const list = $("#customerList"); if (!list || !customersCache) return;
-  const { total, returning, totalSpent, avg, vipSet } = customersCache;
-  let rows = customersCache.rows;
   const q = ($("#custSearch") && $("#custSearch").value.trim().toLowerCase()) || "";
-  if (q) rows = rows.filter((c) => (c.name || "").toLowerCase().includes(q));
+  const rows = q ? allRows.filter((c) => (c.name || "").toLowerCase().includes(q)) : allRows;
   if (!total) { list.innerHTML = emptyHTML("👤", tr("emptyCustomers"), tr("emptyCustomersHint")); return; }
   list.innerHTML = "";
   const sum = document.createElement("div");
@@ -2249,6 +2413,10 @@ function drawCustomers() {
     <span><strong style="font-size:18px">${money(avg)}</strong> <small style="color:var(--ink-soft)">${tr("crmAvg")}</small></span>
   </div>`;
   list.appendChild(sum);
+  if (q && !rows.length) { // kërkim pa përputhje → gjendje e qartë, jo hapësirë bosh
+    const nm = document.createElement("div"); nm.innerHTML = emptyHTML("🔍", tr("inboxNoMatch"), "");
+    list.appendChild(nm.firstElementChild); return;
+  }
   for (const c of rows) {
     const item = document.createElement("div");
     item.className = "block-item";
@@ -2261,10 +2429,17 @@ function drawCustomers() {
 }
 
 async function renderActivity() {
+  return swr("activity", async () => {
+    const { data, error } = await sb.from("notifications").select("*").eq("business_id", biz.id)
+      .order("created_at", { ascending: false }).limit(60);
+    if (error) throw error;
+    return data || [];
+  }, drawActivity);
+}
+function drawActivity(rows) {
   const list = $("#activityList"); if (!list) return;
-  const { data } = await sb.from("notifications").select("*").eq("business_id", biz.id)
-    .order("created_at", { ascending: false }).limit(60);
-  const rows = data || [];
+  if (rows === null) { list.innerHTML = skel(3); return; }
+  if (rows.__error) { list.innerHTML = errorHTML("actRetry"); const r = $("#actRetry"); if (r) r.onclick = rows.retry; return; }
   if (!rows.length) { list.innerHTML = emptyHTML("🔔", tr("emptyActivity"), tr("emptyActivityHint")); return; }
   list.innerHTML = "";
   for (const n of rows) {
@@ -2277,10 +2452,17 @@ async function renderActivity() {
 }
 
 async function renderLeads() {
+  return swr("leads", async () => {
+    const { data, error } = await sb.from("leads").select("*").eq("business_id", biz.id)
+      .order("created_at", { ascending: false }).limit(50);
+    if (error) throw error;
+    return data || [];
+  }, drawLeads);
+}
+function drawLeads(rows) {
   const list = $("#leadsList"); if (!list) return;
-  const { data } = await sb.from("leads").select("*").eq("business_id", biz.id)
-    .order("created_at", { ascending: false }).limit(50);
-  const rows = data || [];
+  if (rows === null) { list.innerHTML = skel(3); return; }
+  if (rows.__error) { list.innerHTML = errorHTML("leadsRetry"); const r = $("#leadsRetry"); if (r) r.onclick = rows.retry; return; }
   if (!rows.length) { list.innerHTML = emptyHTML("📥", tr("emptyLeads"), tr("emptyLeadsHint")); return; }
   list.innerHTML = "";
   for (const l of rows) {
@@ -2329,7 +2511,14 @@ function renderStaffPane() {
       const item = document.createElement("div"); item.className = "block-item";
       item.innerHTML = `<span class="grow">👤 <strong>${esc(s.name)}</strong>${s.role && s.role !== "staff" ? " • " + esc(s.role) : ""}${loc ? " • 📍 " + esc(loc.name) : ""}</span>`;
       const del = document.createElement("button"); del.className = "btn small ghost danger"; del.textContent = tr("remove");
-      del.onclick = async () => { await sb.from("staff").update({ active: false }).eq("id", s.id); await loadStaff(); setupStaffUI(); await renderAll(); };
+      del.onclick = async () => {
+        const { error } = await sb.from("staff").update({ active: false }).eq("id", s.id);
+        if (error) { errToast(error); return; }
+        await loadStaff(); setupStaffUI(); renderStaffPane();
+        // Stafi ndikon kapacitetin në vizatim → detyro rivizatim; të dhënat vetë-shërohen
+        forceDraw("cal:" + calDate); forceDraw("statsAppts");
+        renderCalendar(); renderStats();
+      };
       item.appendChild(del); stl.appendChild(item);
     }
   }
@@ -2337,12 +2526,19 @@ function renderStaffPane() {
 
 const PERIOD_LBL = { morning: "periodMorning", afternoon: "periodAfternoon", evening: "periodEvening" };
 async function renderWaitlist() {
+  return swr("waitlist", async () => {
+    const today = fmtDate(new Date());
+    const { data, error } = await sb.from("waitlist").select("*, services(name)")
+      .eq("business_id", biz.id).gte("desired_date", today)
+      .in("status", ["waiting", "notified"]).order("desired_date").order("created_at");
+    if (error) throw error;
+    return data || [];
+  }, drawWaitlist);
+}
+function drawWaitlist(rows) {
   const list = $("#waitList"); if (!list) return;
-  const today = fmtDate(new Date());
-  const { data } = await sb.from("waitlist").select("*, services(name)")
-    .eq("business_id", biz.id).gte("desired_date", today)
-    .in("status", ["waiting", "notified"]).order("desired_date").order("created_at");
-  const rows = data || [];
+  if (rows === null) { list.innerHTML = skel(3); return; }
+  if (rows.__error) { list.innerHTML = errorHTML("waitRetry"); const r = $("#waitRetry"); if (r) r.onclick = rows.retry; return; }
   if (!rows.length) { list.innerHTML = emptyHTML("⏳", tr("emptyWait"), tr("emptyWaitHint")); return; }
   list.innerHTML = "";
   for (const w of rows) {
@@ -2364,12 +2560,30 @@ async function renderWaitlist() {
 async function renderCalendar() {
   const d = parseDate(calDate);
   $("#calLabel").textContent = `${T[lang].dayNames[d.getDay()]}, ${d.getDate()} ${T[lang].months[d.getMonth()]} ${d.getFullYear()}`;
-  const tl = $("#timeline"); tl.innerHTML = "";
+  const h = hours[d.getDay()];
+  if (!h) { const tl0 = $("#timeline"); if (tl0) tl0.innerHTML = emptyHTML("🌙", tr("dayOff")); return; }
+  const forDate = calDate; // kapet TANI: nëse pronari ndërron ditën para se të kthehet serveri, vizatimi i vjetër hidhet
+  return swr("cal:" + forDate, async () => {
+    const [a, b] = await Promise.all([
+      sb.from("appointments").select("*").eq("business_id", biz.id).eq("appt_date", forDate).neq("status", "cancelled"),
+      sb.from("time_blocks").select("*").eq("business_id", biz.id).eq("block_date", forDate),
+    ]);
+    if (a.error) throw a.error;
+    if (b.error) throw b.error;
+    return { appts: a.data || [], blocks: b.data || [] };
+  }, (data) => drawCalendar(data, forDate));
+}
+function drawCalendar(data, forDate) {
+  if (forDate !== calDate) return; // dita u ndërrua ndërkohë → kjo pamje s'vlen më
+  const tl = $("#timeline"); if (!tl) return;
+  if (data === null) { tl.innerHTML = skel(6); return; }
+  if (data.__error) { tl.innerHTML = errorHTML("calRetry"); const r = $("#calRetry"); if (r) r.onclick = data.retry; return; }
+  const d = parseDate(forDate);
   const h = hours[d.getDay()];
   if (!h) { tl.innerHTML = emptyHTML("🌙", tr("dayOff")); return; }
+  tl.innerHTML = "";
   const open = toMin(h.open), close = toMin(h.close);
-  let appts = await apptsForDate(calDate);
-  let blocks = await blocksForDate(calDate);
+  let appts = data.appts, blocks = data.blocks;
   if (calStaff) {
     appts = appts.filter((a) => a.staff_id === calStaff);
     blocks = blocks.filter((b) => !b.staff_id || b.staff_id === calStaff);
@@ -2409,13 +2623,21 @@ async function renderCalendar() {
 function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 
 async function renderAppointments() {
-  const list = $("#apptList"); list.innerHTML = skel(4);
+  return swr("appts", async () => {
+    const today = fmtDate(new Date());
+    const { data, error } = await sb.from("appointments").select("*").eq("business_id", biz.id)
+      .gte("appt_date", today).order("appt_date").order("appt_time").limit(400);
+    if (error) throw error;
+    return data || [];
+  }, drawAppointments);
+}
+function drawAppointments(appts) {
+  const list = $("#apptList"); if (!list) return;
+  if (appts === null) { list.innerHTML = skel(4); return; }
+  if (appts.__error) { list.innerHTML = errorHTML("apptRetry"); const r = $("#apptRetry"); if (r) r.onclick = appts.retry; return; }
   const today = fmtDate(new Date());
-  const { data } = await sb.from("appointments").select("*").eq("business_id", biz.id)
-    .gte("appt_date", today).order("appt_date").order("appt_time");
-  const appts = data || [];
   if (!appts.length) { list.innerHTML = emptyHTML("📅", tr("emptyAppt"), tr("emptyApptHint")); return; }
-  list.innerHTML = "";  // pastro skeleton-in
+  list.innerHTML = "";
   for (const a of appts) {
     const s = svcById(a.service_id); const d = parseDate(a.appt_date);
     const card = document.createElement("div");
@@ -2484,53 +2706,118 @@ async function rescheduleAppt(card, a) {
   const no = document.createElement("button"); no.className = "btn small ghost"; no.textContent = "✕";
   ok.onclick = async () => {
     if (!dIn.value || !tIn.value) return;
-    try {
-      const { error } = await sb.from("appointments").update({ appt_date: dIn.value, appt_time: tIn.value, status: "pending" }).eq("id", a.id);
-      if (error) throw error;
-      toast(tr("toastRescheduled")); await renderAll();
-    } catch (ex) { errToast(ex); }
+    const nd = dIn.value, nt = tIn.value, od = a.appt_date;
+    // UI OPTIMISTE: lista rirenditet menjëherë; kalendari hiqet nga data e vjetër + futet te e reja
+    const moved = { ...a, appt_date: nd, appt_time: nt, status: "pending" };
+    const undos = [
+      mutateData("appts", (d) => {
+        const x = d.find((y) => y.id === a.id);
+        if (x) { x.appt_date = nd; x.appt_time = nt; x.status = "pending"; }
+        d.sort((p, q) => (p.appt_date + hm(p.appt_time)).localeCompare(q.appt_date + hm(q.appt_time)));
+        return d;
+      }, drawAppointments),
+      mutateData("cal:" + od, (d) => {
+        if (nd === od) { const x = d.appts.find((y) => y.id === a.id); if (x) { x.appt_time = nt; x.status = "pending"; } }
+        else d.appts = d.appts.filter((x) => x.id !== a.id); // u zhvendos në ditë tjetër
+        return d;
+      }, (d) => drawCalendar(d, od)),
+      nd !== od ? mutateData("cal:" + nd, (d) => { d.appts.push(moved); return d; },
+        (d) => drawCalendar(d, nd)) : null,
+    ].filter(Boolean);
+    toast(tr("toastRescheduled"));
+    const { error } = await sb.from("appointments").update({ appt_date: nd, appt_time: nt, status: "pending" }).eq("id", a.id);
+    if (error) { undos.forEach((u) => u()); errToast(error); return; }
+    renderAppointments(); // pajtim i heshtur me serverin
   };
-  no.onclick = () => renderAppointments();
+  no.onclick = () => { forceDraw("appts"); renderAppointments(); }; // rikthe butonat e kartës
   act.append(dIn, tIn, ok, no);
 }
 
 async function setStatus(id, status, prev) {
   haptic(12);
-  await sb.from("appointments").update({ status }).eq("id", id);
+  // UI OPTIMISTE: karta ndryshon MENJËHERË nga kujtesa (nën 100ms, 0 rrjet).
+  // Sinkronizohet edhe kujtesa e kalendarit të asaj date (kalendari s'e mban të anuluarin).
+  const apptRow = (() => { const e = dataCache.get(ck("appts")); return e ? e.data.find((x) => x.id === id) : null; })();
+  const undos = [
+    mutateData("appts", (d) => {
+      const a = d.find((x) => x.id === id); if (a) a.status = status; return d;
+    }, drawAppointments),
+    apptRow ? mutateData("cal:" + apptRow.appt_date, (d) => {
+      if (status === "cancelled") d.appts = d.appts.filter((x) => x.id !== id);
+      else {
+        const a = d.appts.find((x) => x.id === id);
+        if (a) a.status = status;
+        else d.appts.push({ ...apptRow, status }); // undo pas anulimit → takimi rikthehet në ditë
+      }
+      return d;
+    }, (d) => drawCalendar(d, apptRow.appt_date)) : null,
+  ].filter(Boolean);
   const m = status === "cancelled" ? tr("toastCancelled") : status === "no_show" ? tr("toastNoShow") : status === "attended" ? tr("toastAttended") : tr("toastConfirmed");
   // Undo për veprime të rrezikshme (parandalon humbjen e takimit nga prekje aksidentale)
   const undoable = (status === "cancelled" || status === "no_show") && prev && prev !== status;
   toast(m, null, undoable ? { label: tr("undo"), fn: () => setStatus(id, prev) } : null);
-  await renderAll();
+  const { error } = await sb.from("appointments").update({ status }).eq("id", id);
+  if (error) { undos.forEach((u) => u()); errToast(error); return; }
+  renderAppointments(); // pajtim i heshtur me serverin (asnjë prekje DOM-i po s'pati ndryshim)
 }
 
 async function renderBlocks() {
-  const list = $("#blockList"); list.innerHTML = "";
-  const { data } = await sb.from("time_blocks").select("*").eq("business_id", biz.id)
-    .order("block_date").order("from_time");
-  const blocks = data || [];
+  return swr("blocks", async () => {
+    const { data, error } = await sb.from("time_blocks").select("*").eq("business_id", biz.id)
+      .order("block_date").order("from_time");
+    if (error) throw error;
+    return data || [];
+  }, drawBlocks);
+}
+function drawBlocks(blocks) {
+  const list = $("#blockList"); if (!list) return;
+  if (blocks === null) { list.innerHTML = skel(3); return; }
+  if (blocks.__error) { list.innerHTML = errorHTML("blockRetry"); const r = $("#blockRetry"); if (r) r.onclick = blocks.retry; return; }
   if (!blocks.length) { list.innerHTML = emptyHTML("⛔", tr("emptyBlock"), tr("emptyBlockHint")); return; }
+  list.innerHTML = "";
   for (const b of blocks) {
     const item = document.createElement("div");
     item.className = "block-item";
     item.innerHTML = `<span class="grow">⛔ ${humanDate(b.block_date)} • ${hm(b.from_time)}–${hm(b.to_time)}${b.reason ? " — " + esc(b.reason) : ""}</span>`;
     const del = document.createElement("button");
     del.className = "btn small ghost danger"; del.textContent = tr("remove");
-    del.onclick = async () => { await sb.from("time_blocks").delete().eq("id", b.id); await renderAll(); };
+    del.onclick = () => deleteBlock(b.id);
     item.appendChild(del);
     list.appendChild(item);
   }
 }
+async function deleteBlock(id) {
+  if (String(id).startsWith("tmp-")) return; // rreshti sapo u shtua, serveri s'e ka ende — injoro klikun e çastit
+  haptic(10);
+  // UI OPTIMISTE: rreshti hiqet menjëherë nga lista DHE nga kujtesa e kalendarit të asaj date
+  const row = (() => { const e = dataCache.get(ck("blocks")); return e ? e.data.find((x) => x.id === id) : null; })();
+  const undos = [
+    mutateData("blocks", (d) => d.filter((x) => x.id !== id), drawBlocks),
+    row ? mutateData("cal:" + row.block_date, (d) => { d.blocks = d.blocks.filter((x) => x.id !== id); return d; },
+      (d) => drawCalendar(d, row.block_date)) : null,
+  ].filter(Boolean);
+  const { error } = await sb.from("time_blocks").delete().eq("id", id);
+  if (error) { undos.forEach((u) => u()); errToast(error); return; }
+  renderBlocks(); // pajtim i heshtur
+}
 
 /* ---------------- AI Ekonomisti — këshilla që çojnë te vendime (jo vetëm shifra) ---------------- */
 async function renderInsights() {
+  if (!$("#insightsBox") || !biz) return;
+  return swr("insights", async () => {
+    let appts = [], orders = [], items = [];
+    // Secila pjesë është opsionale (tabelat e tregtisë mund të mos ekzistojnë) → dështimi i njërës s'i pengon të tjerat
+    try { const { data } = await sb.from("appointments").select("appt_date,status,client_name,services(price)").eq("business_id", biz.id); appts = data || []; } catch (e) {}
+    try { const { data } = await sb.from("orders").select("*").eq("business_id", biz.id); orders = data || []; } catch (e) {}
+    try { const { data } = await sb.from("order_items").select("name,qty,line_total").eq("business_id", biz.id); items = data || []; } catch (e) {}
+    return { appts, orders, items };
+  }, drawInsights);
+}
+function drawInsights(d) {
   const box = $("#insightsBox");
-  if (!box || !biz) return;
-  let appts = [], orders = [], items = [];
-  try { const { data } = await sb.from("appointments").select("appt_date,status,client_name,services(price)").eq("business_id", biz.id); appts = data || []; } catch (e) {}
-  try { const { data } = await sb.from("orders").select("*").eq("business_id", biz.id); orders = data || []; } catch (e) {}
-  try { const { data } = await sb.from("order_items").select("name,qty,line_total").eq("business_id", biz.id); items = data || []; } catch (e) {}
-  const ins = buildInsights(appts, orders, items);
+  if (!box) return;
+  if (d === null || d.__error) return; // kuti ndihmëse: pa skeleton (s'i dihet lartësia), pa kartë gabimi — thjesht heshtje
+  const ins = buildInsights(d.appts, d.orders, d.items);
   box.innerHTML = ins.length ? `<div class="ins-h">💡 ${tr("insTitle")}</div>` + ins.slice(0, 6).map(insCard).join("") : "";
   box.querySelectorAll("[data-go]").forEach((b) => b.onclick = () => { const t = document.querySelector('.tab[data-tab="' + b.dataset.go + '"]'); if (t) t.click(); });
   box.querySelectorAll("[data-draft]").forEach((b) => b.onclick = () => openDraft(b.dataset.draft));
@@ -2649,14 +2936,32 @@ function countUp(el, dur) {
 
 async function renderStats() {
   renderInsights();
-  const sg0 = $("#statsGrid"); if (sg0) sg0.innerHTML = skel(4);   // skeleton gjatë ngarkimit
-  const tb0 = $("#todayBox"); if (tb0 && (biz.mode || "appointments") !== "inquiry") tb0.innerHTML = skel(2);
   // Marrim çdo takim me emrin/çmimin e shërbimit (edhe nëse shërbimi është çaktivizuar)
-  const { data } = await sb.from("appointments")
-    .select("appt_date, appt_time, status, source, client_name, services(name, price, duration_min, cost)")
-    .eq("business_id", biz.id);
-  const appts = data || [];
-  const grid = $("#statsGrid");
+  return swr("statsAppts", async () => {
+    const { data, error } = await sb.from("appointments")
+      .select("id, appt_date, appt_time, status, source, client_name, services(name, price, duration_min, cost)")
+      .eq("business_id", biz.id);
+    if (error) throw error;
+    return data || [];
+  }, drawStats);
+}
+let statsAnimated = false; // count-up + stagger vetëm herën e parë (rifreskimet e heshtura s'duhet të kërcejnë)
+function drawStats(appts) {
+  const grid = $("#statsGrid"); if (!grid) return;
+  const tb0 = $("#todayBox");
+  if (appts === null) {
+    grid.innerHTML = skel(4);
+    if (tb0 && (biz.mode || "appointments") !== "inquiry") tb0.innerHTML = skel(2);
+    return;
+  }
+  if (appts.__error) {
+    grid.innerHTML = errorHTML("statsRetry");
+    if (tb0) tb0.innerHTML = "";
+    const r = $("#statsRetry"); if (r) r.onclick = appts.retry;
+    return;
+  }
+  // Pas vizatimit të parë: pa animacione hyrjeje (rifreskim i heshtur, jo "shfaqje")
+  grid.classList.toggle("no-replay", statsAnimated);
 
   // ---- "SOT" — pamja e shpejtë (UX mobile: hap app → sheh sot menjëherë) ----
   renderTodayGlance(appts);
@@ -2819,10 +3124,12 @@ async function renderStats() {
       </div>
     </div>`;
 
-  // Count-up i butë i shifrave kryesore (çiftohet me stagger reveal); respekton reduced-motion
-  if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  // Count-up i butë i shifrave — VETËM herën e parë (rifreskimet e heshtura
+  // nuk duhet t'i rianimojnë shifrat: do dukej si dridhje e lirë); reduced-motion i nderuar
+  if (!statsAnimated && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     grid.querySelectorAll(".stat-card .num").forEach((el) => countUp(el));
   }
+  statsAnimated = true;
 }
 
 /* ---------------- Takim manual ---------------- */
@@ -2860,18 +3167,35 @@ async function saveManual() {
 
   const step = parseInt($("#manRepeat") ? $("#manRepeat").value : "0", 10) || 0;
   const times = step ? Math.max(2, Math.min(52, parseInt($("#manTimes").value, 10) || 1)) : 1;
-  let created = 0;
-  for (let i = 0; i < times; i++) {
-    const d = parseDate($("#manDate").value);
-    if (step === 30) d.setMonth(d.getMonth() + i); else d.setDate(d.getDate() + step * i);
-    const { error } = await sb.from("appointments").insert({ ...baseRow, appt_date: fmtDate(d) });
-    if (!error) created++;
-  }
+  const dateStr = $("#manDate").value;
+
+  // UI OPTIMISTE: modali mbyllet MENJËHERË dhe takimi duket në listë/kalendar;
+  // serveri konfirmon në sfond (për seritë e përsëritura vetëm rreshti i parë optimist).
   $("#manModal").hidden = true; $("#manClient").value = "";
   if ($("#manRepeat")) $("#manRepeat").value = "0";
   if ($("#manTimesField")) $("#manTimesField").hidden = true;
-  toast(step ? tr("recurDone").replace("{n}", created) : tr("toastSaved"));
-  await renderAll();
+  const tmp = { ...baseRow, appt_date: dateStr, id: "tmp-" + Date.now() };
+  const undos = [
+    mutateData("appts", (d) => {
+      d.push(tmp);
+      d.sort((p, q) => (p.appt_date + hm(p.appt_time)).localeCompare(q.appt_date + hm(q.appt_time)));
+      return d;
+    }, drawAppointments),
+    mutateData("cal:" + dateStr, (d) => { d.appts.push(tmp); return d; },
+      (d) => drawCalendar(d, dateStr)),
+  ].filter(Boolean);
+  toast(step ? tr("recurDone").replace("{n}", times) : tr("toastSaved"));
+
+  let failed = 0;
+  for (let i = 0; i < times; i++) {
+    const d = parseDate(dateStr);
+    if (step === 30) d.setMonth(d.getMonth() + i); else d.setDate(d.getDate() + step * i);
+    const { error } = await sb.from("appointments").insert({ ...baseRow, appt_date: fmtDate(d) });
+    if (error) failed++;
+  }
+  if (failed === times) { undos.forEach((u) => u()); errToast(new Error(tr("errGeneric"))); return; }
+  if (failed > 0) errToast(new Error(tr("errGeneric"))); // seri e pjesshme: njofto, por mbaj të krijuarat
+  renderAppointments(); renderCalendar(); renderStats(); // pajtim i heshtur: id-të reale + statistikat
 }
 
 /* =====================================================================
@@ -3027,7 +3351,8 @@ function wire() {
   document.querySelectorAll("#langSwitch button").forEach((b) => {
     b.onclick = () => { lang = b.dataset.l; localStorage.setItem(LANG_KEY, lang); applyLang();
       if (!$("#onboardView").hidden) openOnboard();
-      if (!$("#appView").hidden && biz) loadAll(); };
+      // Gjuha ndryshoi → listat mbajnë tekste të vjetra → rivizato TË GJITHA nga kujtesa (i çastit)
+      if (!$("#appView").hidden && biz) { forceDrawAll(); loadAll(); } };
   });
   // Toggle i temës (errët/çelët) — ruhet, respekton sistemin si default
   const themeBtn = $("#themeToggle");
@@ -3108,7 +3433,8 @@ function wire() {
       $("#bizName").textContent = tr("panelPrefix") + biz.name;
       renderBizSwitch();
       applyModeUI(); renderCatalog(); if (commerceOn()) renderOrders();
-      renderSettings(); await renderAll();
+      renderSettings();
+      forceDrawAll(); await renderAll(); // cilësimet prekin shumë pane → rivizato gjithçka nga kujtesa (i çastit)
       toast(tr("toastSaved"));
     } catch (ex) { errToast(ex); }
   };
@@ -3166,7 +3492,7 @@ function wire() {
   if ($("#obBack")) $("#obBack").onclick = () => { addingBiz = false; if (biz) { renderBizSwitch(); showView("app"); } };
   // Porositë
   if ($("#btnAddOrder")) $("#btnAddOrder").onclick = () => openOrder(null);
-  if ($("#orderFilter")) $("#orderFilter").onchange = renderOrders;
+  if ($("#orderFilter")) $("#orderFilter").onchange = () => { forceDraw("orders"); renderOrders(); }; // filtri është lokal → rivizato nga kujtesa
   if ($("#addOrderLine")) $("#addOrderLine").onclick = () => addOrderLine();
   if ($("#orderDiscount")) $("#orderDiscount").oninput = recomputeOrder;
   if ($("#orderSave")) $("#orderSave").onclick = saveOrder;
@@ -3182,7 +3508,7 @@ function wire() {
   $("#manService").onchange = refreshManTimes;
   $("#manDate").onchange = refreshManTimes;
   if ($("#manStaff")) $("#manStaff").onchange = refreshManTimes;
-  if ($("#calStaff")) $("#calStaff").onchange = (e) => { calStaff = e.target.value || null; renderCalendar(); };
+  if ($("#calStaff")) $("#calStaff").onchange = (e) => { calStaff = e.target.value || null; forceDraw("cal:" + calDate); renderCalendar(); }; // filtri është lokal → rivizato nga kujtesa
   if ($("#manRepeat")) $("#manRepeat").onchange = (e) => { if ($("#manTimesField")) $("#manTimesField").hidden = e.target.value === "0"; };
   $("#manCancel").onclick = () => { $("#manModal").hidden = true; };
   $("#manSave").onclick = saveManual;
@@ -3202,12 +3528,16 @@ function wire() {
       tab.classList.add("active");
       tab.setAttribute("aria-current", "page");
       $("#pane-" + tab.dataset.tab).classList.add("active");
-      // Render lazy për skedat e tregtisë (gjithmonë të freskëta kur i hap)
-      if (tab.dataset.tab === "orders") renderOrders();
-      else if (tab.dataset.tab === "reports") renderReports();
-      else if (tab.dataset.tab === "catalog") renderCatalog();
-      else if (tab.dataset.tab === "config") renderConfigHub();
-      else if (tab.dataset.tab === "inbox") renderInbox();
+      // Çdo skedë me të dhëna VETË-SHËROHET kur hapet: vizatim i çastit nga kujtesa
+      // (swr — zero pritje, zero dridhje) + rifreskim i heshtur nga serveri në sfond.
+      const lazy = {
+        stats: renderStats, calendar: renderCalendar, appointments: renderAppointments,
+        blocks: renderBlocks, waitlist: renderWaitlist, leads: renderLeads,
+        customers: renderCustomers, activity: renderActivity,
+        orders: renderOrders, reports: renderReports, inbox: renderInbox,
+        catalog: renderCatalog, config: renderConfigHub,
+      };
+      const fn = lazy[tab.dataset.tab]; if (fn) fn();
       closeSidebarDrawer(); syncBotnav(); // sirtar i telefonit + sinkronizim i barit poshtë
     };
   });
@@ -3224,11 +3554,32 @@ function wire() {
     e.preventDefault();
     const from = $("#blockFrom").value, to = $("#blockTo").value;
     if (!from || !to || toMin(to) <= toMin(from)) return;
-    await sb.from("time_blocks").insert({
+    const row = {
       business_id: biz.id, block_date: $("#blockDate").value,
       from_time: from, to_time: to, reason: $("#blockReason").value.trim() || null,
-    });
-    e.target.reset(); toast(tr("toastBlocked")); await renderAll();
+    };
+    // UI OPTIMISTE: blloku shfaqet MENJËHERË në listë + në kujtesën e kalendarit të asaj date
+    // (me id të përkohshme); pas konfirmimit të serverit zëvendësohet në heshtje me rreshtin real.
+    const tmpRow = { ...row, id: "tmp-" + Date.now() };
+    const undos = [
+      mutateData("blocks", (d) => {
+        d.push(tmpRow);
+        d.sort((a, b) => (a.block_date + a.from_time).localeCompare(b.block_date + b.from_time));
+        return d;
+      }, drawBlocks),
+      mutateData("cal:" + row.block_date, (d) => { d.blocks.push(tmpRow); return d; },
+        (d) => drawCalendar(d, row.block_date)),
+    ].filter(Boolean);
+    e.target.reset(); toast(tr("toastBlocked"));
+    const { error } = await sb.from("time_blocks").insert(row);
+    if (error) {
+      undos.forEach((u) => u()); errToast(error);
+      // riktheji vlerat në formular që pronari të mos i shkruajë nga e para
+      $("#blockDate").value = row.block_date; $("#blockFrom").value = row.from_time;
+      $("#blockTo").value = row.to_time; $("#blockReason").value = row.reason || "";
+      return;
+    }
+    renderBlocks(); renderCalendar(); // pajtim i heshtur: id-ja reale zë vendin e të përkohshmes
   });
   if ($("#locForm")) $("#locForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -3247,7 +3598,10 @@ function wire() {
       location_id: $("#staffLoc").value || null, sort_order: staff.length,
     });
     if (error) { errToast(error); return; }
-    e.target.reset(); await loadStaff(); setupStaffUI(); await renderAll(); toast(tr("toastSaved"));
+    e.target.reset(); await loadStaff(); setupStaffUI(); renderStaffPane();
+    forceDraw("cal:" + calDate); forceDraw("statsAppts");
+    renderCalendar(); renderStats();
+    toast(tr("toastSaved"));
   });
 }
 
