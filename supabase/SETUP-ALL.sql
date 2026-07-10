@@ -395,3 +395,24 @@ create policy "members_read_business" on public.businesses for select
 -- Gati! Tabela, kolona, RLS, indeks, trigger, tregti + faqja publike.
 -- (Cron-et për kujtesa/win-back/reviews vendosen veç, pasi të jenë funksionet.)
 -- =====================================================================
+
+-- =====================================================================
+-- REALTIME (Faza 2) — paneli merr ndryshimet LIVE, pa rifreskim.
+-- RLS vlen edhe këtu: çdo pronar merr vetëm rreshtat e bizneseve të veta.
+-- Idempotent (duplicate/undefined → kapërcehen).
+-- =====================================================================
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'appointments', 'orders', 'order_items', 'time_blocks',
+    'messages', 'waitlist', 'leads', 'notifications'
+  ] loop
+    begin
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    exception
+      when duplicate_object then null;
+      when undefined_table then null;
+    end;
+  end loop;
+end $$;

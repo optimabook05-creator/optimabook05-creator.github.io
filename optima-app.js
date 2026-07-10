@@ -151,6 +151,7 @@ const T = {
     errGeneric: "Diçka shkoi keq. Provo sërish.", itemDescTitle: "📝 Përshkrimi",
     errLoadT: "S'u ngarkua dot", errLoadH: "Kontrollo internetin dhe provo sërish.", retry: "Provo sërish",
     netOffline: "📡 Pa internet — po shfaqen të dhënat e fundit",
+    rtNewAppt: "📅 Rezervim i ri", rtNewOrder: "🧾 Porosi e re", rtNewLead: "📥 Kërkesë e re", rtSee: "Shiko",
     infoDesc: "Detaje që i shfaqen klientit dhe i përdor AI-ja për t'iu përgjigjur pyetjeve (p.sh. përbërësit, madhësia, ngjyra).",
     infoTime: "Sa zgjat shërbimi dhe a zë një orar në kalendar. Vetëm për shërbime.",
     infoBook: "Nëse aktiv, klientët e rezervojnë vetë në një orar të lirë. Fike për gjëra që s'kanë orar.",
@@ -362,6 +363,7 @@ const T = {
     errGeneric: "Something went wrong. Try again.", itemDescTitle: "📝 Description",
     errLoadT: "Couldn't load", errLoadH: "Check your internet connection and try again.", retry: "Try again",
     netOffline: "📡 Offline — showing your latest data",
+    rtNewAppt: "📅 New booking", rtNewOrder: "🧾 New order", rtNewLead: "📥 New request", rtSee: "View",
     infoDesc: "Details shown to the customer and used by the AI to answer questions (e.g. ingredients, size, color).",
     infoTime: "How long the service takes and whether it books a calendar slot. Services only.",
     infoBook: "If on, customers can self-book a free slot. Turn off for things without a schedule.",
@@ -619,8 +621,14 @@ if (!navigator.onLine) netBanner(true); // faqja u hap TASHMË offline → event
 let hiddenAt = 0;
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
+  // Zgjimi i faqes: nëse kanali Realtime ra në gjumë (telefoni e ngriu WebSocket-in),
+  // rilidhe — callback-u SUBSCRIBED bën vetë pajtimin e pamjes me serverin.
+  // ("joining" = ende duke u lidhur vetë → mos e prek)
+  if (rtChannel && rtChannel.state !== "joined" && rtChannel.state !== "joining") {
+    const b = rtBizId; stopRealtime(); if (biz && biz.id === b) startRealtime();
+  }
   // U kthye pas >60s larg → rifresko në heshtje pamjen aktive (të dhëna të freskëta pa asnjë veprim)
-  if (hiddenAt && Date.now() - hiddenAt > 60000) revalidateVisible();
+  else if (hiddenAt && Date.now() - hiddenAt > 60000) revalidateVisible();
 });
 function revalidateVisible() {
   if (!biz || !$("#appView") || $("#appView").hidden) return;
@@ -630,6 +638,94 @@ function revalidateVisible() {
     orders: renderOrders, blocks: renderBlocks, waitlist: renderWaitlist, leads: renderLeads,
     customers: renderCustomers, activity: renderActivity, inbox: renderInbox, reports: renderReports };
   if (m[t]) m[t]();
+}
+
+/* =====================================================================
+   FAZA 2 — REALTIME: rezervimet/porositë/mesazhet shfaqen VETË në panel
+
+   Si punon:
+   - Një kanal WebSocket për biznesin aktiv (filtri business_id në server);
+     RLS vlen edhe këtu → merren vetëm rreshtat që i sheh pronari.
+   - Kur vjen një ngjarje: nëse pamja e hapur varet nga ajo tabelë,
+     rifreskohet në heshtje (debounce 300ms — ngjarjet vijnë në tufa,
+     p.sh. porosi + artikujt e saj). Panet e tjera vetë-shërohen kur
+     hapen (swr, Faza 1) → s'kanë nevojë për asgjë.
+   - Rezervim/porosi/kërkesë e re nga AI ose faqja publike → toast me
+     buton "Shiko" (por JO kur pronari e ka atë pamje para syve — lista
+     përditësohet vetë; edhe veprimet e tij manuale s'i bëjnë toast vetes).
+   - Pas çdo ri-lidhjeje (interneti ra e u kthye, telefoni u zgjua) mund
+     të kenë humbur ngjarje → pamja e dukshme pajtohet me serverin.
+
+   KËRKON (njëherë): SQL-in te supabase/realtime.sql (shton tabelat në
+   publikimin supabase_realtime). Pa të, kanali lidhet por s'vjen asgjë —
+   paneli mbetet i saktë, thjesht pa "live" (vetë-shërimi i Fazës 1 punon).
+   ===================================================================== */
+let rtChannel = null, rtBizId = null;
+const rtTimers = {};
+/* Cilat pamje varen nga cila tabelë (statistikat përfshijnë insights + "sot") */
+const RT_DEPS = {
+  appointments: ["appointments", "calendar", "stats", "customers", "reports"],
+  orders: ["orders", "reports", "customers", "stats"],
+  order_items: ["orders", "reports"],
+  time_blocks: ["calendar", "blocks"],
+  messages: ["inbox"],
+  waitlist: ["waitlist"],
+  leads: ["leads"],
+  notifications: ["activity"],
+};
+
+function onRtEvent(table, payload) {
+  const active = document.querySelector(".tab.active");
+  const tab = active ? active.dataset.tab : "stats";
+  if ((RT_DEPS[table] || []).includes(tab)) {
+    clearTimeout(rtTimers[tab]);
+    rtTimers[tab] = setTimeout(revalidateVisible, 300);
+  }
+  rtToast(table, payload, tab);
+}
+
+/* Toast "erdhi diçka e re" — vetëm për INSERT-e që s'i bëri vetë pronari */
+function rtToast(table, payload, activeTab) {
+  if (!payload || payload.eventType !== "INSERT" || !payload.new) return;
+  const r = payload.new;
+  const go = (msg, tab) => {
+    if (tab === activeTab) return; // e ka para syve → lista u përditësua vetë, pa zhurmë
+    haptic(20);
+    toast(msg, null, { label: tr("rtSee"), fn: () => { const t = document.querySelector('.tab[data-tab="' + tab + '"]'); if (t) t.click(); } });
+  };
+  // (toast-i e vendos tekstin me textContent → emrat janë të sigurt pa escape)
+  if (table === "appointments" && r.source !== "manual") {
+    go(tr("rtNewAppt") + (r.client_name ? ": " + r.client_name : ""), "appointments");
+  } else if (table === "orders" && r.created_by !== "manual") {
+    go(tr("rtNewOrder") + (r.customer_name ? ": " + r.customer_name : ""), "orders");
+  } else if (table === "leads") {
+    go(tr("rtNewLead"), "leads");
+  }
+}
+
+function startRealtime() {
+  if (!biz || typeof sb.channel !== "function") return;
+  if (rtBizId === biz.id && rtChannel) return; // i njëjti biznes → kanali ekzistues mjafton
+  stopRealtime();
+  rtBizId = biz.id;
+  const filter = "business_id=eq." + biz.id;
+  let ch = sb.channel("panel-" + biz.id);
+  for (const table of Object.keys(RT_DEPS)) {
+    ch = ch.on("postgres_changes", { event: "*", schema: "public", table, filter },
+      (payload) => onRtEvent(table, payload));
+  }
+  let firstJoin = true;
+  rtChannel = ch.subscribe((status) => {
+    if (status !== "SUBSCRIBED") return;
+    // SUBSCRIBED vjen edhe pas çdo RI-lidhjeje → pajto pamjen (mund të kenë humbur
+    // ngjarje sa ishte shkëputur). Herën e PARË jo — loadAll sapo mori gjithçka.
+    if (firstJoin) { firstJoin = false; return; }
+    revalidateVisible();
+  });
+}
+function stopRealtime() {
+  if (rtChannel) { try { sb.removeChannel(rtChannel); } catch (e) {} }
+  rtChannel = null; rtBizId = null;
 }
 function humanDate(ds) {
   const d = parseDate(ds), today = fmtDate(new Date());
@@ -889,6 +985,10 @@ async function mfaDisable() {
 
 async function logout() {
   await sb.auth.signOut();
+  stopRealtime(); // mbyll kanalin WebSocket të biznesit
+  // Higjienë: pastro KREJT kujtesën — një përdorues tjetër në të njëjtin
+  // shfletues s'duhet të gjejë asnjë gjurmë të të dhënave të të parit
+  dataCache.clear(); forceDrawAll();
   biz = null; businesses = []; services = []; hours = {}; addingBiz = false;
   showView("auth");
 }
@@ -988,6 +1088,7 @@ async function loadAll() {
   renderCatalog();
   if (commerceOn()) renderOrders();
   renderConfigHub();
+  startRealtime(); // Faza 2: rezervimet e reja shfaqen vetë (idempotente për të njëjtin biznes)
 }
 
 /* ---------------- Qendra e konfigurimit (hub i udhëhequr "rregullo një herë") ---------------- */
