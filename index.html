@@ -732,16 +732,122 @@ footer{border-top:0;position:relative;padding-top:40px}
 footer::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
   width:min(680px,82%);height:1px;
   background:linear-gradient(90deg,transparent,rgba(12,166,120,.55),transparent)}
+/* ============================================================
+   🧭 NAV MASTERPIECE — tregues rrëshqitës, gjendje scroll, menu mobile
+   (shtresë finale — fiton në kaskadë; vetëm transform/opacity animohen)
+   ============================================================ */
+/* Skip-link: i padukshëm derisa merr fokus me Tab — a11y e klasit të parë */
+.skip-link{position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:12px;z-index:100;
+  transform:translateY(-250%);background:var(--accent-deep);color:#fff;font-family:var(--fb);
+  font-weight:800;font-size:14px;padding:12px 18px;border-radius:12px;text-decoration:none;
+  box-shadow:0 12px 30px rgba(0,0,0,.3);transition:transform .2s ease}
+.skip-link:focus{transform:none;outline:2px solid #fff;outline-offset:2px}
+
+/* Lidhjet + treguesi smerald rrëshqitës (lëviz VETËM me transform/width një herë në ndryshim seksioni) */
+.nav-links{position:relative;gap:4px}
+.nav-links a{position:relative;z-index:1;padding:10px 16px;border-radius:999px;transition:color .18s ease}
+.nav-links a.active{color:var(--accent-deep)}
+:root[data-theme="dark"] .nav-links a.active{color:var(--accent-bright)}
+.nav-ind{position:absolute;left:0;top:50%;height:38px;width:70px;opacity:0;pointer-events:none;
+  transform:translate(0,-50%);border-radius:999px;
+  background:linear-gradient(180deg,var(--accent-soft),rgba(12,166,120,.06));
+  border:1px solid rgba(12,166,120,.18);box-shadow:inset 0 1px 0 rgba(255,255,255,.35);
+  transition:transform .32s cubic-bezier(.22,1,.36,1),width .32s cubic-bezier(.22,1,.36,1),opacity .2s ease}
+:root[data-theme="dark"] .nav-ind{background:linear-gradient(180deg,rgba(32,201,151,.14),rgba(32,201,151,.05));
+  border-color:rgba(32,201,151,.22);box-shadow:none}
+
+/* FIX para-ekzistues: shtresa "liquid glass" (v118) i vuri .nav position:relative
+   dhe mbivendosi sticky-n e bazës → navi IKTE me scroll që prej v118. Sticky rikthehet
+   (elementi sticky është containing-block për ::before absolute njësoj si relative). */
+.nav{position:sticky}
+
+/* Gjendja "scrolled" — hije më e thellë + vijë më e ndritshme (pa animim layout-i) */
+.nav{transition:box-shadow .3s ease,border-color .3s ease}
+.nav.scrolled{border-color:rgba(255,255,255,.75);
+  box-shadow:0 18px 50px -12px rgba(22,32,28,.30),inset 0 1px 0 rgba(255,255,255,.85),inset 0 -1px 0 rgba(255,255,255,.18)}
+:root[data-theme="dark"] .nav.scrolled{border-color:rgba(255,255,255,.16);
+  box-shadow:0 20px 60px -14px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.12)}
+
+/* Hamburgeri: 2 vija → X, vetëm transform */
+.nav-burger{display:none;position:relative;width:44px;height:44px;border-radius:14px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.35);backdrop-filter:blur(10px)}
+:root[data-theme="dark"] .nav-burger{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.12)}
+.nb-l{position:absolute;left:50%;top:50%;width:18px;height:2px;border-radius:2px;background:var(--ink);
+  transition:transform .28s cubic-bezier(.22,1,.36,1)}
+.nb-l1{transform:translate(-50%,-50%) translateY(-4px)}
+.nb-l2{transform:translate(-50%,-50%) translateY(4px)}
+.nav-burger[aria-expanded="true"] .nb-l1{transform:translate(-50%,-50%) rotate(45deg)}
+.nav-burger[aria-expanded="true"] .nb-l2{transform:translate(-50%,-50%) rotate(-45deg)}
+
+/* Nën 1150px: lidhjet + veprimet futen te menuja (më parë thjesht ZHDUKESHIN ≤920 — pa asnjë menu!) */
+@media(max-width:1150px){
+  .nav-links,.nav .lang,#portalLink,#demoLink{display:none}
+  .nav-burger{display:block}
+}
+
+/* Menuja mobile: kartë e ngritur nën nav. Paneli animohet me transform → PA backdrop-filter
+   (mësimi v125: blur mbi element që lëviz = ri-kampionim çdo kuadër = lag); gradient gati opak. */
+.mmenu{position:fixed;inset:0;z-index:60}
+.mmenu[hidden]{display:none}
+.mmenu-backdrop{position:absolute;inset:0;background:rgba(8,14,12,.44);opacity:0;transition:opacity .25s ease}
+.mmenu.open .mmenu-backdrop{opacity:1}
+.mmenu-panel{position:absolute;right:max(10px,env(safe-area-inset-right,0px));
+  top:calc(env(safe-area-inset-top,0px) + 78px);width:min(400px,calc(100vw - 20px));
+  border-radius:24px;padding:14px;overflow-y:auto;overscroll-behavior:contain;
+  max-height:calc(100vh - 100px);max-height:calc(100dvh - 100px);
+  background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(245,243,239,.96));
+  border:1px solid rgba(255,255,255,.85);
+  box-shadow:0 30px 80px -18px rgba(22,32,28,.4),inset 0 1px 0 #fff;
+  transform:translateY(-12px) scale(.97);opacity:0;transform-origin:top right;
+  transition:transform .3s cubic-bezier(.22,1,.36,1),opacity .22s ease}
+.mmenu.open .mmenu-panel{transform:none;opacity:1}
+:root[data-theme="dark"] .mmenu-panel{
+  background:linear-gradient(180deg,rgba(26,36,31,.98),rgba(12,19,16,.97));
+  border-color:rgba(255,255,255,.12);
+  box-shadow:0 30px 80px -14px rgba(0,0,0,.85),inset 0 1px 0 rgba(255,255,255,.08)}
+.mmenu-link{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-12);
+  text-decoration:none;color:var(--ink);font-family:var(--fb);font-weight:800;font-size:17px;
+  padding:15px 14px;border-radius:14px;transition:background .18s ease}
+.mmenu-link::after{content:"→";color:var(--ink-faint);font-weight:700;
+  transition:transform .2s ease,color .2s ease}
+.mmenu-link:hover,.mmenu-link:active{background:var(--accent-soft)}
+.mmenu-link:hover::after{transform:translateX(3px);color:var(--accent)}
+.mmenu-sep{height:1px;background:var(--glass-line);margin:8px 6px}
+:root[data-theme="dark"] .mmenu-sep{background:rgba(255,255,255,.08)}
+.mmenu-cta{display:flex;align-items:center;justify-content:center;margin:8px 6px 0;gap:0}
+.mmenu-foot{display:flex;justify-content:center;padding:14px 0 4px}
+/* Hyrje me stagger — vetëm opacity/transform, respekton reduced-motion */
+.mmenu.open .mmenu-panel>*{animation:mItem .34s cubic-bezier(.22,1,.36,1) backwards}
+.mmenu.open .mmenu-panel>*:nth-child(1){animation-delay:.02s}
+.mmenu.open .mmenu-panel>*:nth-child(2){animation-delay:.06s}
+.mmenu.open .mmenu-panel>*:nth-child(3){animation-delay:.10s}
+.mmenu.open .mmenu-panel>*:nth-child(4){animation-delay:.14s}
+.mmenu.open .mmenu-panel>*:nth-child(5){animation-delay:.18s}
+.mmenu.open .mmenu-panel>*:nth-child(6){animation-delay:.21s}
+.mmenu.open .mmenu-panel>*:nth-child(7){animation-delay:.24s}
+.mmenu.open .mmenu-panel>*:nth-child(8){animation-delay:.27s}
+@keyframes mItem{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .mmenu-panel,.mmenu-backdrop,.nb-l,.nav-ind{transition:none}
+  .mmenu.open .mmenu-panel>*{animation:none}
+}
+/* Fokus i dukshëm për navigim me tastierë në krejt navin/menunë */
+.nav a:focus-visible,.nav button:focus-visible,.mmenu a:focus-visible,.mmenu button:focus-visible{
+  outline:2.5px solid var(--accent);outline-offset:2px;border-radius:12px}
 </style>
 </head>
 <body>
 <div class="cursor-glow" aria-hidden="true"></div>
 <div class="scroll-progress" aria-hidden="true"></div>
 
-<nav class="nav">
-  <a class="brand" href="#"><span class="logo">O</span><span class="brand-txt"><b>OptimaBook</b><small class="brand-tag" data-t="brandTag">Recepsionisti AI</small></span></a>
-  <div class="nav-links">
+<a class="skip-link" href="#main" data-t="skipLink">Kalo te përmbajtja</a>
+
+<nav class="nav" id="topNav" aria-label="Navigimi kryesor">
+  <a class="brand" href="#"><span class="logo" aria-hidden="true">O</span><span class="brand-txt"><b>OptimaBook</b><small class="brand-tag" data-t="brandTag">Recepsionisti AI</small></span></a>
+  <div class="nav-links" id="navLinks">
+    <span class="nav-ind" id="navInd" aria-hidden="true"></span>
     <a href="#features" data-t="navFeatures">Veçoritë</a>
+    <a href="#compare" data-t="navWhy">Pse ne</a>
     <a href="#pricing" data-t="navPricing">Çmimet</a>
     <a href="#faq" data-t="navFaq">FAQ</a>
   </div>
@@ -753,10 +859,34 @@ footer::before{content:"";position:absolute;top:0;left:50%;transform:translateX(
     <button class="theme-toggle" id="themeToggle" type="button" aria-label="Ndrysho temën" title="Temë e errët / e çelët">🌙</button>
     <a class="btn" id="portalLink" href="app.html"><span class="live-dot" id="portalDot" hidden></span><span id="portalText">Portal</span></a>
     <a class="btn" id="demoLink" href="demo.html" data-t="navDemo">▶ Provo demon</a>
+    <button class="nav-burger" id="navBurger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mobileMenu">
+      <span class="nb-l nb-l1" aria-hidden="true"></span><span class="nb-l nb-l2" aria-hidden="true"></span>
+    </button>
   </div>
 </nav>
 
-<header class="hero wrap">
+<!-- Menuja mobile — MOTËR e navit, jo brenda tij: .nav ka transform (GPU layer),
+     dhe position:fixed brenda një elementi me transform prishet (mësimi v106). -->
+<div class="mmenu" id="mobileMenu" hidden>
+  <div class="mmenu-backdrop" id="mmenuBackdrop" aria-hidden="true"></div>
+  <div class="mmenu-panel" role="dialog" aria-modal="true" aria-label="Menu">
+    <a class="mmenu-link" href="#features" data-t="navFeatures">Veçoritë</a>
+    <a class="mmenu-link" href="#compare" data-t="navWhy">Pse ne</a>
+    <a class="mmenu-link" href="#pricing" data-t="navPricing">Çmimet</a>
+    <a class="mmenu-link" href="#faq" data-t="navFaq">FAQ</a>
+    <div class="mmenu-sep" aria-hidden="true"></div>
+    <a class="btn big mmenu-cta" id="mDemoLink" href="demo.html" data-t="navDemo">▶ Provo demon</a>
+    <a class="btn big mmenu-cta" id="mPortalLink" href="app.html"><span class="live-dot" id="mPortalDot" hidden></span><span id="mPortalText">Portal</span></a>
+    <div class="mmenu-foot">
+      <div class="lang" id="mLang">
+        <button data-l="sq">SQ</button>
+        <button data-l="en">EN</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<header class="hero wrap" id="main" tabindex="-1">
   <div class="hero-copy">
     <div class="eyebrow" data-t="eyebrow">Për çdo biznes · Në çdo gjuhë · 24/7</div>
     <h1 data-t="h1html"></h1>
@@ -941,6 +1071,7 @@ const T = {
   sq: {
     navDemo: "▶ Provo demon", navLogin: "Hyr / Regjistrohu", navPortal: "Paneli im",
     brandTag: "Recepsionisti AI", navFeatures: "Veçoritë", navPricing: "Çmimet", navFaq: "FAQ",
+    navWhy: "Pse ne", skipLink: "Kalo te përmbajtja",
     eyebrow: "Për çdo biznes · Në çdo gjuhë · 24/7",
     h1html: 'Recepsionisti AI që <span class="grad">nuk fle kurrë</span>',
     sub: "OptimaBook i përgjigjet klientëve të tu në WhatsApp, Telegram e më shumë, rezervon takimet në kalendarin tënd dhe u kujton që të vijnë — 24 orë në ditë, pa lëvizur ti gishtin.",
@@ -990,6 +1121,7 @@ const T = {
   en: {
     navDemo: "▶ Try the demo", navLogin: "Sign in / Sign up", navPortal: "My panel",
     brandTag: "The AI receptionist", navFeatures: "Features", navPricing: "Pricing", navFaq: "FAQ",
+    navWhy: "Why us", skipLink: "Skip to content",
     eyebrow: "For every business · In any language · 24/7",
     h1html: 'The AI receptionist that <span class="grad">never sleeps</span>',
     sub: "OptimaBook answers your customers on WhatsApp, Telegram & more, books appointments into your calendar and reminds them to show up — 24 hours a day, without you lifting a finger.",
@@ -1045,7 +1177,8 @@ if (!T[lang]) lang = "en";
 
 function apply() {
   document.documentElement.lang = lang;
-  document.querySelectorAll("#lang button").forEach((b) =>
+  // Të dy pillat e gjuhës (në nav + në menunë mobile) mbahen sinkron
+  document.querySelectorAll(".lang button").forEach((b) =>
     b.classList.toggle("active", b.dataset.l === lang));
   document.querySelectorAll("[data-t]").forEach((el) => {
     const v = T[lang][el.dataset.t];
@@ -1066,6 +1199,8 @@ function apply() {
   }
   chips.appendChild(track);
   updatePortalLink();
+  // Gjerësitë e lidhjeve ndryshojnë me gjuhën → rivendos treguesin rrëshqitës
+  if (window.__navPlace) window.__navPlace();
 }
 
 // Butoni i portalit: e kupton vetë nëse je i loguar → "Paneli im"; përndryshe "Hyr / Regjistrohu"
@@ -1079,19 +1214,25 @@ function isLoggedIn() {
   return false;
 }
 function updatePortalLink() {
-  const a = document.getElementById("portalLink");
-  if (!a) return;
   const logged = isLoggedIn();
-  const txt = document.getElementById("portalText");
-  const dot = document.getElementById("portalDot");
-  if (txt) txt.textContent = logged ? T[lang].navPortal : T[lang].navLogin;
-  if (dot) dot.hidden = !logged;
-  // Hierarki: i loguar → "Paneli im" primar, demo dytësor; i paloguar → demo primar
-  a.classList.toggle("primary", logged);
-  const demo = document.getElementById("demoLink");
-  if (demo) demo.classList.toggle("primary", !logged);
+  // Dy kopje: në nav (desktop) + në menunë mobile — të dyja mbahen sinkron
+  for (const [aId, tId, dId, demoId] of [
+    ["portalLink", "portalText", "portalDot", "demoLink"],
+    ["mPortalLink", "mPortalText", "mPortalDot", "mDemoLink"],
+  ]) {
+    const a = document.getElementById(aId);
+    if (!a) continue;
+    const txt = document.getElementById(tId);
+    const dot = document.getElementById(dId);
+    if (txt) txt.textContent = logged ? T[lang].navPortal : T[lang].navLogin;
+    if (dot) dot.hidden = !logged;
+    // Hierarki: i loguar → "Paneli im" primar, demo dytësor; i paloguar → demo primar
+    a.classList.toggle("primary", logged);
+    const demo = document.getElementById(demoId);
+    if (demo) demo.classList.toggle("primary", !logged);
+  }
 }
-document.querySelectorAll("#lang button").forEach((b) => {
+document.querySelectorAll(".lang button").forEach((b) => {
   b.onclick = () => { lang = b.dataset.l; localStorage.setItem(LK, lang); apply(); };
 });
 apply();
@@ -1183,6 +1324,93 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
     p.style.width=(m>0?(h.scrollTop/m*100):0)+"%"}
   addEventListener("scroll",function(){if(!t){t=true;requestAnimationFrame(upd)}},{passive:true});
   upd();
+})();
+
+/* ===== NAV MASTERPIECE: gjendja scrolled + scroll-spy me tregues + menuja mobile ===== */
+(function(){
+  var nav=document.getElementById("topNav");if(!nav)return;
+
+  /* 1) Gjendja "scrolled" (rAF-gated, pasiv) */
+  var st=false;
+  function updScrolled(){st=false;nav.classList.toggle("scrolled",(window.scrollY||0)>24)}
+  addEventListener("scroll",function(){if(!st){st=true;requestAnimationFrame(updScrolled)}},{passive:true});
+  updScrolled();
+
+  /* 2) Scroll-spy: cili seksion duket → lidhja aktive + treguesi rrëshqet aty (transform/width, një herë në ndryshim) */
+  var links=[].slice.call(document.querySelectorAll(".nav-links a"));
+  var ind=document.getElementById("navInd");
+  function place(){
+    if(!ind)return;
+    var a=null;for(var i=0;i<links.length;i++)if(links[i].classList.contains("active")){a=links[i];break}
+    if(!a){ind.style.opacity="0";return}
+    ind.style.opacity="1";
+    ind.style.width=a.offsetWidth+"px";
+    ind.style.transform="translateX("+a.offsetLeft+"px) translateY(-50%)";
+  }
+  window.__navPlace=place;
+  var activeId="";
+  function setActive(id){
+    if(id===activeId)return;activeId=id;
+    links.forEach(function(l){
+      var on=l.getAttribute("href")==="#"+id;
+      l.classList.toggle("active",on);
+      if(on)l.setAttribute("aria-current","true");else l.removeAttribute("aria-current");
+    });
+    place();
+  }
+  var secs=links.map(function(l){return document.querySelector(l.getAttribute("href"))}).filter(Boolean);
+  if("IntersectionObserver" in window&&secs.length){
+    var vis={};
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){vis[e.target.id]=e.isIntersecting?e.intersectionRatio:0});
+      var best="",r=0;
+      for(var k in vis)if(vis[k]>r){r=vis[k];best=k}
+      setActive(best);
+    },{rootMargin:"-20% 0px -55% 0px",threshold:[0,.12,.3,.6]});
+    secs.forEach(function(s){io.observe(s)});
+  }
+  var rt=false;
+  addEventListener("resize",function(){if(!rt){rt=true;requestAnimationFrame(function(){rt=false;place()})}},{passive:true});
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(place);
+
+  /* 3) Menuja mobile: hap/mbyll me sinkron aria, Escape, klik-jashtë, kurth fokusi, kyçje scroll-i */
+  var burger=document.getElementById("navBurger"),menu=document.getElementById("mobileMenu");
+  if(!burger||!menu)return;
+  var lastFocus=null,hideTimer=null;
+  function isOpen(){return burger.getAttribute("aria-expanded")==="true"}
+  function open(){
+    if(hideTimer){clearTimeout(hideTimer);hideTimer=null}
+    lastFocus=document.activeElement;
+    menu.hidden=false;
+    void menu.offsetHeight; /* reflow → tranzicioni i hapjes luhet */
+    menu.classList.add("open");
+    burger.setAttribute("aria-expanded","true");
+    document.body.style.overflow="hidden";
+    var f=menu.querySelector(".mmenu-link");if(f)f.focus({preventScroll:true});
+  }
+  function close(){
+    menu.classList.remove("open");
+    burger.setAttribute("aria-expanded","false");
+    document.body.style.overflow="";
+    hideTimer=setTimeout(function(){menu.hidden=true;hideTimer=null},320);
+    if(lastFocus&&lastFocus.focus)lastFocus.focus({preventScroll:true});
+  }
+  burger.addEventListener("click",function(){isOpen()?close():open()});
+  menu.querySelector(".mmenu-backdrop").addEventListener("click",close);
+  menu.querySelectorAll("a").forEach(function(a){a.addEventListener("click",close)});
+  document.addEventListener("keydown",function(e){
+    if(!isOpen())return;
+    if(e.key==="Escape"){close();return}
+    if(e.key!=="Tab")return;
+    /* kurth i thjeshtë fokusi brenda panelit */
+    var f=[].slice.call(menu.querySelectorAll("a,button")).filter(function(el){return el.offsetParent!==null});
+    if(!f.length)return;
+    var first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+  });
+  /* Nëse ekrani zgjerohet mbi pikën e thyerjes ndërsa menuja është hapur → mbylle */
+  addEventListener("resize",function(){if(isOpen()&&innerWidth>1150)close()},{passive:true});
 })();
 </script>
 </body>
