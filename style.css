@@ -2112,6 +2112,22 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
   .today-card  { -webkit-backdrop-filter: none; backdrop-filter: none; }   /* sfond gradient i mjafton */
   body::before { filter: blur(46px) saturate(1.4); }                        /* aurora: blur më i vogël në telefon */
 }
+
+/* ⚡ FAZA 3 — Përdoruesi ka kërkuar në sistem "më pak transparencë" (a11y):
+   sipërfaqet kryesore bëhen opake, zero blur — më e lexueshme, më e shpejtë. */
+@media (prefers-reduced-transparency: reduce) {
+  .topbar, .nav, .botnav, .modal, .sidebar, .panel-col, .today-card {
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+    background: rgba(255, 255, 255, .97);
+  }
+  :root[data-theme="dark"] .topbar, :root[data-theme="dark"] .nav, :root[data-theme="dark"] .botnav,
+  :root[data-theme="dark"] .modal, :root[data-theme="dark"] .sidebar, :root[data-theme="dark"] .panel-col,
+  :root[data-theme="dark"] .today-card {
+    background: rgba(16, 24, 21, .97);
+  }
+  .modal-backdrop { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  body::before { filter: blur(46px); opacity: .5; } /* aurora më e qetë */
+}
 /* Kartat shtesë që scroll-ojnë → browser-i i kapërcen jashtë ekranit (Safari 18+) */
 .cv-card, .ins-card, .bi-box { content-visibility: auto; contain-intrinsic-size: auto 110px; }
 

@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=130">
-<link rel="modulepreload" href="config.js?v=130">
-<link rel="modulepreload" href="optima-app.js?v=130">
+<link rel="stylesheet" href="style.css?v=131">
+<link rel="modulepreload" href="config.js?v=131">
+<link rel="modulepreload" href="optima-app.js?v=131">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -53,6 +53,16 @@
   .app-shell { max-width: 760px; margin: 24px auto; padding: 0 18px; }
   .onboard-actions { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
   .onboard-actions .btn.primary { flex: 1; }
+
+  /* ⚡ FAZA 3 — xhami pa lag në telefon (si v108 për panelin): blur më i lehtë vetëm në prekje */
+  @media (pointer: coarse) {
+    .auth-card, .onboard-card { -webkit-backdrop-filter: blur(16px) saturate(1.5); backdrop-filter: blur(16px) saturate(1.5); }
+  }
+  /* "Më pak transparencë" nga sistemi (a11y) → karta opake, zero blur */
+  @media (prefers-reduced-transparency: reduce) {
+    .auth-card, .onboard-card { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,.97); }
+    :root[data-theme="dark"] .auth-card, :root[data-theme="dark"] .onboard-card { background: rgba(16,24,21,.97); }
+  }
 </style>
 </head>
 <body>
@@ -795,7 +805,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=130"></script>
-<script type="module" src="optima-app.js?v=130"></script>
+<script src="core.js?v=131"></script>
+<script type="module" src="optima-app.js?v=131"></script>
 </body>
 </html>

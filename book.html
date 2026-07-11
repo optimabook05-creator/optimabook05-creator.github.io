@@ -10,7 +10,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=130">
+<link rel="stylesheet" href="style.css?v=131">
 <style>
   .pub-wrap { max-width: 560px; margin: 30px auto 80px; padding: 0 16px; }
   .pub-card { background: var(--glass); backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6);
@@ -87,6 +87,17 @@
     .pub-foot { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
   }
   @media (prefers-reduced-motion: reduce) { .pub-card, .slot-btn, .pub-msg .big { animation: none !important; } }
+
+  /* ⚡ FAZA 3 — xhami pa lag në telefon: blur më i lehtë vetëm në prekje
+     (kjo është faqja që klientët e hapin MË SHUMTI nga telefoni) */
+  @media (pointer: coarse) {
+    .pub-card { -webkit-backdrop-filter: blur(14px) saturate(1.5); backdrop-filter: blur(14px) saturate(1.5); }
+  }
+  /* Përdoruesi ka kërkuar "më pak transparencë" në sistem → kartë opake, zero blur */
+  @media (prefers-reduced-transparency: reduce) {
+    .pub-card { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,.97); }
+    :root[data-theme="dark"] .pub-card { background: rgba(16,24,21,.97); }
+  }
 </style>
 </head>
 <body>
