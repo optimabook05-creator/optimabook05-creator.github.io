@@ -158,6 +158,22 @@ const T = {
     aiqAnswerPh: "Përgjigja që duhet të japë AI…", aiqQPh: "Pyetja (si do ta bënte klienti)…",
     aiqSave: "Mësoje AI-në", aiqDismiss: "Hiqe", aiqLearned: "Të mësuara",
     aiqAddBtn: "+ Shto pyetje-përgjigje", aiqSaved: "✅ AI-ja e mësoi — do ta dijë përgjithmonë",
+    impBtn: "📥 Ngarko listën", catSearchPh: "Kërko në katalog…", catNoMatch: "Asnjë artikull nuk përputhet me kërkimin.",
+    catMore: "…dhe {n} artikuj të tjerë — përdor kërkimin lart për t'i gjetur.",
+    impTitle: "📥 Ngarko listën e artikujve",
+    impSub: "Excel (CSV), PDF me tekst, ose thjesht një foto e çmimores. AI e lexon — ti kontrollon — asgjë s'hyn pa konfirmimin tënd.",
+    impDrop: "Kliko dhe zgjidh skedarin (Excel/CSV, PDF, ose foto)",
+    impHint: "Këshillë: nga Excel-i bëj \"Save As → CSV\" për leximin më të saktë. Fotot punojnë shumë mirë për çmimore të shtypura.",
+    impReading: "Duke lexuar me AI… pjesa {x}/{y}", impErrRead: "Leximi dështoi — provo sërish.",
+    impErrPdfScan: "Ky PDF duket i skanuar (pa tekst). Bëji screenshot faqeve dhe ngarkoji si foto — punon shumë mirë.",
+    impErrEmpty: "S'u gjet asnjë artikull në skedar.",
+    impStats: "U lexuan {n} artikuj: {i} të rinj · {u} përditësime",
+    impUncertainN: "⚠️ {n} për kontroll (me të verdhë)",
+    impCurWarn: "Lista duket në {a}, biznesi yt përdor {b} — kontrollo çmimet.",
+    impMore: "…dhe {n} rreshta të tjerë (hyjnë të gjithë në katalog kur konfirmon).",
+    impConfirm: "✓ Fut në katalog", impSaving: "Duke ruajtur… {x}/{y}",
+    impSaved: "✅ {n} artikuj hynë në katalog — AI tani i njeh të gjithë",
+    impColName: "Emri", impColPrice: "Çmimi", impColStock: "Stoku", impColSku: "Kodi", impColNote: "Shënim",
     infoDesc: "Detaje që i shfaqen klientit dhe i përdor AI-ja për t'iu përgjigjur pyetjeve (p.sh. përbërësit, madhësia, ngjyra).",
     infoTime: "Sa zgjat shërbimi dhe a zë një orar në kalendar. Vetëm për shërbime.",
     infoBook: "Nëse aktiv, klientët e rezervojnë vetë në një orar të lirë. Fike për gjëra që s'kanë orar.",
@@ -376,6 +392,22 @@ const T = {
     aiqAnswerPh: "The answer the AI should give…", aiqQPh: "The question (as a customer would ask it)…",
     aiqSave: "Teach the AI", aiqDismiss: "Remove", aiqLearned: "Learned",
     aiqAddBtn: "+ Add Q&A", aiqSaved: "✅ The AI learned it — it will know it forever",
+    impBtn: "📥 Upload list", catSearchPh: "Search catalog…", catNoMatch: "No items match your search.",
+    catMore: "…and {n} more items — use the search above to find them.",
+    impTitle: "📥 Upload your item list",
+    impSub: "Excel (CSV), text PDF, or simply a photo of your price list. The AI reads it — you review — nothing enters without your confirmation.",
+    impDrop: "Click and choose a file (Excel/CSV, PDF, or photo)",
+    impHint: "Tip: from Excel do \"Save As → CSV\" for the most accurate reading. Photos work great for printed price lists.",
+    impReading: "AI reading… part {x}/{y}", impErrRead: "Reading failed — please try again.",
+    impErrPdfScan: "This PDF looks scanned (no text). Screenshot the pages and upload them as photos — works great.",
+    impErrEmpty: "No items found in the file.",
+    impStats: "Read {n} items: {i} new · {u} updates",
+    impUncertainN: "⚠️ {n} to review (highlighted)",
+    impCurWarn: "The list looks like {a}, but your business uses {b} — double-check prices.",
+    impMore: "…and {n} more rows (all will be imported when you confirm).",
+    impConfirm: "✓ Add to catalog", impSaving: "Saving… {x}/{y}",
+    impSaved: "✅ {n} items added — the AI now knows them all",
+    impColName: "Name", impColPrice: "Price", impColStock: "Stock", impColSku: "Code", impColNote: "Note",
     infoDesc: "Details shown to the customer and used by the AI to answer questions (e.g. ingredients, size, color).",
     infoTime: "How long the service takes and whether it books a calendar slot. Services only.",
     infoBook: "If on, customers can self-book a free slot. Turn off for things without a schedule.",
@@ -1143,12 +1175,21 @@ function renderConfigHub() {
 }
 
 /* ---------------- Katalogu (produkte/shërbime + stok + çmime sipas sasisë) ---------------- */
+const CAT_SHOW_MAX = 300; // mbi këtë numër lista pritet — kërkimi gjen gjithçka
 function renderCatalog() {
   const list = $("#catalogList");
   if (!list) return;
   if (!services.length) { list.innerHTML = emptyHTML("📦", tr("emptyCatalog"), tr("emptyCatalogHint")); return; }
+  // Kërkimi lokal (për katalogë të mëdhenj pas importit): emër/përshkrim/kod
+  const q = OB.normKey(($("#catSearch") && $("#catSearch").value) || "");
+  let shown = q
+    ? services.filter((s) => OB.normKey([s.name, s.description, s.sku].filter(Boolean).join(" ")).includes(q))
+    : services;
+  const total = shown.length;
+  if (!total) { list.innerHTML = emptyHTML("🔍", tr("catNoMatch"), ""); return; }
+  shown = shown.slice(0, CAT_SHOW_MAX);
   list.innerHTML = "";
-  services.forEach((s) => {
+  shown.forEach((s) => {
     const kind = s.kind === "product" ? "product" : "service";
     const tiers = priceTiers.filter((t) => t.service_id === s.id);
     const meta = [`<span class="kind-badge ${kind}">${kind === "product" ? tr("kindProduct") : tr("kindService")}</span>`];
@@ -1172,6 +1213,207 @@ function renderCatalog() {
     item.onclick = () => openItem(s);
     list.appendChild(item);
   });
+  if (total > CAT_SHOW_MAX) {
+    const more = document.createElement("div");
+    more.className = "cat-more";
+    more.textContent = tr("catMore").replace("{n}", total - CAT_SHOW_MAX);
+    list.appendChild(more);
+  }
+}
+
+/* =====================================================================
+   IMPORTI I KATALOGUT — "Ngarko → Shiko → Konfirmo"
+   Pronari ngarkon çfarë ka (Excel/CSV, PDF me tekst, ose FOTO çmimoreje);
+   funksioni `import` (AI) e kthen në artikuj të strukturuar; tabela
+   paraprake tregon gjithçka (rreshtat e pasigurt me qelibar, të
+   redaktueshëm); OB.planImport ndan të rinjtë nga përditësimet (dedup
+   me kod/emër — ringarkimi i listës përditëson çmimet, s'dyfishon).
+   ASGJË nuk hyn në katalog pa klikimin "Fut në katalog".
+   ===================================================================== */
+let impItems = [];       // artikujt e lexuar (redaktimet e tabelës shkruhen këtu)
+let impCurrency = "";
+const IMP_SHOW_MAX = 300;    // rreshtat e dukshëm në tabelën paraprake
+const IMP_CHUNK_TEXT = 12000; // shkronja teksti për thirrje AI
+const IMP_SAVE_CHUNK = 300;   // rreshta për shkrim në bazë
+
+function impShow(step) { // pick | busy | preview | saving
+  for (const id of ["impPick", "impBusy", "impPreview", "impSaving"]) {
+    const el = $("#" + id); if (el) el.hidden = id !== "imp" + step.charAt(0).toUpperCase() + step.slice(1);
+  }
+}
+function openImport() {
+  impItems = []; impCurrency = "";
+  const f = $("#impFile"); if (f) f.value = "";
+  impShow("pick");
+  $("#impModal").hidden = false;
+}
+function closeImport() { $("#impModal").hidden = true; }
+
+/* Leximi i skedarit sipas llojit → listë copash {kind, content, mime} për funksionin AI */
+async function impReadFile(file) {
+  const name = (file.name || "").toLowerCase();
+  const isImg = /^image\//.test(file.type);
+  if (isImg) {
+    // Foto çmimoreje: zvogëlohet në ~1600px (cilësi e mjaftueshme, ngarkim i shpejtë)
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bmp.width * scale); canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext("2d").drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const b64 = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+    return [{ kind: "image", content: b64, mime: "image/jpeg" }];
+  }
+  if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+    // Excel: lexohet me SheetJS (ngarkohet vetëm kur duhet) → CSV tekst
+    const XLSX = await import("https://esm.sh/xlsx@0.18.5");
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    let text = "";
+    for (const sn of wb.SheetNames) text += XLSX.utils.sheet_to_csv(wb.Sheets[sn]) + "\n";
+    return impChunkText(text);
+  }
+  if (name.endsWith(".pdf")) {
+    // PDF me tekst: pdf.js; PDF i skanuar (pa tekst) → udhëzim për foto
+    const pdfjs = await import("https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs");
+    pdfjs.GlobalWorkerOptions.workerSrc = "https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.worker.min.mjs";
+    const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
+    let text = "";
+    for (let p = 1; p <= doc.numPages; p++) {
+      const tc = await (await doc.getPage(p)).getTextContent();
+      text += tc.items.map((it) => it.str).join(" ") + "\n";
+    }
+    if (text.trim().length < 40 * doc.numPages) throw new Error(tr("impErrPdfScan"));
+    return impChunkText(text);
+  }
+  // CSV / tekst i thjeshtë
+  return impChunkText(await file.text());
+}
+// Copëton tekstin në kufij rreshtash (kurrë në mes të një artikulli)
+function impChunkText(text) {
+  const t = String(text || "").trim();
+  if (!t) throw new Error(tr("impErrEmpty"));
+  const chunks = [];
+  let start = 0;
+  while (start < t.length) {
+    let end = Math.min(start + IMP_CHUNK_TEXT, t.length);
+    if (end < t.length) { const nl = t.lastIndexOf("\n", end); if (nl > start) end = nl; }
+    chunks.push({ kind: "text", content: t.slice(start, end) });
+    start = end;
+  }
+  return chunks;
+}
+
+async function impProcess(file) {
+  impShow("busy");
+  try {
+    const chunks = await impReadFile(file);
+    impItems = []; impCurrency = "";
+    const warnings = [];
+    for (let i = 0; i < chunks.length; i++) {
+      $("#impBusyTxt").textContent = tr("impReading").replace("{x}", i + 1).replace("{y}", chunks.length);
+      const { data, error } = await sb.functions.invoke("import", { body: chunks[i] });
+      if (error) {
+        // invoke e kthen trupin e gabimit te error.context (Response) — nxirre mesazhin e vërtetë
+        let msg = tr("impErrRead");
+        try { const j = await error.context.json(); if (j && j.error) msg = j.error; } catch (_e) {}
+        throw new Error(msg);
+      }
+      if (data.error) throw new Error(data.error);
+      impItems.push(...(data.products || []));
+      if (!impCurrency && data.currency) impCurrency = data.currency;
+      warnings.push(...(data.warnings || []));
+    }
+    if (!impItems.length) throw new Error(tr("impErrEmpty"));
+    impPreview(warnings);
+  } catch (e) {
+    closeImport(); errToast(e);
+  }
+}
+
+function impPreview(warnings) {
+  const plan = OB.planImport(services, impItems);
+  const unc = impItems.filter((p) => p.uncertain).length;
+  let stats = tr("impStats").replace("{n}", impItems.length).replace("{i}", plan.inserts.length).replace("{u}", plan.updates.length);
+  if (unc) stats += " · " + tr("impUncertainN").replace("{n}", unc);
+  // Monedha e listës ndryshe nga e biznesit → paralajmërim i qartë
+  if (impCurrency && biz.currency && impCurrency.toUpperCase() !== String(biz.currency).toUpperCase()) {
+    warnings = [tr("impCurWarn").replace("{a}", impCurrency.toUpperCase()).replace("{b}", biz.currency), ...(warnings || [])];
+  }
+  $("#impStats").textContent = stats;
+  const w = $("#impWarn");
+  if (warnings && warnings.length) { w.textContent = "⚠️ " + warnings.slice(0, 4).join(" · "); w.hidden = false; } else w.hidden = true;
+
+  const tb = $("#impRows"); tb.innerHTML = "";
+  impItems.slice(0, IMP_SHOW_MAX).forEach((p, i) => {
+    const trow = document.createElement("tr");
+    if (p.uncertain) trow.className = "imp-unc";
+    trow.innerHTML = `
+      <td><input type="text" value="${esc(p.name).replace(/"/g, "&quot;")}" data-i="${i}" data-f="name" maxlength="120"></td>
+      <td><input type="number" value="${p.price}" data-i="${i}" data-f="price" min="0" step="0.01"></td>
+      <td>${p.stock || ""}</td><td>${esc(p.sku || "")}</td>
+      <td class="imp-note">${p.uncertain ? "⚠️ " : ""}${esc(p.note || "")}</td>`;
+    tb.appendChild(trow);
+  });
+  if (impItems.length > IMP_SHOW_MAX) {
+    const trow = document.createElement("tr");
+    trow.innerHTML = `<td colspan="5" class="imp-note">${tr("impMore").replace("{n}", impItems.length - IMP_SHOW_MAX)}</td>`;
+    tb.appendChild(trow);
+  }
+  // Redaktimet shkruhen direkt te artikujt (emri/çmimi — më të rëndësishmit)
+  tb.oninput = (e) => {
+    const el = e.target; const i = +el.dataset.i, f = el.dataset.f;
+    if (!Number.isInteger(i) || !impItems[i]) return;
+    if (f === "name") impItems[i].name = el.value;
+    if (f === "price") impItems[i].price = Math.max(0, Number(el.value) || 0);
+  };
+  impShow("preview");
+}
+
+async function impSave() {
+  // Plani rillogaritet NË FUND (me redaktimet e tabelës të përfshira)
+  const plan = OB.planImport(services, impItems);
+  impShow("saving");
+  const totalOps = plan.inserts.length + plan.updates.length;
+  let done = 0;
+  const bar = $("#impBarFill");
+  const tick = (n) => { done += n; if (bar) bar.style.transform = "scaleX(" + (totalOps ? done / totalOps : 1) + ")"; $("#impSaveTxt").textContent = tr("impSaving").replace("{x}", done).replace("{y}", totalOps); };
+  tick(0);
+  try {
+    // Të rinjtë: futen si produkte (pa orare — s'prekin kalendarin)
+    for (let i = 0; i < plan.inserts.length; i += IMP_SAVE_CHUNK) {
+      const rows = plan.inserts.slice(i, i + IMP_SAVE_CHUNK).map((p) => ({
+        business_id: biz.id, kind: "product", bookable: false,
+        name: p.name.trim(), price: p.price,
+        description: p.description || null, sku: p.sku || null,
+        unit_label: p.unit || null,
+        stock: p.stock > 0 ? p.stock : 0, track_stock: p.stock > 0,
+      }));
+      const { error } = await sb.from("services").insert(rows);
+      if (error) throw error;
+      tick(rows.length);
+    }
+    // Përditësimet: vetëm fushat që lista i solli (mos fshi përshkrime/stok ekzistues me boshllëk)
+    for (let i = 0; i < plan.updates.length; i += IMP_SAVE_CHUNK) {
+      const rows = plan.updates.slice(i, i + IMP_SAVE_CHUNK).map((p) => {
+        const r = { id: p.id, business_id: biz.id, name: p.name.trim(), price: p.price };
+        if (p.description) r.description = p.description;
+        if (p.sku) r.sku = p.sku;
+        if (p.unit) r.unit_label = p.unit;
+        if (p.stock > 0) { r.stock = p.stock; r.track_stock = true; }
+        return r;
+      });
+      const { error } = await sb.from("services").upsert(rows); // konflikt mbi id → përditësim
+      if (error) throw error;
+      tick(rows.length);
+    }
+    await loadServices();
+    forceDraw("insights"); renderCatalog(); renderConfigHub(); applyModeUI();
+    closeImport();
+    toast(tr("impSaved").replace("{n}", totalOps));
+    haptic(20);
+  } catch (e) {
+    impShow("preview"); // asgjë s'humbet — tabela mbetet, provohet sërish
+    errToast(e);
+  }
 }
 
 // Bisedat e fundit të AI-së (cikli i mësimit: pronari sheh → korrigjon te "Info për AI-në")
@@ -3689,6 +3931,13 @@ function wire() {
   };
   // Katalogu: editori i artikullit
   if ($("#btnAddItem")) $("#btnAddItem").onclick = () => openItem(null);
+  // Importi i katalogut: ngarko → shiko → konfirmo
+  if ($("#btnImport")) $("#btnImport").onclick = openImport;
+  if ($("#impFile")) $("#impFile").onchange = (e) => { const f = e.target.files && e.target.files[0]; if (f) impProcess(f); };
+  if ($("#impCancel")) $("#impCancel").onclick = closeImport;
+  if ($("#impConfirm")) $("#impConfirm").onclick = impSave;
+  // Kërkimi në katalog (lokal, pa rrjet — i domosdoshëm pas importeve të mëdha)
+  if ($("#catSearch")) $("#catSearch").oninput = debounce(renderCatalog, 150);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
   if ($("#addAddon")) $("#addAddon").onclick = () => { addAddonRow("", "", "", false); const rows = document.querySelectorAll("#itemAddons .addon-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".a-name").focus(); };
   if ($("#addVariant")) $("#addVariant").onclick = () => { addVariantRow("", ""); const rows = document.querySelectorAll("#itemVariants .variant-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".v-label").focus(); };

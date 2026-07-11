@@ -197,3 +197,31 @@ test("listChanged — vetëm ndryshimet reale shkaktojnë rivizatim", () => {
   assert.strictEqual(OB.listChanged([{ a: { b: 1 } }], [{ a: { b: 1 } }]), false); // e thellë
   assert.strictEqual(OB.listChanged([{ a: { b: 1 } }], [{ a: { b: 2 } }]), true);
 });
+
+test("normKey — çelës krahasimi i qëndrueshëm (ë/ç, shenja, hapësira)", () => {
+  assert.strictEqual(OB.normKey("Bluzë Pambuku  M-Blu"), "bluze pambuku m blu");
+  assert.strictEqual(OB.normKey("BLUZE pambuku, M (blu)"), "bluze pambuku m blu");
+  assert.strictEqual(OB.normKey("  Çanta #42  "), "canta 42");
+  assert.strictEqual(OB.normKey(null), "");
+});
+
+test("planImport — i ri vs përditësim (SKU fiton, pastaj emri); dublikatat brenda listës kapërcehen", () => {
+  const existing = [
+    { id: "a1", name: "Bluzë pambuku M", sku: "BL-100" },
+    { id: "a2", name: "Këmishë liri L", sku: null },
+  ];
+  const imported = [
+    { name: "BLUZE PAMBUKU M", sku: "bl-100", price: 5 },   // përputhje me SKU → update a1
+    { name: "Këmishë Liri L", price: 12 },                   // përputhje me emër → update a2
+    { name: "Fustan veror", price: 18 },                     // i ri → insert
+    { name: "Fustan veror", price: 18 },                     // dublikatë në listë → skipped
+    { name: "   ", price: 9 },                               // pa emër → skipped
+  ];
+  const plan = OB.planImport(existing, imported);
+  assert.strictEqual(plan.updates.length, 2);
+  assert.strictEqual(plan.updates[0].id, "a1");
+  assert.strictEqual(plan.updates[1].id, "a2");
+  assert.strictEqual(plan.inserts.length, 1);
+  assert.strictEqual(plan.inserts[0].name, "Fustan veror");
+  assert.strictEqual(plan.skipped, 2);
+});

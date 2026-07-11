@@ -235,7 +235,44 @@
     catch (e) { return true; }
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged };
+  /* -------------------------------------------------------------------
+     IMPORTI I KATALOGUT — logjika e pastër e përputhjes (dedup)
+     Pronari ngarkon listën (Excel/CSV/PDF/foto) → AI e lexon → këto
+     funksione vendosin: cili artikull është I RI dhe cili PËRDITËSIM
+     i një ekzistuesi (me kod SKU, përndryshe me emër të normalizuar).
+     Ringarkimi i së njëjtës listë përditëson çmimet — kurrë dublikata.
+     ------------------------------------------------------------------- */
+  // Çelës krahasimi: pa shkronja të mëdha/ë/ç, pa shenja, hapësira të njësuara
+  function normKey(s) {
+    return String(s || "").toLowerCase()
+      .replace(/ë/g, "e").replace(/ç/g, "c")
+      .replace(/[^a-z0-9]+/g, " ").trim();
+  }
+  // planImport(ekzistues, tëImportuar) → { inserts, updates, skipped }
+  // updates marrin id-në e artikullit ekzistues (upsert mbi çelësin primar).
+  function planImport(existing, imported) {
+    const bySku = new Map(), byName = new Map();
+    for (const s of (existing || [])) {
+      if (s.sku) bySku.set(normKey(s.sku), s);
+      byName.set(normKey(s.name), s);
+    }
+    const inserts = [], updates = [], seen = new Set();
+    let skipped = 0;
+    for (const p of (imported || [])) {
+      const name = String(p.name || "").trim();
+      if (!name) { skipped++; continue; }
+      // I njëjti artikull dy herë brenda listës së ngarkuar → mbaje të parin
+      const dupKey = p.sku ? "s:" + normKey(p.sku) : "n:" + normKey(name);
+      if (seen.has(dupKey)) { skipped++; continue; }
+      seen.add(dupKey);
+      const match = (p.sku && bySku.get(normKey(p.sku))) || byName.get(normKey(name)) || null;
+      if (match) updates.push({ ...p, id: match.id });
+      else inserts.push(p);
+    }
+    return { inserts, updates, skipped };
+  }
+
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged, normKey, planImport };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);

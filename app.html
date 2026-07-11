@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=132">
-<link rel="modulepreload" href="config.js?v=132">
-<link rel="modulepreload" href="optima-app.js?v=132">
+<link rel="stylesheet" href="style.css?v=133">
+<link rel="modulepreload" href="config.js?v=133">
+<link rel="modulepreload" href="optima-app.js?v=133">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -438,7 +438,11 @@
 
     <div class="tab-pane" id="pane-catalog">
       <p class="pane-desc" data-t="catalogDesc">Vendi i vetëm për gjithçka që ofron — shërbime & produkte: çmim, kosto, kohëzgjatje, prenotim, stok, njësi dhe çmime sipas sasisë (shumicë/pakicë).</p>
-      <div class="pane-toolbar"><button class="btn primary small" id="btnAddItem" data-t="addItem">+ Shto artikull</button></div>
+      <div class="pane-toolbar">
+        <button class="btn primary small" id="btnAddItem" data-t="addItem">+ Shto artikull</button>
+        <button class="btn small" id="btnImport" type="button" data-t="impBtn">📥 Ngarko listën</button>
+        <input type="text" id="catSearch" class="cat-search" data-t-ph="catSearchPh" placeholder="Kërko në katalog…">
+      </div>
       <div class="block-list" id="catalogList"></div>
 
       <div class="settings-block" id="catFieldsBlock" style="margin-top:20px">
@@ -608,6 +612,56 @@
     <div class="modal-actions">
       <button class="btn ghost" id="manCancel" data-t="cancel">Anulo</button>
       <button class="btn primary" id="manSave" data-t="save">Ruaj</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORTI I KATALOGUT: ngarko Excel/CSV/PDF/foto → AI e lexon → shiko → konfirmo -->
+<div class="modal-backdrop" id="impModal" role="dialog" aria-modal="true" hidden>
+  <div class="modal imp-modal">
+    <div class="modal-head">
+      <h2 data-t="impTitle">📥 Ngarko listën e artikujve</h2>
+      <p data-t="impSub">Excel (CSV), PDF me tekst, ose thjesht një foto e çmimores. AI e lexon — ti kontrollon — asgjë s'hyn pa konfirmimin tënd.</p>
+    </div>
+
+    <!-- Hapi 1: zgjedhja e skedarit -->
+    <div id="impPick">
+      <label class="imp-drop" for="impFile">
+        <span class="imp-drop-ico" aria-hidden="true">📄</span>
+        <span data-t="impDrop">Kliko dhe zgjidh skedarin (Excel/CSV, PDF, ose foto)</span>
+        <input type="file" id="impFile" accept=".csv,.xlsx,.xls,.pdf,image/*" hidden>
+      </label>
+      <p class="imp-hint" data-t="impHint">Këshillë: nga Excel-i bëj "Save As → CSV" për leximin më të saktë. Fotot punojnë shumë mirë për çmimore të shtypura.</p>
+    </div>
+
+    <!-- Hapi 2: duke lexuar -->
+    <div id="impBusy" hidden>
+      <div class="imp-busy-row"><span class="imp-spin" aria-hidden="true"></span> <span id="impBusyTxt">Duke lexuar…</span></div>
+    </div>
+
+    <!-- Hapi 3: pamja paraprake -->
+    <div id="impPreview" hidden>
+      <div class="imp-stats" id="impStats"></div>
+      <div class="imp-warn" id="impWarn" hidden></div>
+      <div class="imp-table-wrap">
+        <table class="imp-table" aria-label="Artikujt e lexuar">
+          <thead><tr>
+            <th data-t="impColName">Emri</th><th data-t="impColPrice">Çmimi</th>
+            <th data-t="impColStock">Stoku</th><th data-t="impColSku">Kodi</th><th data-t="impColNote">Shënim</th>
+          </tr></thead>
+          <tbody id="impRows"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="btn ghost" id="impCancel" type="button" data-t="cancel">Anulo</button>
+        <button class="btn primary" id="impConfirm" type="button" data-t="impConfirm">✓ Fut në katalog</button>
+      </div>
+    </div>
+
+    <!-- Hapi 4: duke ruajtur -->
+    <div id="impSaving" hidden>
+      <div class="imp-busy-row"><span class="imp-spin" aria-hidden="true"></span> <span id="impSaveTxt">Duke ruajtur…</span></div>
+      <div class="imp-bar"><span id="impBarFill"></span></div>
     </div>
   </div>
 </div>
@@ -828,7 +882,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=132"></script>
-<script type="module" src="optima-app.js?v=132"></script>
+<script src="core.js?v=133"></script>
+<script type="module" src="optima-app.js?v=133"></script>
 </body>
 </html>

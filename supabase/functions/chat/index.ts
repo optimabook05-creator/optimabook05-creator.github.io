@@ -434,6 +434,32 @@ function durHuman(s: any, sq: boolean): string {
   }
   return s.duration_min ? `${s.duration_min} min` : "";
 }
+/* ---- KËRKIMI I BRENDSHËM I KATALOGUT (për katalogë të mëdhenj) ----
+   Me mijëra artikuj (import Excel etj.) s'futen dot të gjithë në prompt:
+   zgjidhen vetëm ata që përputhen me fjalët e klientit (emër/përshkrim/kod).
+   Fjalët më të gjata peshojnë më shumë (më specifike). Katalogë ≤cap → të gjithë. */
+function relevantServices(services: any[], text: string, history: any[], cap = 60) {
+  if (!services || services.length <= cap) return services || [];
+  const recent = (history || []).slice(-4).map((m: any) => String(m.text || "")).join(" ");
+  const words = norm(text + " " + recent).split(/\s+/).filter((w: string) => w.length >= 3);
+  if (!words.length) return services.slice(0, cap);
+  const scored = services.map((s: any) => {
+    const hay = norm([s.name, s.description, s.sku].filter(Boolean).join(" "));
+    let score = 0;
+    for (const w of words) if (hay.includes(w)) score += w.length;
+    return { s, score };
+  });
+  scored.sort((a: any, b: any) => b.score - a.score);
+  const hits = scored.filter((x: any) => x.score > 0).slice(0, cap).map((x: any) => x.s);
+  return hits.length ? hits : services.slice(0, cap);
+}
+// Shënimi që i jepet AI-së kur katalogu është i prerë (të mos mohojë kurrë gabimisht)
+function cappedNote(shown: number, total: number) {
+  return total > shown
+    ? `NOTE: the catalog above shows only the ${shown} items most relevant to the customer's question, out of ${total} total. NEVER claim something is "not offered" just because it's not in this excerpt — if the customer asks for something you don't see, say you'll check and ask them to specify (brand/size/type). If they ask what you offer in general, mention the main categories and ask what they're looking for.`
+    : "";
+}
+
 function svcListText(services: any[], sq = true) {
   return services.map((s) => {
     const d = durHuman(s, sq);
@@ -520,8 +546,8 @@ async function tryRules(ctx: any): Promise<any | null> {
   if (/(sa kushton|cmim|qmim|sa eshte|cmimet|sa ben|\bprice|\bcost|how much|pricing)/.test(tx)) {
     const notes = biz.ai_notes ? `\n\n${biz.ai_notes}` : "";
     const r = sq
-      ? `Ja shërbimet tona:\n${svcListText(services, true)}${notes}\n\nTë rezervoj një orar? Më thuaj ditën. 📅`
-      : `Here are our services:\n${svcListText(services, false)}${notes}\n\nShall I book you a slot? Tell me the day. 📅`;
+      ? `Ja shërbimet tona:\n${svcListText(services.slice(0, 25), true)}${services.length > 25 ? `\n…dhe ${services.length - 25} artikuj të tjerë — më thuaj çfarë kërkon dhe ta gjej. 🔎` : ""}${notes}\n\nTë rezervoj një orar? Më thuaj ditën. 📅`
+      : `Here are our services:\n${svcListText(services.slice(0, 25), false)}${services.length > 25 ? `\n…and ${services.length - 25} more items — tell me what you're looking for and I'll find it. 🔎` : ""}${notes}\n\nShall I book you a slot? Tell me the day. 📅`;
     return { reply: r, via: "rule" };
   }
   // Orari / adresa
@@ -808,11 +834,13 @@ async function runAI(ctx: any) {
     `STYLE: warm, human, 1–2 short sentences, offer only 2–3 times, occasional tasteful emoji, never robotic.`,
     `UNDERSTANDING: Understand the customer no matter HOW they write — any language or dialect (incl. Gheg & Tosk Albanian, regional slang), abbreviations (flm, pls, ok, s'), typos, missing diacritics (ç→c, ë→e), ALL CAPS, voice-to-text errors, and mixed Albanian-English in one sentence. Always extract the real intent; never reject or confuse a message for being informal or misspelled. If a key detail is truly unclear, ask ONE short question.`,
     `SERVICES (name — minutes — price):`,
-    services.map((s: any) => {
+    // Katalogë të mëdhenj: vetëm shërbimet përkatëse hyjnë në prompt (kërkim i brendshëm)
+    relevantServices(services, text, history).map((s: any) => {
       let line = `- ${s.name} — ${s.duration_min} min — ${s.price}`;
       if (Array.isArray(s.variants) && s.variants.length) line += " | PACKAGES (quote per choice): " + s.variants.map((v: any) => v.label + "=" + v.price).join(", ");
       return line;
     }).join("\n"),
+    cappedNote(Math.min(services.length, 60), services.length),
     biz.ai_notes ? `BUSINESS INFO / FAQ (use to answer about packages, prices, delivery times, policies — do NOT book these as calendar slots; instead offer a consultation/meeting):\n${biz.ai_notes}` : "",
     knowledge,
     `LEARNING: if the customer asks a FACTUAL question about this business or its services/products (a detail, ingredient, policy, compatibility, what's included…) that the data above does NOT answer, still reply warmly that the owner will confirm it — AND copy that question (one short line, in ${bizLang}) into "unanswered_question". The owner answers it once and you will know it forever. Otherwise set "unanswered_question" to "". NEVER put booking/date/time requests there.`,
@@ -989,7 +1017,9 @@ async function runInquiry(ctx: any) {
   const alb = isAlbanian(text);                      // gjuha e MESAZHIT të klientit
   const sq = (alb === null) ? isSqLang(biz) : alb;   // përgjigju në gjuhën e klientit
   const lang = "the customer's language";
-  const catalog = services.map((s: any) => {
+  // Katalogë të mëdhenj (import Excel etj.): vetëm artikujt përkatës hyjnë në prompt
+  const svcSel = relevantServices(services, text, history);
+  const catalog = svcSel.map((s: any) => {
     const d = durHuman(s, sq);
     let line = `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}${d ? " — gati ~" + d : ""}`;
     if (Array.isArray(s.variants) && s.variants.length) line += " | paketa: " + s.variants.map((v: any) => v.label + "=" + v.price).join(", ");
@@ -1006,6 +1036,7 @@ async function runInquiry(ctx: any) {
     `CLARIFY: If you're not sure what the customer wants (which product/option), ask ONE short friendly clarifying question instead of guessing. Never assume a price when it's ambiguous.`,
     `WHAT WE OFFER:`,
     catalog || "(see details below)",
+    cappedNote(svcSel.length, services.length),
     biz.ai_notes ? `DETAILS / packages / prices / delivery times / policies:\n${biz.ai_notes}` : "",
     knowledge,
     `Answer customer questions accurately using ONLY the info above (prices, delivery times, what's included). If something isn't listed, say you'll check with the owner — never invent prices.`,
