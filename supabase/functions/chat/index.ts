@@ -726,6 +726,7 @@ function allowedAmounts(services: any[], biz: any): number[] {
   const add = (txt: string) => { const re = /\d+(?:[.,]\d+)?/g; let m: any; while ((m = re.exec(txt))) { const n = Math.round(parseFloat(m[0].replace(",", ".")) * 100) / 100; if (n > 0) set.add(n); } };
   add(JSON.stringify(services || []));   // çmime bazë + shkallë + addon (çfarëdo fushe numerike)
   add(String(biz?.ai_notes || ""));      // çmime legjitime në FAQ
+  add(String(biz?._learned || ""));      // çmime legjitime nga PËRGJIGJET E MËSUARA të pronarit (Rrethi i Mësimit)
   return [...set];
 }
 // Nëse përgjigjja përmend një çmim me monedhë që S'është te të dhënat reale → zëvendëson me fallback të sigurt.
@@ -796,6 +797,7 @@ async function runAI(ctx: any) {
   const firstName = (client_name || "").trim().split(" ")[0];
   const memory = await customerMemory(businessId, ctx.chat_id, services);
   const knowledge = await loadKnowledge(businessId); // Rrethi i Mësimit: përgjigjet e pronarit
+  biz._learned = knowledge; // roja e çmimeve i njeh si legjitime edhe çmimet e mësuara
   const system = [
     `You are the warm, friendly booking receptionist for "${biz.name}".${firstName ? ` The customer's name is ${firstName}.` : ""}`,
     `#1 RULE — LANGUAGE (do this FIRST): detect the language of the customer's LATEST message and write your ENTIRE reply in THAT language (Italian→Italian, German→German, English→English, Albanian→Albanian, any language on Earth). The service list below may be in another language — TRANSLATE the facts; never copy its language. Only if the message is too short to tell (e.g. "ok", a time), use the previous message's language. Set "lang" to the ISO code of your reply.`,
@@ -942,7 +944,11 @@ async function loadKnowledge(businessId: string) {
       .eq("business_id", businessId).eq("status", "answered")
       .order("answered_at", { ascending: false }).limit(60);
     if (!data || !data.length) return "";
-    return "OWNER'S LEARNED Q&A (official business facts — answer from these, translating to the customer's language as needed):\n" +
+    // Urdhër i fortë: modelet e vogla priren të thonë "po pyes pronarin" edhe kur
+    // përgjigjen E KANË — këto janë fakte të verifikuara, përdorimi është i detyruar.
+    return "OWNER'S VERIFIED ANSWERS (the owner personally wrote these — they are OFFICIAL business facts, same authority as the catalog). " +
+      "If the customer's question matches a Q below, answer DIRECTLY and confidently from its A, translated into the customer's language. " +
+      "NEVER say you'll check with the owner for anything already answered below:\n" +
       data.map((r: any) => "Q: " + r.question + "\nA: " + r.answer).join("\n");
   } catch (_e) { return ""; }
 }
@@ -991,6 +997,7 @@ async function runInquiry(ctx: any) {
   }).join("\n");
   const memory = await customerMemory(ctx.businessId, ctx.chat_id, services);
   const knowledge = await loadKnowledge(ctx.businessId); // Rrethi i Mësimit: përgjigjet e pronarit
+  biz._learned = knowledge; // roja e çmimeve i njeh si legjitime edhe çmimet e mësuara
   const iqLang = biz.lang === "en" ? "English" : "Albanian";
   const system = [
     `You are the warm, friendly assistant for "${biz.name}".${biz.address ? ` (${biz.address})` : ""}`,
