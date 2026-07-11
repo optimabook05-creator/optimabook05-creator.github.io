@@ -152,6 +152,12 @@ const T = {
     errLoadT: "S'u ngarkua dot", errLoadH: "Kontrollo internetin dhe provo sërish.", retry: "Provo sërish",
     netOffline: "📡 Pa internet — po shfaqen të dhënat e fundit",
     rtNewAppt: "📅 Rezervim i ri", rtNewOrder: "🧾 Porosi e re", rtNewLead: "📥 Kërkesë e re", rtSee: "Shiko",
+    rtNewQ: "❓ Pyetje e re — mësoje AI-në", aiqTitle: "Pyetje pa përgjigje",
+    aiqHint: "Klientët pyetën këto dhe AI s'kishte përgjigjen. Përgjigju NJË herë — AI e mëson përgjithmonë.",
+    aiqEmpty: "Asnjë pyetje e hapur — AI po u përgjigjet të gjithave. 👌", aiqTimes: "herë",
+    aiqAnswerPh: "Përgjigja që duhet të japë AI…", aiqQPh: "Pyetja (si do ta bënte klienti)…",
+    aiqSave: "Mësoje AI-në", aiqDismiss: "Hiqe", aiqLearned: "Të mësuara",
+    aiqAddBtn: "+ Shto pyetje-përgjigje", aiqSaved: "✅ AI-ja e mësoi — do ta dijë përgjithmonë",
     infoDesc: "Detaje që i shfaqen klientit dhe i përdor AI-ja për t'iu përgjigjur pyetjeve (p.sh. përbërësit, madhësia, ngjyra).",
     infoTime: "Sa zgjat shërbimi dhe a zë një orar në kalendar. Vetëm për shërbime.",
     infoBook: "Nëse aktiv, klientët e rezervojnë vetë në një orar të lirë. Fike për gjëra që s'kanë orar.",
@@ -364,6 +370,12 @@ const T = {
     errLoadT: "Couldn't load", errLoadH: "Check your internet connection and try again.", retry: "Try again",
     netOffline: "📡 Offline — showing your latest data",
     rtNewAppt: "📅 New booking", rtNewOrder: "🧾 New order", rtNewLead: "📥 New request", rtSee: "View",
+    rtNewQ: "❓ New question — teach the AI", aiqTitle: "Unanswered questions",
+    aiqHint: "Customers asked these and the AI didn't have the answer. Answer ONCE — the AI learns it forever.",
+    aiqEmpty: "No open questions — the AI is answering everything. 👌", aiqTimes: "times",
+    aiqAnswerPh: "The answer the AI should give…", aiqQPh: "The question (as a customer would ask it)…",
+    aiqSave: "Teach the AI", aiqDismiss: "Remove", aiqLearned: "Learned",
+    aiqAddBtn: "+ Add Q&A", aiqSaved: "✅ The AI learned it — it will know it forever",
     infoDesc: "Details shown to the customer and used by the AI to answer questions (e.g. ingredients, size, color).",
     infoTime: "How long the service takes and whether it books a calendar slot. Services only.",
     infoBook: "If on, customers can self-book a free slot. Turn off for things without a schedule.",
@@ -672,6 +684,7 @@ const RT_DEPS = {
   waitlist: ["waitlist"],
   leads: ["leads"],
   notifications: ["activity"],
+  ai_questions: ["inbox"],
 };
 
 function onRtEvent(table, payload) {
@@ -700,6 +713,8 @@ function rtToast(table, payload, activeTab) {
     go(tr("rtNewOrder") + (r.customer_name ? ": " + r.customer_name : ""), "orders");
   } else if (table === "leads") {
     go(tr("rtNewLead"), "leads");
+  } else if (table === "ai_questions" && r.asked_by !== "owner") {
+    go(tr("rtNewQ"), "inbox"); // AI hasi një pyetje që s'e di → pronari e mëson një herë
   }
 }
 
@@ -1162,7 +1177,101 @@ function renderCatalog() {
 // Bisedat e fundit të AI-së (cikli i mësimit: pronari sheh → korrigjon te "Info për AI-në")
 // AI Inbox — zemra e produktit: çdo bisedë e AI-së me klientët, fije të plota, kërkim, filtër kanali.
 let inboxCache = null;
+/* ---------------- RRETHI I MËSIMIT: pyetje pa përgjigje → mëso një herë → di përgjithmonë ---------------- */
+async function renderAiq() {
+  if (!biz) return;
+  return swr("aiq", async () => {
+    const { data, error } = await sb.from("ai_questions").select("*")
+      .eq("business_id", biz.id).neq("status", "dismissed")
+      .order("created_at", { ascending: false }).limit(120);
+    if (error) throw error;
+    return data || [];
+  }, drawAiq);
+}
+function drawAiq(rows) {
+  const block = $("#aiqBlock"); if (!block) return;
+  // Bllok zbukurues: pa tabelën (SQL i pa-ekzekutuar) ose në ngarkim → thjesht i fshehur, zero zhurmë
+  if (rows === null || rows.__error) { block.hidden = true; return; }
+  block.hidden = false;
+  const open = rows.filter((q) => q.status === "open");
+  const learned = rows.filter((q) => q.status === "answered");
+  const cnt = $("#aiqCount");
+  if (cnt) { cnt.hidden = !open.length; cnt.textContent = open.length; }
+  const list = $("#aiqList");
+  list.innerHTML = open.length ? "" : `<div class="aiq-empty">${tr("aiqEmpty")}</div>`;
+  for (const q of open) {
+    const item = document.createElement("div");
+    item.className = "aiq-item";
+    item.innerHTML = `
+      <div class="aiq-q">“${esc(q.question)}”${q.times_asked > 1 ? ` <span class="aiq-times">×${q.times_asked} ${tr("aiqTimes")}</span>` : ""}</div>
+      <div class="aiq-row">
+        <input type="text" maxlength="600" placeholder="${esc(tr("aiqAnswerPh"))}" aria-label="${esc(tr("aiqAnswerPh"))}">
+        <button class="btn small primary" type="button">${tr("aiqSave")}</button>
+        <button class="btn small ghost danger" type="button" aria-label="${esc(tr("aiqDismiss"))}" title="${esc(tr("aiqDismiss"))}">✕</button>
+      </div>`;
+    const inp = item.querySelector("input");
+    const [saveB, dropB] = item.querySelectorAll("button");
+    const save = () => { const a = inp.value.trim(); if (!a) { inp.focus(); return; } answerAiq(q.id, a); };
+    saveB.onclick = save;
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
+    dropB.onclick = () => dismissAiq(q.id);
+    list.appendChild(item);
+  }
+  const lb = $("#aiqLearnedBox"), ln = $("#aiqLearnedN"), ll = $("#aiqLearnedList");
+  if (lb) {
+    lb.hidden = !learned.length;
+    if (ln) ln.textContent = learned.length;
+    if (ll) {
+      ll.innerHTML = "";
+      for (const q of learned) {
+        const row = document.createElement("div");
+        row.className = "aiq-learned-row";
+        row.innerHTML = `<div class="grow"><div class="aiq-lq">${esc(q.question)}</div><div class="aiq-la">→ ${esc(q.answer || "")}</div></div>`;
+        const del = document.createElement("button");
+        del.className = "btn small ghost danger"; del.type = "button";
+        del.textContent = "✕"; del.title = tr("aiqDismiss"); del.setAttribute("aria-label", tr("aiqDismiss") + ": " + q.question);
+        del.onclick = () => dismissAiq(q.id);
+        row.appendChild(del);
+        ll.appendChild(row);
+      }
+    }
+  }
+}
+async function answerAiq(id, answer) {
+  haptic(12);
+  // UI OPTIMISTE: pyetja kalon te "Të mësuarat" në çast; rollback po refuzoi serveri
+  const now = new Date().toISOString();
+  const undo = mutateData("aiq", (d) => {
+    const q = d.find((x) => x.id === id);
+    if (q) { q.status = "answered"; q.answer = answer; q.answered_at = now; }
+    return d;
+  }, drawAiq);
+  toast(tr("aiqSaved"));
+  const { error } = await sb.from("ai_questions").update({ status: "answered", answer, answered_at: now }).eq("id", id);
+  if (error) { if (undo) undo(); errToast(error); return; }
+  renderAiq(); // pajtim i heshtur
+}
+async function dismissAiq(id) {
+  if (String(id).startsWith("tmp-")) return;
+  haptic(10);
+  const undo = mutateData("aiq", (d) => d.filter((x) => x.id !== id), drawAiq);
+  const { error } = await sb.from("ai_questions").update({ status: "dismissed" }).eq("id", id);
+  if (error) { if (undo) undo(); errToast(error); return; }
+  renderAiq();
+}
+async function addAiqManual(question, answer) {
+  const now = new Date().toISOString();
+  const row = { business_id: biz.id, question, answer, status: "answered", asked_by: "owner", times_asked: 1, created_at: now, answered_at: now };
+  // UI OPTIMISTE: shfaqet te "Të mësuarat" në çast me id të përkohshme
+  const undo = mutateData("aiq", (d) => { d.unshift({ ...row, id: "tmp-" + Date.now() }); return d; }, drawAiq);
+  toast(tr("aiqSaved"));
+  const { error } = await sb.from("ai_questions").insert(row);
+  if (error) { if (undo) undo(); errToast(error); return; }
+  renderAiq(); // merr id-në reale
+}
+
 async function renderInbox() {
+  renderAiq(); // Rrethi i Mësimit jeton në krye të kësaj skede
   const box = $("#inboxList"); if (!box || !biz) return;
   box.innerHTML = (typeof skel === "function") ? skel(3) : "";
   // Bot-analytics: vëllimi i bisedave + përgjigjet + kërkesat e kapura
@@ -3649,6 +3758,18 @@ function wire() {
   // AI Inbox: kërkimi + filtri i kanalit (filtron nga cache, pa rrjet) + shkurtorja nga Cilësimet
   const ibS = $("#inboxSearch"); if (ibS) ibS.oninput = debounce(() => drawInbox(), 150);
   const ibC = $("#inboxChannel"); if (ibC) ibC.onchange = () => drawInbox();
+  // Rrethi i Mësimit: pronari parangarkon pyetje-përgjigje (FAQ) me dorë
+  const aqA = $("#aiqAdd"), aqN = $("#aiqNew");
+  if (aqA && aqN) {
+    aqA.onclick = () => { aqN.hidden = !aqN.hidden; if (!aqN.hidden) $("#aiqNewQ").focus(); };
+    $("#aiqNewCancel").onclick = () => { aqN.hidden = true; };
+    $("#aiqNewSave").onclick = () => {
+      const q = $("#aiqNewQ").value.trim(), a = $("#aiqNewA").value.trim();
+      if (!q || !a) { (!q ? $("#aiqNewQ") : $("#aiqNewA")).focus(); return; }
+      $("#aiqNewQ").value = ""; $("#aiqNewA").value = ""; aqN.hidden = true;
+      addAiqManual(q, a);
+    };
+  }
   const goIb = $("#goInbox"); if (goIb) goIb.onclick = () => { const t = document.querySelector('.tab[data-tab="inbox"]'); if (t) t.click(); };
   if ($("#aiForm")) $("#aiForm").addEventListener("submit", (e) => { e.preventDefault(); aiSend(); });
   $("#blockForm").addEventListener("submit", async (e) => {

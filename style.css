@@ -2203,3 +2203,37 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 .stagger > *:nth-child(7) { animation-delay: .32s; }
 .stagger > *:nth-child(n+8) { animation-delay: .36s; }
 @media (prefers-reduced-motion: reduce) { .stagger > * { animation: none; } }
+
+/* ============================================================
+   ❓ RRETHI I MËSIMIT (pane-inbox) — pyetje pa përgjigje → mëso një herë
+   Theks qelibar (= kërkon vëmendjen e pronarit), i dallueshëm nga smeraldi.
+   ============================================================ */
+.aiq-block { background: var(--glass-strong); border: 1px solid var(--glass-edge);
+  border-left: 4px solid var(--amber); border-radius: var(--r-md);
+  padding: var(--sp-16); margin-bottom: var(--sp-16); box-shadow: var(--shadow-glass); }
+.aiq-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); flex-wrap: wrap; }
+.aiq-head h3 { font-family: var(--font-display); font-size: 15px; letter-spacing: -.01em; }
+.aiq-count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: 999px; background: var(--amber); color: #fff; font-size: 12px; font-weight: 800; vertical-align: 2px; }
+.aiq-hint { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; margin: 6px 0 var(--sp-8); line-height: 1.5; }
+.aiq-item { padding: 10px 0 var(--sp-12); border-top: 1px solid var(--glass-line); }
+.aiq-q { font-weight: 700; font-size: 14px; margin-bottom: var(--sp-8); line-height: 1.45; }
+.aiq-times { color: var(--amber); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.aiq-row { display: flex; gap: var(--sp-8); flex-wrap: wrap; }
+.aiq-row input, .aiq-new input { flex: 1; min-width: 180px; font-family: var(--font-body); font-size: 14px;
+  font-weight: 600; color: var(--ink); background: rgba(255,255,255,.75); border: 1px solid var(--glass-edge);
+  border-radius: var(--r-sm); padding: 10px var(--sp-12); outline: none; transition: border .15s, box-shadow .15s; }
+.aiq-row input:focus, .aiq-new input:focus { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+.aiq-new { display: flex; flex-direction: column; gap: var(--sp-8); margin: var(--sp-8) 0 var(--sp-12); }
+.aiq-new-actions { display: flex; gap: var(--sp-8); }
+.aiq-empty { font-size: 13px; color: var(--ink-soft); font-weight: 600; padding: var(--sp-8) 0 2px; }
+.aiq-learned { margin-top: var(--sp-8); }
+.aiq-learned summary { cursor: pointer; font-weight: 800; font-size: 13px; color: var(--ink-soft);
+  padding: 6px 0; border-radius: 8px; }
+.aiq-learned summary:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+.aiq-learned-row { display: flex; gap: var(--sp-8); align-items: flex-start; padding: var(--sp-8) 0; border-top: 1px solid var(--glass-line); }
+.aiq-learned-row .grow { flex: 1; min-width: 0; }
+.aiq-lq { font-weight: 700; font-size: 13.5px; line-height: 1.45; }
+.aiq-la { font-size: 13px; color: var(--ink-soft); font-weight: 600; margin-top: 2px; line-height: 1.5; overflow-wrap: anywhere; }
+:root[data-theme="dark"] .aiq-row input, :root[data-theme="dark"] .aiq-new input {
+  background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.12); color: var(--ink); }

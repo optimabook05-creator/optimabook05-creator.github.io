@@ -416,3 +416,31 @@ begin
     end;
   end loop;
 end $$;
+
+-- =====================================================================
+-- RRETHI I MËSIMIT — pyetje pa përgjigje → pronari përgjigjet një herë
+-- → AI e di përgjithmonë (learning.sql; idempotent)
+-- =====================================================================
+create table if not exists public.ai_questions (
+  id           uuid primary key default gen_random_uuid(),
+  business_id  uuid not null references public.businesses(id) on delete cascade,
+  question     text not null,
+  answer       text,
+  status       text not null default 'open',
+  asked_by     text,
+  times_asked  int  not null default 1,
+  created_at   timestamptz not null default now(),
+  answered_at  timestamptz
+);
+alter table public.ai_questions enable row level security;
+drop policy if exists "aiq_owner" on public.ai_questions;
+create policy "aiq_owner" on public.ai_questions for all
+  using (public.is_my_business(business_id))
+  with check (public.is_my_business(business_id));
+create index if not exists aiq_biz_status on public.ai_questions (business_id, status);
+do $$ begin
+  execute 'alter publication supabase_realtime add table public.ai_questions';
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;

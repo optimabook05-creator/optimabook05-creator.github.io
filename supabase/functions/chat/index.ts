@@ -634,6 +634,7 @@ async function askGemini(system: string, contents: any[]) {
             confidence: { type: "NUMBER" },
             intent_confidence: { type: "NUMBER" }, service_confidence: { type: "NUMBER" },
             time_confidence: { type: "NUMBER" }, risk_score: { type: "NUMBER" },
+            unanswered_question: { type: "STRING" },
           },
           required: ["reply", "wants_to_book"],
         },
@@ -669,8 +670,9 @@ async function askOpenAI(system: string, contents: any[]) {
               confidence: { type: "number" },
               intent_confidence: { type: "number" }, service_confidence: { type: "number" },
               time_confidence: { type: "number" }, risk_score: { type: "number" },
+              unanswered_question: { type: "string" },
             },
-            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "wants_to_reschedule", "needs_human", "sentiment", "service", "date", "time", "confidence", "intent_confidence", "service_confidence", "time_confidence", "risk_score"],
+            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "wants_to_reschedule", "needs_human", "sentiment", "service", "date", "time", "confidence", "intent_confidence", "service_confidence", "time_confidence", "risk_score", "unanswered_question"],
           },
         },
       },
@@ -793,6 +795,7 @@ async function runAI(ctx: any) {
   const bizLang = biz.lang === "en" ? "English" : "Albanian";
   const firstName = (client_name || "").trim().split(" ")[0];
   const memory = await customerMemory(businessId, ctx.chat_id, services);
+  const knowledge = await loadKnowledge(businessId); // Rrethi i Mësimit: përgjigjet e pronarit
   const system = [
     `You are the warm, friendly booking receptionist for "${biz.name}".${firstName ? ` The customer's name is ${firstName}.` : ""}`,
     `#1 RULE — LANGUAGE (do this FIRST): detect the language of the customer's LATEST message and write your ENTIRE reply in THAT language (Italian→Italian, German→German, English→English, Albanian→Albanian, any language on Earth). The service list below may be in another language — TRANSLATE the facts; never copy its language. Only if the message is too short to tell (e.g. "ok", a time), use the previous message's language. Set "lang" to the ISO code of your reply.`,
@@ -809,6 +812,8 @@ async function runAI(ctx: any) {
       return line;
     }).join("\n"),
     biz.ai_notes ? `BUSINESS INFO / FAQ (use to answer about packages, prices, delivery times, policies — do NOT book these as calendar slots; instead offer a consultation/meeting):\n${biz.ai_notes}` : "",
+    knowledge,
+    `LEARNING: if the customer asks a FACTUAL question about this business or its services/products (a detail, ingredient, policy, compatibility, what's included…) that the data above does NOT answer, still reply warmly that the owner will confirm it — AND copy that question (one short line, in ${bizLang}) into "unanswered_question". The owner answers it once and you will know it forever. Otherwise set "unanswered_question" to "". NEVER put booking/date/time requests there.`,
     `SCOPE (STRICT): You represent ONLY "${biz.name}". Speak strictly about THIS business and the services/info listed above. If the customer asks about a product, service, brand, or topic this business does NOT offer, do NOT invent anything and do NOT pretend to offer it — warmly clarify what "${biz.name}" actually offers and steer back. Never mention or compare other businesses. If you genuinely don't know, say the owner will follow up.`,
     `AVAILABLE START TIMES (the ONLY source of truth — use ONLY these, never invent):`,
     availability,
@@ -919,10 +924,43 @@ Also set "confidence" = the overall (the minimum of the three). Use LOW scores (
     const tag = out.sentiment === "frustrated" ? "😟 Klient i PAKËNAQUR" : "🙋 Klienti kërkon pronarin";
     try { await supabase.from("notifications").insert({ business_id: businessId, text: `${tag} (${client_name || "Klient"}): ${String(text).slice(0, 120)}` }); } catch (_e) { /* injoro */ }
   }
+  // Rrethi i Mësimit: pyetje faktike që AI s'e përgjigj dot nga të dhënat → shënoje për pronarin
+  if (!ctx.preview) await captureQuestion(businessId, out.unanswered_question, ctx.channel);
   // Roja: vetëm përgjigjet e gjeneruara nga AI (jo konfirmimet e ndërtuara nga sistemi)
   if (!booked && !cancelled && !rescheduled && !proposed) reply = guardReply(reply, services, biz, isSqLang(biz));
   const intent = out.wants_to_book ? "booking" : out.wants_to_cancel ? "cancel" : out.wants_to_reschedule ? "reschedule" : (out.needs_human ? "human" : "info");
   return { reply, booked, cancelled, rescheduled, proposed, escalated, intent, confidence: overallConf, sentiment: out.sentiment || null, via: "ai" };
+}
+
+/* ---------------- RRETHI I MËSIMIT (learning loop) ----------------
+   Pyetje faktike pa përgjigje → shënohet → pronari përgjigjet NJË herë
+   në panel → AI e di PËRGJITHMONË (loadKnowledge e fut në çdo bisedë).
+   Gjithçka best-effort: pa tabelën ai_questions funksionon si më parë. */
+async function loadKnowledge(businessId: string) {
+  try {
+    const { data } = await supabase.from("ai_questions").select("question, answer")
+      .eq("business_id", businessId).eq("status", "answered")
+      .order("answered_at", { ascending: false }).limit(60);
+    if (!data || !data.length) return "";
+    return "OWNER'S LEARNED Q&A (official business facts — answer from these, translating to the customer's language as needed):\n" +
+      data.map((r: any) => "Q: " + r.question + "\nA: " + r.answer).join("\n");
+  } catch (_e) { return ""; }
+}
+async function captureQuestion(businessId: string, q: any, channel: string) {
+  try {
+    const question = String(q || "").trim().slice(0, 300);
+    if (question.length < 6) return;
+    // E njëjta pyetje ende e hapur → numëro sa herë u pyet (peshë/urgjencë për pronarin)
+    // (%/_ shpëtohen — janë wildcards në ilike dhe do bënin përputhje të gabuara)
+    const { data: ex } = await supabase.from("ai_questions").select("id, times_asked")
+      .eq("business_id", businessId).eq("status", "open")
+      .ilike("question", question.replace(/[\\%_]/g, "\\$&")).limit(1);
+    if (ex && ex.length) {
+      await supabase.from("ai_questions").update({ times_asked: (Number(ex[0].times_asked) || 1) + 1 }).eq("id", ex[0].id);
+    } else {
+      await supabase.from("ai_questions").insert({ business_id: businessId, question, asked_by: channel || null });
+    }
+  } catch (_e) { /* tabela mungon para learning.sql → injoro */ }
 }
 
 /* ---------------- Mënyra INQUIRY (biznese pa takime: porosi/kërkesa) ---------------- */
@@ -952,6 +990,8 @@ async function runInquiry(ctx: any) {
     return line;
   }).join("\n");
   const memory = await customerMemory(ctx.businessId, ctx.chat_id, services);
+  const knowledge = await loadKnowledge(ctx.businessId); // Rrethi i Mësimit: përgjigjet e pronarit
+  const iqLang = biz.lang === "en" ? "English" : "Albanian";
   const system = [
     `You are the warm, friendly assistant for "${biz.name}".${biz.address ? ` (${biz.address})` : ""}`,
     `#1 RULE — LANGUAGE (do this FIRST, before anything else): detect the language of the customer's LATEST message and write your ENTIRE reply in THAT language (Italian→Italian, German→German, English→English, Albanian→Albanian, any language on Earth). The catalog/details below may be written in another language — TRANSLATE the facts into the customer's language; never copy their language. Only if the message is too short to tell (e.g. "ok", a number), use the previous message's language.`,
@@ -960,7 +1000,9 @@ async function runInquiry(ctx: any) {
     `WHAT WE OFFER:`,
     catalog || "(see details below)",
     biz.ai_notes ? `DETAILS / packages / prices / delivery times / policies:\n${biz.ai_notes}` : "",
+    knowledge,
     `Answer customer questions accurately using ONLY the info above (prices, delivery times, what's included). If something isn't listed, say you'll check with the owner — never invent prices.`,
+    `LEARNING: if the customer asks a FACTUAL question about this business or its products (a detail, ingredient, policy, what's included…) that the data above does NOT answer, still reply warmly that the owner will confirm it — AND copy that question (one short line, in ${iqLang}) into "unanswered_question". The owner answers it once and you will know it forever. Otherwise set "unanswered_question" to "". NEVER put order/intent messages there.`,
     `SCOPE (STRICT): You represent ONLY "${biz.name}". Talk strictly about what we offer above. If asked about a product, category, brand, or topic we do NOT sell, do NOT invent and do NOT pretend to offer it — warmly clarify what "${biz.name}" actually offers and steer back. Never mention or compare other businesses.`,
     `IMPORTANT: this business does NOT take calendar appointments. NEVER offer time slots or bookings.`,
     `When the customer wants to order / proceed / start, warmly confirm and tell them the owner will contact them shortly to finalize.`,
@@ -987,6 +1029,8 @@ async function runInquiry(ctx: any) {
     const tag = out.sentiment === "frustrated" ? "😟 Klient i PAKËNAQUR" : "🙋 Klienti kërkon pronarin";
     try { await supabase.from("notifications").insert({ business_id: ctx.businessId, text: `${tag} (${client_name || "Klient"}): ${String(text).slice(0, 120)}` }); } catch (_e2) { /* injoro */ }
   }
+  // Rrethi i Mësimit: pyetje faktike pa përgjigje nga të dhënat → shënoje për pronarin
+  if (out && !ctx.preview) await captureQuestion(ctx.businessId, out.unanswered_question, ctx.channel);
   reply = guardReply(reply, services, biz, sq); // roja anti-çmim-i-shpikur
 
   // Kapja e kërkesës (lead) me intent të qartë

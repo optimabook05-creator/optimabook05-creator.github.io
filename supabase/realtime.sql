@@ -10,7 +10,7 @@ declare t text;
 begin
   foreach t in array array[
     'appointments', 'orders', 'order_items', 'time_blocks',
-    'messages', 'waitlist', 'leads', 'notifications'
+    'messages', 'waitlist', 'leads', 'notifications', 'ai_questions'
   ] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);

@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=131">
-<link rel="modulepreload" href="config.js?v=131">
-<link rel="modulepreload" href="optima-app.js?v=131">
+<link rel="stylesheet" href="style.css?v=132">
+<link rel="modulepreload" href="config.js?v=132">
+<link rel="modulepreload" href="optima-app.js?v=132">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -365,6 +365,29 @@
 
     <div class="tab-pane" id="pane-inbox">
       <p class="pane-desc" data-t="inboxDesc">Çdo bisedë e AI-së me klientët — lexo fijet e plota, kërko, filtro sipas kanalit.</p>
+
+      <!-- RRETHI I MËSIMIT: pyetjet që AI s'i përgjigji dot → përgjigju një herë → i di përgjithmonë -->
+      <div class="aiq-block" id="aiqBlock" hidden>
+        <div class="aiq-head">
+          <h3>❓ <span data-t="aiqTitle">Pyetje pa përgjigje</span> <span class="aiq-count" id="aiqCount" hidden></span></h3>
+          <button class="btn small ghost" id="aiqAdd" type="button" data-t="aiqAddBtn">+ Shto pyetje-përgjigje</button>
+        </div>
+        <p class="aiq-hint" data-t="aiqHint">Klientët pyetën këto dhe AI s'kishte përgjigjen. Përgjigju NJË herë — AI e mëson përgjithmonë.</p>
+        <div id="aiqNew" class="aiq-new" hidden>
+          <input type="text" id="aiqNewQ" maxlength="300" data-t-ph="aiqQPh" placeholder="Pyetja (si do ta bënte klienti)…">
+          <input type="text" id="aiqNewA" maxlength="600" data-t-ph="aiqAnswerPh" placeholder="Përgjigja që duhet të japë AI…">
+          <div class="aiq-new-actions">
+            <button class="btn small primary" id="aiqNewSave" type="button" data-t="aiqSave">Mësoje AI-në</button>
+            <button class="btn small ghost" id="aiqNewCancel" type="button" data-t="cancel">Anulo</button>
+          </div>
+        </div>
+        <div id="aiqList"></div>
+        <details class="aiq-learned" id="aiqLearnedBox" hidden>
+          <summary>✅ <span data-t="aiqLearned">Të mësuara</span> (<span id="aiqLearnedN">0</span>)</summary>
+          <div id="aiqLearnedList"></div>
+        </details>
+      </div>
+
       <div class="inbox-stats" id="inboxStats"></div>
       <div class="inbox-tools">
         <input type="text" id="inboxSearch" data-t-ph="inboxSearchPh" placeholder="Kërko në biseda…">
@@ -805,7 +828,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=131"></script>
-<script type="module" src="optima-app.js?v=131"></script>
+<script src="core.js?v=132"></script>
+<script type="module" src="optima-app.js?v=132"></script>
 </body>
 </html>
