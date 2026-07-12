@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=134">
-<link rel="modulepreload" href="config.js?v=134">
-<link rel="modulepreload" href="optima-app.js?v=134">
+<link rel="stylesheet" href="style.css?v=135">
+<link rel="modulepreload" href="config.js?v=135">
+<link rel="modulepreload" href="optima-app.js?v=135">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -359,6 +359,8 @@
 
     <div class="tab-pane active" id="pane-stats">
       <div id="todayBox"></div>
+      <!-- Raporti javor i vlerës: çfarë bëri punonjësi AI për ty këtë javë -->
+      <div id="weeklyBox"></div>
       <div id="insightsBox" class="stagger"></div>
       <div class="stats-grid stagger" id="statsGrid"></div>
     </div>
@@ -894,7 +896,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=134"></script>
-<script type="module" src="optima-app.js?v=134"></script>
+<script src="core.js?v=135"></script>
+<script type="module" src="optima-app.js?v=135"></script>
 </body>
 </html>

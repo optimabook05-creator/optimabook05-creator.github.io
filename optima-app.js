@@ -179,6 +179,11 @@ const T = {
     qrHow: "Hap kamerën e telefonit, drejtoje te kodi — dhe rezervo vetë në sekonda. Pa telefonata, pa pritje, 24 orë.",
     qrOpen: "Rezervime edhe natën, çdo ditë",
     qrPopupBlocked: "Shfletuesi bllokoi dritaren e printimit — lejo pop-up për këtë faqe.",
+    wkTitle: "Java jote me punonjësin AI", wkSub: "7 ditët e fundit · krahasuar me javën e kaluar",
+    wkConvos: "biseda të mbajtura", wkAnswered: "përgjigje të dhëna", wkBuyers: "blerës të kapur",
+    wkHours: "orë të kursyera (≈)", wkValue: "vlerë e sjellë",
+    wkEmpty: "Punonjësi yt AI është gati — por s'ka pasur ende biseda këtë javë. Ndaje faqen publike ose lidh kanalin, dhe këtu do shohësh çdo javë sa orë të kurseu e sa blerës të solli.",
+    wkEmptyBtn: "Hap cilësimet e kanalit →",
     pushH: "🔔 Njoftimet në telefon", pushBtn: "🔔 Aktivizo në këtë pajisje",
     pushDesc: "Merr «📅 Rezervim i ri» në telefon edhe me panelin TË MBYLLUR — si WhatsApp. Aktivizoje në çdo pajisje që përdor.",
     pushOn: "✅ Aktive në këtë pajisje", pushOk: "🔔 Njoftimet u aktivizuan — provoje me një rezervim!",
@@ -424,6 +429,11 @@ const T = {
     qrHow: "Open your phone camera, point it at the code — and book yourself in seconds. No calls, no waiting, 24/7.",
     qrOpen: "Bookings even at night, every day",
     qrPopupBlocked: "The browser blocked the print window — allow pop-ups for this page.",
+    wkTitle: "Your week with the AI employee", wkSub: "last 7 days · vs previous week",
+    wkConvos: "conversations handled", wkAnswered: "answers given", wkBuyers: "buyers captured",
+    wkHours: "hours saved (≈)", wkValue: "value brought in",
+    wkEmpty: "Your AI employee is ready — but no conversations yet this week. Share your public page or connect a channel, and every week you'll see here how many hours it saved you and how many buyers it brought.",
+    wkEmptyBtn: "Open channel settings →",
     pushH: "🔔 Phone notifications", pushBtn: "🔔 Enable on this device",
     pushDesc: "Get «📅 New booking» on your phone even with the panel CLOSED — like WhatsApp. Enable it on every device you use.",
     pushOn: "✅ Active on this device", pushOk: "🔔 Notifications enabled — try it with a booking!",
@@ -3502,8 +3512,75 @@ function countUp(el, dur) {
   requestAnimationFrame(frame);
 }
 
+/* ---------------- RAPORTI JAVOR I VLERËS — çfarë bëri punonjësi AI për ty ----------------
+   Arma kundër anulimit: pronari sheh çdo javë me shifra se AI-ja i kurseu orë
+   dhe i solli blerës. Gjithçka nga të dhënat ekzistuese — zero SQL i ri. */
+async function renderWeekly() {
+  if (!$("#weeklyBox") || !biz) return;
+  return swr("weekly", async () => {
+    const since = new Date(Date.now() - 14 * 864e5).toISOString();
+    let msgs = [], appts = [], orders = [], leads = [];
+    // Secila pjesë opsionale (tabelat mund të mungojnë) → dështimi i njërës s'i pengon të tjerat
+    try { const { data } = await sb.from("messages").select("chat_id, role, created_at").eq("business_id", biz.id).gte("created_at", since).limit(4000); msgs = data || []; } catch (e) {}
+    try { const { data } = await sb.from("appointments").select("created_at, source, status, services(price)").eq("business_id", biz.id).gte("created_at", since); appts = data || []; } catch (e) {}
+    try { const { data } = await sb.from("orders").select("total, created_by, status, placed_at").eq("business_id", biz.id).gte("placed_at", since); orders = data || []; } catch (e) {}
+    try { const { data } = await sb.from("leads").select("created_at").eq("business_id", biz.id).gte("created_at", since); leads = data || []; } catch (e) {}
+    return { msgs, appts, orders, leads };
+  }, drawWeekly);
+}
+function weekStats(d, from, to) {
+  const inW = (t) => { const x = new Date(t).getTime(); return x >= from && x < to; };
+  const m = d.msgs.filter((x) => inW(x.created_at));
+  const convos = new Set(m.filter((x) => x.chat_id).map((x) => x.chat_id)).size;
+  const answered = m.filter((x) => x.role === "bot" || x.role === "assistant").length;
+  const aiAppts = d.appts.filter((x) => inW(x.created_at) && x.source === "ai" && x.status !== "cancelled");
+  const aiOrders = d.orders.filter((x) => inW(x.placed_at) && x.created_by !== "manual" && x.status !== "cancelled");
+  const buyers = aiAppts.length + aiOrders.length + d.leads.filter((x) => inW(x.created_at)).length;
+  const value = round2(aiAppts.reduce((s, a) => s + (a.services ? Number(a.services.price) || 0 : 0), 0)
+    + aiOrders.reduce((s, o) => s + (Number(o.total) || 0), 0));
+  // Vlerësim i ndershëm: ~1.5 min kursehet për çdo përgjigje që s'e dha pronari vetë
+  const hours = Math.round(answered * 1.5 / 6) / 10;
+  return { convos, answered, buyers, value, hours };
+}
+function drawWeekly(d) {
+  const box = $("#weeklyBox"); if (!box) return;
+  if (d === null || d.__error) { box.innerHTML = ""; return; } // kuti ndihmëse: heshtje, pa skeleton
+  const now = Date.now();
+  const cur = weekStats(d, now - 7 * 864e5, now + 1);
+  const prev = weekStats(d, now - 14 * 864e5, now - 7 * 864e5);
+  const any = cur.convos + cur.buyers + prev.convos + prev.buyers > 0;
+  if (!any) {
+    // Gjendje bosh që SHET: pa biseda ende → thirrje për veprim, jo boshllëk
+    box.innerHTML = `<div class="wk-card"><div class="wk-h">📈 ${tr("wkTitle")}</div>
+      <div class="wk-empty">${tr("wkEmpty")}</div>
+      <button class="btn small primary" type="button" data-go="settings">${tr("wkEmptyBtn")}</button></div>`;
+    const b = box.querySelector("[data-go]");
+    if (b) b.onclick = () => { const t = document.querySelector('.tab[data-tab="settings"]'); if (t) t.click(); };
+    return;
+  }
+  const delta = (c, p) => {
+    if (!p) return "";
+    const pct = Math.round(((c - p) / p) * 100);
+    if (!pct) return "";
+    return `<span class="wk-d ${pct > 0 ? "up" : "down"}">${pct > 0 ? "▲" : "▼"} ${Math.abs(pct)}%</span>`;
+  };
+  const chip = (ico, num, lbl, dl) =>
+    `<div class="wk-chip"><span class="wk-ico">${ico}</span><div><div class="wk-n">${num} ${dl || ""}</div><div class="wk-l">${lbl}</div></div></div>`;
+  box.innerHTML = `<div class="wk-card">
+    <div class="wk-h">📈 ${tr("wkTitle")} <span class="wk-sub">${tr("wkSub")}</span></div>
+    <div class="wk-grid">
+      ${chip("💬", cur.convos, tr("wkConvos"), delta(cur.convos, prev.convos))}
+      ${chip("✅", cur.answered, tr("wkAnswered"), delta(cur.answered, prev.answered))}
+      ${chip("💰", cur.buyers, tr("wkBuyers"), delta(cur.buyers, prev.buyers))}
+      ${chip("⏱", cur.hours, tr("wkHours"), "")}
+      ${cur.value > 0 ? chip("🧾", money(cur.value), tr("wkValue"), delta(cur.value, prev.value)) : ""}
+    </div>
+  </div>`;
+}
+
 async function renderStats() {
   renderInsights();
+  renderWeekly();
   // Marrim çdo takim me emrin/çmimin e shërbimit (edhe nëse shërbimi është çaktivizuar)
   return swr("statsAppts", async () => {
     const { data, error } = await sb.from("appointments")
