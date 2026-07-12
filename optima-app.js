@@ -174,6 +174,17 @@ const T = {
     impConfirm: "✓ Fut në katalog", impSaving: "Duke ruajtur… {x}/{y}",
     impSaved: "✅ {n} artikuj hynë në katalog — AI tani i njeh të gjithë",
     impColName: "Emri", impColPrice: "Çmimi", impColStock: "Stoku", impColSku: "Kodi", impColNote: "Shënim",
+    qrPosterBtn: "🖨️ Posteri QR", qrPosterHint: "Printoje posterin dhe vëre në banak/derë — klientët skanojnë me telefon dhe rezervojnë vetë.",
+    qrActBook: "Skano & Rezervo", qrActOrder: "Skano & Porosit", qrActBoth: "Skano — Rezervo ose Porosit",
+    qrHow: "Hap kamerën e telefonit, drejtoje te kodi — dhe rezervo vetë në sekonda. Pa telefonata, pa pritje, 24 orë.",
+    qrOpen: "Rezervime edhe natën, çdo ditë",
+    qrPopupBlocked: "Shfletuesi bllokoi dritaren e printimit — lejo pop-up për këtë faqe.",
+    pushH: "🔔 Njoftimet në telefon", pushBtn: "🔔 Aktivizo në këtë pajisje",
+    pushDesc: "Merr «📅 Rezervim i ri» në telefon edhe me panelin TË MBYLLUR — si WhatsApp. Aktivizoje në çdo pajisje që përdor.",
+    pushOn: "✅ Aktive në këtë pajisje", pushOk: "🔔 Njoftimet u aktivizuan — provoje me një rezervim!",
+    pushDenied: "Leja u refuzua — aktivizoje nga cilësimet e shfletuesit (ikona e drynit te adresa).",
+    pushUnsupported: "Ky shfletues s'i mbështet njoftimet push.",
+    pushIos: "Në iPhone: së pari shto panelin në ekranin kryesor (Share → Add to Home Screen), pastaj hape prej aty dhe aktivizo.",
     infoDesc: "Detaje që i shfaqen klientit dhe i përdor AI-ja për t'iu përgjigjur pyetjeve (p.sh. përbërësit, madhësia, ngjyra).",
     infoTime: "Sa zgjat shërbimi dhe a zë një orar në kalendar. Vetëm për shërbime.",
     infoBook: "Nëse aktiv, klientët e rezervojnë vetë në një orar të lirë. Fike për gjëra që s'kanë orar.",
@@ -408,6 +419,17 @@ const T = {
     impConfirm: "✓ Add to catalog", impSaving: "Saving… {x}/{y}",
     impSaved: "✅ {n} items added — the AI now knows them all",
     impColName: "Name", impColPrice: "Price", impColStock: "Stock", impColSku: "Code", impColNote: "Note",
+    qrPosterBtn: "🖨️ QR poster", qrPosterHint: "Print the poster and put it on your counter/door — customers scan with their phone and book themselves.",
+    qrActBook: "Scan & Book", qrActOrder: "Scan & Order", qrActBoth: "Scan — Book or Order",
+    qrHow: "Open your phone camera, point it at the code — and book yourself in seconds. No calls, no waiting, 24/7.",
+    qrOpen: "Bookings even at night, every day",
+    qrPopupBlocked: "The browser blocked the print window — allow pop-ups for this page.",
+    pushH: "🔔 Phone notifications", pushBtn: "🔔 Enable on this device",
+    pushDesc: "Get «📅 New booking» on your phone even with the panel CLOSED — like WhatsApp. Enable it on every device you use.",
+    pushOn: "✅ Active on this device", pushOk: "🔔 Notifications enabled — try it with a booking!",
+    pushDenied: "Permission denied — enable it in your browser settings (lock icon in the address bar).",
+    pushUnsupported: "This browser does not support push notifications.",
+    pushIos: "On iPhone: first add the panel to your Home Screen (Share → Add to Home Screen), then open it from there and enable.",
     infoDesc: "Details shown to the customer and used by the AI to answer questions (e.g. ingredients, size, color).",
     infoTime: "How long the service takes and whether it books a calendar slot. Services only.",
     infoBook: "If on, customers can self-book a free slot. Turn off for things without a schedule.",
@@ -2094,6 +2116,99 @@ async function deleteOrder() {
   renderOrders(); // pajtim i heshtur
 }
 
+/* ---------------- Posteri QR "Skano & Rezervo" (marketing fizik falas) ----------------
+   Gjeneron poster A5 të printueshëm me QR → faqja publike e biznesit.
+   Pronari e printon, e vë në banak/derë; klientët skanojnë → rezervojnë vetë. */
+async function printQrPoster() {
+  if (!biz) return;
+  const url = location.href.split("?")[0].replace(/[^/]*$/, "") + "book.html?b=" + biz.id;
+  let qrData;
+  try {
+    // Libraria ngarkohet VETËM kur klikohet (zero peshë për të tjerët)
+    const QR = await import("https://esm.sh/qrcode@1.5.4");
+    qrData = await (QR.toDataURL || QR.default.toDataURL)(url, { width: 640, margin: 1, color: { dark: "#065f46", light: "#ffffff" } });
+  } catch (e) { errToast(e); return; }
+  const mode = biz.mode || "appointments";
+  const action = mode === "inquiry" ? tr("qrActOrder") : mode === "both" ? tr("qrActBoth") : tr("qrActBook");
+  const w = window.open("", "_blank");
+  if (!w) { errToast(tr("qrPopupBlocked")); return; }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(biz.name)} — QR</title>
+<style>
+  @page { size: A5 portrait; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; width: 148mm; height: 210mm;
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 14mm 12mm; background: linear-gradient(160deg, #f0fdf9, #ffffff 40%, #f0fdf9);
+    color: #16201c; text-align: center; }
+  .top { display: flex; flex-direction: column; align-items: center; gap: 4mm; }
+  .logo { width: 18mm; height: 18mm; border-radius: 5mm; background: linear-gradient(140deg, #2ad59f, #0ca678 55%, #066649);
+    color: #fff; font-size: 11mm; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+  h1 { font-size: 11mm; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+  .act { font-size: 7mm; font-weight: 800; color: #087f5b; }
+  .qr { width: 78mm; height: 78mm; padding: 4mm; background: #fff; border: 1.2mm solid #0ca678; border-radius: 8mm; }
+  .qr img { width: 100%; height: 100%; }
+  .how { font-size: 4.6mm; font-weight: 600; color: #5a6a64; line-height: 1.5; max-width: 110mm; }
+  .foot { font-size: 3.6mm; color: #93a29c; font-weight: 600; }
+  .foot b { color: #087f5b; }
+</style></head><body>
+  <div class="top">
+    <div class="logo">O</div>
+    <h1>${esc(biz.name)}</h1>
+    <div class="act">${esc(action)}</div>
+  </div>
+  <div class="qr"><img src="${qrData}" alt="QR"></div>
+  <div class="how">${esc(tr("qrHow"))}</div>
+  <div class="foot">${esc(tr("qrOpen"))} · <b>OptimaBook</b></div>
+<script>window.onload = function(){ setTimeout(function(){ window.print(); }, 150); };<\/script>
+</body></html>`);
+  w.document.close();
+  w.focus();
+}
+
+/* ---------------- WEB PUSH: njoftime në telefon me panel TË MBYLLUR ----------------
+   Abonohet pajisja te sw.js (push handler) → ruhet te push_subs (RLS) →
+   trigger-at e bazës (push.sql) → funksioni 'push' → telefoni i bie. */
+const VAPID_PUBLIC = "BMnqZCLKFekC7b17ulnYV-6Sq5jx8lQz7Zllp7LgaX8AWFwtZmtgzipzXChNDIfcS1LXU8nSdUrR31ZDOdSNFm0";
+function urlB64ToU8(s) {
+  const pad = "=".repeat((4 - (s.length % 4)) % 4);
+  const b = atob((s + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from(b, (c) => c.charCodeAt(0));
+}
+const pushSupported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+async function refreshPushUI() {
+  const st = $("#pushStatus"), btn = $("#pushEnable"), ios = $("#pushIosHint");
+  if (!st || !btn) return;
+  // iPhone pa PWA të instaluar: push-i kërkon "Add to Home Screen" (rregull i Apple)
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if (ios) ios.hidden = !(isIos && !standalone);
+  if (!pushSupported()) { btn.hidden = true; st.textContent = tr("pushUnsupported"); return; }
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = reg && await reg.pushManager.getSubscription();
+    if (sub) { btn.hidden = true; st.textContent = tr("pushOn"); }
+    else { btn.hidden = false; st.textContent = ""; }
+  } catch (e) { /* gjendja e paqartë → thjesht lëre butonin */ }
+}
+async function enablePush() {
+  try {
+    if (!pushSupported()) { toast(tr("pushUnsupported"), "err"); return; }
+    const reg = await navigator.serviceWorker.getRegistration() || await navigator.serviceWorker.register("sw.js");
+    await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { toast(tr("pushDenied"), "err"); return; }
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlB64ToU8(VAPID_PUBLIC) });
+    const j = sub.toJSON();
+    const { error } = await sb.from("push_subs").upsert(
+      { business_id: biz.id, endpoint: sub.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth },
+      { onConflict: "endpoint" },
+    );
+    if (error) throw error;
+    haptic(20); toast(tr("pushOk"));
+    refreshPushUI();
+  } catch (e) { errToast(e); }
+}
+
 // Faturë / Ofertë e printueshme (PDF nëpërmjet "Print → Save as PDF") nga porosia e hapur
 function printInvoice() {
   const lines = [];
@@ -2494,6 +2609,7 @@ function renderSettingsHours() {
 
 function renderSettings() {
   if (!biz) return;
+  refreshPushUI(); // gjendja e njoftimeve push në këtë pajisje (async, s'pengon)
   const sn = $("#setName"); if (sn) sn.value = biz.name || "";
   const sa = $("#setAddress"); if (sa) sa.value = biz.address || "";
   const tg = $("#tgToken"); if (tg) tg.value = biz.telegram_token || "";
@@ -3910,6 +4026,8 @@ function wire() {
     try { await navigator.clipboard.writeText(v); toast(tr("copied")); }
     catch (e) { $("#pubLink").select(); document.execCommand && document.execCommand("copy"); toast(tr("copied")); }
   };
+  if ($("#qrPoster")) $("#qrPoster").onclick = printQrPoster;
+  if ($("#pushEnable")) $("#pushEnable").onclick = enablePush;
   // Përshtatja: fik/ndiz fushat e katalogut
   if ($("#saveFields")) $("#saveFields").onclick = async () => {
     const cfg = Object.assign({}, biz.config || {});

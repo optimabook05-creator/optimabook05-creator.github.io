@@ -30,6 +30,27 @@ function putInCache(req, res) {
   return res;
 }
 
+/* ---- WEB PUSH: njoftime në telefon edhe me panelin TË MBYLLUR ----
+   Serveri (funksioni push) dërgon {title, body} — këtu vetëm shfaqet.
+   Klikimi hap/fokuson panelin. Zero lidhje me cache-in (asnjë rrezik "stale"). */
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_e) {}
+  e.waitUntil(self.registration.showNotification(d.title || "OptimaBook", {
+    body: d.body || "Diçka e re në panelin tënd",
+    icon: "icon-192.png", badge: "icon-192.png",
+    tag: d.tag || "ob-" + Date.now(),  // tag unik → njoftimet s'e mbishkruajnë njëra-tjetrën
+  }));
+});
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const target = new URL("app.html", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+    for (const c of list) { if (c.url.indexOf("app.html") !== -1 && "focus" in c) return c.focus(); }
+    return self.clients.openWindow(target);
+  }));
+});
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;

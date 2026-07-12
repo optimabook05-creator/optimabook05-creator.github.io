@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="OptimaBook">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <script src="v.js"></script>
 <title>OptimaBook — Hyr</title>
@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=133">
-<link rel="modulepreload" href="config.js?v=133">
-<link rel="modulepreload" href="optima-app.js?v=133">
+<link rel="stylesheet" href="style.css?v=134">
+<link rel="modulepreload" href="config.js?v=134">
+<link rel="modulepreload" href="optima-app.js?v=134">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -512,7 +512,19 @@
           <input type="text" id="pubLink" readonly>
           <button class="btn small primary" id="copyPubLink" data-t="copyLink">Kopjo</button>
           <a class="btn small" id="openPubLink" target="_blank" rel="noopener" data-t="openLink">Hap ↗</a>
+          <button class="btn small" id="qrPoster" type="button" data-t="qrPosterBtn">🖨️ Posteri QR</button>
         </div>
+        <p class="pane-desc" data-t="qrPosterHint" style="margin-top:8px">Printoje posterin dhe vëre në banak/derë — klientët skanojnë me telefon dhe rezervojnë vetë.</p>
+      </div>
+
+      <div class="settings-block" id="pushBlock">
+        <h3 class="set-h" data-t="pushH">🔔 Njoftimet në telefon</h3>
+        <p class="pane-desc" data-t="pushDesc">Merr "📅 Rezervim i ri" në telefon edhe me panelin TË MBYLLUR — si WhatsApp. Aktivizoje në çdo pajisje që përdor.</p>
+        <div class="settings-input">
+          <button class="btn small primary" id="pushEnable" type="button" data-t="pushBtn">🔔 Aktivizo në këtë pajisje</button>
+          <span class="push-status" id="pushStatus"></span>
+        </div>
+        <p class="pane-desc" id="pushIosHint" data-t="pushIos" hidden>Në iPhone: së pari shto panelin në ekranin kryesor (Share → Add to Home Screen), pastaj hape prej aty dhe aktivizo.</p>
       </div>
 
       <div class="settings-block" id="teamBlock" hidden>
@@ -882,7 +894,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=133"></script>
-<script type="module" src="optima-app.js?v=133"></script>
+<script src="core.js?v=134"></script>
+<script type="module" src="optima-app.js?v=134"></script>
 </body>
 </html>

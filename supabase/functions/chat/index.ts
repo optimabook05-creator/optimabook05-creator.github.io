@@ -1079,12 +1079,38 @@ async function runInquiry(ctx: any) {
   return { reply, via: "inquiry" };
 }
 
+/* ---------------- MBUROJA E KUOTËS (rate limit) ----------------
+   Funksioni thirret me çelës publik → dikush dashakeq mund të digjte
+   kuotën e AI-së me mijëra thirrje. Kufij në kujtesën e instancës:
+   - për KLIENT (chat_id ose IP): 20 mesazhe/min — asnjë klient real s'i kalon
+   - për BIZNES gjithsej: 120/min — ndal edhe sulmet e shpërndara
+   (Instanca ftohet → numëruesit rifillojnë — e mjaftueshme kundër
+   sulmit real, që është breshëri e shpejtë; zero kosto DB.) */
+const rlHits = new Map<string, number[]>();
+function rateLimited(key: string, max: number): boolean {
+  const now = Date.now();
+  const arr = (rlHits.get(key) || []).filter((t) => now - t < 60000);
+  if (arr.length >= max) { rlHits.set(key, arr); return true; }
+  arr.push(now); rlHits.set(key, arr);
+  if (rlHits.size > 5000) rlHits.clear(); // sigurim kujtese (sulm me çelësa unikë)
+  return false;
+}
+
 /* ---------------- Handler ---------------- */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const { business_id, text, client_name, client_phone, history, channel, chat_id, preview } = await req.json();
     if (!business_id || !text) return json({ error: "business_id and text are required" }, 400);
+
+    // Mburoja e kuotës: përgjigje e sjellshme (200 → webhook-et s'bëjnë retry-stuhi)
+    const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "?";
+    const perClient = business_id + ":" + (chat_id || ip);
+    if (rateLimited(perClient, 20) || rateLimited("biz:" + business_id, 120)) {
+      return json({ reply: "Shumë mesazhe njëherësh — prit disa sekonda dhe provo sërish. 🙏 / Too many messages at once — please wait a few seconds. 🙏", via: "rate" });
+    }
+    // Mesazhe qëllimisht gjigante djegin kuotë → pritet me edukatë (klientët realë s'shkruajnë romane)
+    const safeText = String(text).slice(0, 800);
 
     const { biz, services, hours, staff } = await loadContext(business_id);
     if (!biz) return json({ error: "business not found" }, 404);
@@ -1098,7 +1124,7 @@ Deno.serve(async (req) => {
     const svcDur: Record<string, number> = {};
     for (const s of services) svcDur[s.id] = s.duration_min;
     const now = nowInTz(biz.timezone || "Europe/Tirane");   // P0-2: data/ora në timezone-in e biznesit
-    const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text, client_name, client_phone, channel, chat_id, history, now, todayStr: now.todayStr, preview: isPreview };
+    const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text: safeText, client_name, client_phone, channel, chat_id, history, now, todayStr: now.todayStr, preview: isPreview };
 
     let result: any;
     // Mënyra INQUIRY (biznese pa takime): AI informon + merr kërkesën, pa kalendar
