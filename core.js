@@ -272,7 +272,15 @@
     return { inserts, updates, skipped };
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged, normKey, planImport };
+  // Escape i sigurt për ÇDO kontekst HTML (tekst DHE atribute). Burim i vetëm i së vërtetës,
+  // i testuar nga CI → mbrojtja XSS s'prishet dot pa u kapur nga testet.
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged, normKey, planImport, escapeHtml };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);

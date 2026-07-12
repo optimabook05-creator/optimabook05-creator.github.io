@@ -24,7 +24,7 @@
   --milk: #f5f3ef;
   --ink: #16201c;
   --ink-soft: #5a6a64;
-  --ink-faint: #93a29c;
+  --ink-faint: #66766f; /* AA: ~4.5:1 mbi --milk (ish #93a29c ~2.4:1 — i palexueshëm për shumë sy) */
 
   /* xhami */
   --glass: rgba(255, 255, 255, .55);
@@ -2305,3 +2305,26 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 .wk-empty { font-size: 13.5px; font-weight: 600; color: var(--ink-soft); line-height: 1.55; margin-bottom: var(--sp-12); }
 :root[data-theme="dark"] .wk-card { background: linear-gradient(150deg, rgba(32,201,151,.10), rgba(24,33,29,.6) 55%); }
 :root[data-theme="dark"] .wk-d.up { color: var(--accent-bright); }
+
+/* ============================================================
+   ⚡ Lidhja 1-klik e Telegram (bot-i master) + rruga e avancuar e palosur
+   ============================================================ */
+.tg-easy { background: var(--accent-soft); border: 1px solid rgba(12,166,120,.22);
+  border-radius: var(--r-sm); padding: var(--sp-12); margin-bottom: var(--sp-12); }
+.tg-easy-h { font-weight: 800; font-size: 13.5px; margin-bottom: 4px; color: var(--accent-deep); }
+:root[data-theme="dark"] .tg-easy { background: rgba(32,201,151,.10); border-color: rgba(32,201,151,.25); }
+:root[data-theme="dark"] .tg-easy-h { color: var(--accent-bright); }
+.tg-adv summary { cursor: pointer; font-weight: 800; font-size: 13px; color: var(--ink-soft);
+  padding: 6px 0; border-radius: 8px; }
+.tg-adv summary:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+.tg-adv[open] summary { margin-bottom: 6px; }
+
+/* ============================================================
+   🎛 Gjendje të dizajnuara: disabled + loading (busy) për ÇDO buton
+   ============================================================ */
+.btn[disabled], .btn.busy { opacity: .62; pointer-events: none; filter: saturate(.8); }
+.btn.busy { position: relative; color: transparent !important; }
+.btn.busy::after { content: ""; position: absolute; inset: 0; margin: auto; width: 16px; height: 16px;
+  border-radius: 50%; border: 2.5px solid rgba(255,255,255,.45); border-top-color: #fff;
+  animation: impSpin .7s linear infinite; }
+.btn.busy:not(.primary)::after { border-color: var(--accent-soft); border-top-color: var(--accent); }

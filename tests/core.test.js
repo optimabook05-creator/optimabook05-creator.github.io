@@ -225,3 +225,13 @@ test("planImport — i ri vs përditësim (SKU fiton, pastaj emri); dublikatat b
   assert.strictEqual(plan.inserts[0].name, "Fustan veror");
   assert.strictEqual(plan.skipped, 2);
 });
+
+test("escapeHtml — mbron ÇDO kontekst (tekst + atribute), kundër XSS", () => {
+  assert.strictEqual(OB.escapeHtml('<script>alert(1)</script>'), "&lt;script&gt;alert(1)&lt;/script&gt;");
+  assert.strictEqual(OB.escapeHtml('" onmouseover="alert(1)'), "&quot; onmouseover=&quot;alert(1)");
+  assert.strictEqual(OB.escapeHtml("it's & <b>"), "it&#39;s &amp; &lt;b&gt;");
+  assert.strictEqual(OB.escapeHtml(null), "");
+  assert.strictEqual(OB.escapeHtml(undefined), "");
+  // & escape-ohet i pari → s'ka dyfishim (&quot; s'bëhet &amp;quot;)
+  assert.strictEqual(OB.escapeHtml('"'), "&quot;");
+});

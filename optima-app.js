@@ -6,7 +6,7 @@
    ===================================================================== */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
+import { SUPABASE_URL, SUPABASE_KEY, MASTER_BOT } from "./config.js";
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -184,6 +184,12 @@ const T = {
     wkHours: "orë të kursyera (≈)", wkValue: "vlerë e sjellë",
     wkEmpty: "Punonjësi yt AI është gati — por s'ka pasur ende biseda këtë javë. Ndaje faqen publike ose lidh kanalin, dhe këtu do shohësh çdo javë sa orë të kurseu e sa blerës të solli.",
     wkEmptyBtn: "Hap cilësimet e kanalit →",
+    aiNotesHelp: "Shkruaj pyetjet që të bëjnë më shpesh klientët + përgjigjet. AI-ja u përgjigjet vetë me këto. Fillo me një shabllon dhe plotëso kllapat.",
+    aiTemplateBtn: "📋 Nis me një shabllon", aiTemplateDone: "Shablloni u vendos — plotëso kllapat [...] dhe ruaj",
+    aiTemplateConfirm: "Do zëvendësohet teksti aktual me shabllonin. Vazhdoj?",
+    tgEasyH: "⚡ Mënyra e lehtë (rekomandohet): ndaje këtë link",
+    tgEasyD: "Klienti e hap linkun → i shkruan recepsionistit tënd AI menjëherë. Vëre në bio, status, poster — gati për 30 sekonda, pa asnjë konfigurim.",
+    tgAdvH: "🤖 E avancuar: bot me emrin TËND (opsionale)",
     pushH: "🔔 Njoftimet në telefon", pushBtn: "🔔 Aktivizo në këtë pajisje",
     pushDesc: "Merr «📅 Rezervim i ri» në telefon edhe me panelin TË MBYLLUR — si WhatsApp. Aktivizoje në çdo pajisje që përdor.",
     pushOn: "✅ Aktive në këtë pajisje", pushOk: "🔔 Njoftimet u aktivizuan — provoje me një rezervim!",
@@ -434,6 +440,12 @@ const T = {
     wkHours: "hours saved (≈)", wkValue: "value brought in",
     wkEmpty: "Your AI employee is ready — but no conversations yet this week. Share your public page or connect a channel, and every week you'll see here how many hours it saved you and how many buyers it brought.",
     wkEmptyBtn: "Open channel settings →",
+    aiNotesHelp: "Write the questions customers ask most + the answers. The AI answers with these on its own. Start from a template and fill in the brackets.",
+    aiTemplateBtn: "📋 Start from a template", aiTemplateDone: "Template inserted — fill in the [...] brackets and save",
+    aiTemplateConfirm: "This will replace the current text with the template. Continue?",
+    tgEasyH: "⚡ Easy way (recommended): share this link",
+    tgEasyD: "The customer opens the link → chats with your AI receptionist instantly. Put it in your bio, status, poster — ready in 30 seconds, zero setup.",
+    tgAdvH: "🤖 Advanced: a bot with YOUR name (optional)",
     pushH: "🔔 Phone notifications", pushBtn: "🔔 Enable on this device",
     pushDesc: "Get «📅 New booking» on your phone even with the panel CLOSED — like WhatsApp. Enable it on every device you use.",
     pushOn: "✅ Active on this device", pushOk: "🔔 Notifications enabled — try it with a booking!",
@@ -524,6 +536,87 @@ const tr = (k) => T[lang][k];
 function emptyHTML(icon, title, hint) {
   return `<div class="empty"><span class="e-ic">${icon}</span><div class="e-title">${esc(title)}</div>` +
     (hint ? `<div class="e-hint">${esc(hint)}</div>` : "") + `</div>`;
+}
+
+/* Shabllone "Info për AI-në" për vertikale — plotëso-kllapat.
+   Ngre cilësinë e AI-së së çdo biznesi që ditën e parë: pronari s'niset nga bosh.
+   Grupohen sipas llojit të biznesit; kllapat [...] i plotëson pronari. */
+const AI_TEMPLATES = {
+  sq: {
+    shop: `Orari: [p.sh. Hën–Shtu 09:00–18:00]
+Dërgesa: dërgojmë në [qytetet/vendet]; kostoja [X€]; koha [1–3 ditë].
+Pagesa: [para në dorë / kartë / bankë]; [me para në dorë në dorëzim? po/jo].
+Kthimi: pranojmë kthim brenda [14] ditësh nëse produkti është i paprekur.
+Garancia: [X muaj] për [cilat produkte].
+Zbritje me shumicë: nga [X copë] çmimi bie te [Y€/copë].`,
+    taxi: `Zona: mbulojmë [qyteti + fshatrat përreth]; jashtë zonës [+X€].
+Çmimi: nisja [X€] + [Y€/km]; natën (pas [22:00]) [+Z%].
+Rezervim paraprak: po, më thoni orën dhe adresën e marrjes.
+Aeroporti: [Rinas → qyteti = X€ fiks].
+Pagesa: [para në dorë / kartë]. Bagazh/kafshë: [po/jo, kushte].
+Sa shpejt: makina vjen zakonisht për [5–15] min.`,
+    salon: `Orari: [Hën–Shtu 09:00–19:00], [e diel mbyllur].
+Shërbimet & çmimet i keni te katalogu. Për [ngjyrosje/flokë të gjatë] çmimi mund të ndryshojë pas konsultës.
+A duhet rezervim: po, që të mos prisni.
+Anulimi: na njoftoni [2 orë] përpara.
+Produktet: përdorim [markat]. Parking: [po/jo].`,
+    clinic: `Orari: [Hën–Pre 09:00–17:00].
+Konsulta e parë: [X€], zgjat [30] min.
+Trajtimet & çmimet: [listoji ose thuaj "sipas konsultës"].
+A mbulohet nga sigurimi: [po/jo, cilat].
+Përgatitja para vizitës: [p.sh. esëll për analiza].
+Anulimi: njoftoni [24 orë] përpara. Adresa & parking: [...].`,
+    generic: `Orari i punës: [...].
+Çfarë ofroni + çmimet kryesore: [ose thoni "te katalogu"].
+Pyetjet më të shpeshta të klientëve + përgjigjet:
+- [Pyetje 1]? → [Përgjigje]
+- [Pyetje 2]? → [Përgjigje]
+Pagesa: [...]. Dërgesa/vendndodhja: [...].
+Politika (kthim/anulim/garanci): [...].`,
+  },
+  en: {
+    shop: `Hours: [e.g. Mon–Sat 09:00–18:00]
+Shipping: we ship to [cities/countries]; cost [X€]; time [1–3 days].
+Payment: [cash / card / bank]; [cash on delivery? yes/no].
+Returns: accepted within [14] days if the product is untouched.
+Warranty: [X months] on [which products].
+Wholesale discount: from [X units] the price drops to [Y€/unit].`,
+    taxi: `Area: we cover [city + nearby villages]; outside the area [+X€].
+Price: base [X€] + [Y€/km]; nights (after [22:00]) [+Z%].
+Pre-booking: yes, tell me the time and pickup address.
+Airport: [Airport → city = X€ flat].
+Payment: [cash / card]. Luggage/pets: [yes/no, conditions].
+Arrival: the car usually comes in [5–15] min.`,
+    salon: `Hours: [Mon–Sat 09:00–19:00], [Sunday closed].
+Services & prices are in the catalog. For [coloring/long hair] the price may change after a consult.
+Booking needed: yes, so you don't wait.
+Cancellation: let us know [2 hours] ahead.
+Products: we use [brands]. Parking: [yes/no].`,
+    clinic: `Hours: [Mon–Fri 09:00–17:00].
+First consult: [X€], lasts [30] min.
+Treatments & prices: [list them or say "after consultation"].
+Insurance covered: [yes/no, which].
+Preparation before visit: [e.g. fasting for blood tests].
+Cancellation: notify [24 hours] ahead. Address & parking: [...].`,
+    generic: `Business hours: [...].
+What you offer + main prices: [or say "in the catalog"].
+Most frequent customer questions + answers:
+- [Question 1]? → [Answer]
+- [Question 2]? → [Answer]
+Payment: [...]. Delivery/location: [...].
+Policies (returns/cancellation/warranty): [...].`,
+  },
+};
+// Harta lloj-biznesi → shabllon (grupon të ngjashmit)
+function aiTemplateFor(type) {
+  const map = {
+    barber: "salon", salon: "salon", tattoo: "salon", photo: "salon",
+    dentist: "clinic", clinic: "clinic", physio: "clinic", vet: "clinic",
+    auto: "shop", restaurant: "generic", gym: "clinic", lawyer: "generic", tutor: "generic",
+    taxi: "taxi", shop: "shop", other: "generic",
+  };
+  const key = map[type] || "generic";
+  return (AI_TEMPLATES[lang] || AI_TEMPLATES.en)[key] || (AI_TEMPLATES[lang] || AI_TEMPLATES.en).generic;
 }
 
 const PRESETS = {
@@ -937,6 +1030,7 @@ async function handleAuth(e) {
   if (!email || pass.length < 6) { err.textContent = tr("errFields"); return; }
 
   $("#authSubmit").disabled = true;
+  $("#authSubmit").classList.add("busy"); // spinner i dizajnuar (jo vetëm tekst)
   $("#authSubmit").textContent = tr("authWait");
   try {
     if (authMode === "signup") {
@@ -969,6 +1063,7 @@ async function handleAuth(e) {
     err.textContent = ex.message || String(ex);
   } finally {
     $("#authSubmit").disabled = false;
+    $("#authSubmit").classList.remove("busy");
     renderAuthMode();
   }
 }
@@ -1379,7 +1474,7 @@ function impPreview(warnings) {
     const trow = document.createElement("tr");
     if (p.uncertain) trow.className = "imp-unc";
     trow.innerHTML = `
-      <td><input type="text" value="${esc(p.name).replace(/"/g, "&quot;")}" data-i="${i}" data-f="name" maxlength="120"></td>
+      <td><input type="text" value="${esc(p.name)}" data-i="${i}" data-f="name" maxlength="120"></td>
       <td><input type="number" value="${p.price}" data-i="${i}" data-f="price" min="0" step="0.01"></td>
       <td>${p.stock || ""}</td><td>${esc(p.sku || "")}</td>
       <td class="imp-note">${p.uncertain ? "⚠️ " : ""}${esc(p.note || "")}</td>`;
@@ -2626,6 +2721,13 @@ function renderSettings() {
   const bid = $("#bizIdVal"); if (bid) bid.textContent = biz.id;
   const pubBase = location.href.split("?")[0].replace(/[^/]*$/, "") + "book.html?b=" + biz.id;
   const pl = $("#pubLink"); if (pl) pl.value = pubBase;
+  // Lidhja 1-klik e Telegram-it (bot-i master i përbashkët)
+  const te = $("#tgEasy");
+  if (te) {
+    te.hidden = !MASTER_BOT;
+    const tl = $("#tgEasyLink");
+    if (tl && MASTER_BOT) tl.value = `https://t.me/${MASTER_BOT}?start=${biz.id}`;
+  }
   const op = $("#openPubLink"); if (op) op.href = pubBase;
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
   const cc = $("#bizCurrency"); if (cc) cc.value = biz.currency || "EUR";
@@ -3198,7 +3300,9 @@ function drawCalendar(data, forDate) {
   }
 }
 
-function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+// Escape i sigurt për ÇDO kontekst HTML — referenca e vetme e testuar (core.js).
+// Deklaratë funksioni (jo const) → hoisting: e thërrasin lirshëm edhe funksionet më lart.
+function esc(s) { return OB.escapeHtml(s); }
 
 async function renderAppointments() {
   return swr("appts", async () => {
@@ -4052,6 +4156,14 @@ function wire() {
     } catch (ex) { errToast(ex); }
   };
   if ($("#tgToken")) $("#tgToken").oninput = updateTgWebhookLink;
+  // Shablloni "Info për AI-në": plotëso-kllapat sipas llojit të biznesit
+  if ($("#aiTemplate")) $("#aiTemplate").onclick = () => {
+    const ta = $("#aiNotes"); if (!ta) return;
+    const tpl = aiTemplateFor(biz && biz.type);
+    if (ta.value.trim() && !confirm(tr("aiTemplateConfirm"))) return;
+    ta.value = tpl; ta.focus();
+    toast(tr("aiTemplateDone"));
+  };
   if ($("#profitOnChk")) $("#profitOnChk").onchange = (e) => { const f = $("#fixedCostField"); if (f) f.hidden = !e.target.checked; };
   if ($("#addFixedCost")) $("#addFixedCost").onclick = () => { addFixedCostRow("", ""); const rows = document.querySelectorAll("#fixedCostList .exp-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".exp-name").focus(); };
   // General: ruaj GJITHÇKA me një buton
@@ -4104,6 +4216,11 @@ function wire() {
     catch (e) { $("#pubLink").select(); document.execCommand && document.execCommand("copy"); toast(tr("copied")); }
   };
   if ($("#qrPoster")) $("#qrPoster").onclick = printQrPoster;
+  if ($("#copyTgEasy")) $("#copyTgEasy").onclick = async () => {
+    const v = $("#tgEasyLink").value;
+    try { await navigator.clipboard.writeText(v); toast(tr("copied")); }
+    catch (e) { $("#tgEasyLink").select(); document.execCommand && document.execCommand("copy"); toast(tr("copied")); }
+  };
   if ($("#pushEnable")) $("#pushEnable").onclick = enablePush;
   // Përshtatja: fik/ndiz fushat e katalogut
   if ($("#saveFields")) $("#saveFields").onclick = async () => {

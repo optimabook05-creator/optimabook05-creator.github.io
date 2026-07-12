@@ -91,10 +91,23 @@ async function sendWhatsApp(phoneNumberId: string, to: string, text: string) {
   });
 }
 
+// Kufi thirrjesh: thirret pa JWT (nga trigger-i i anulimit). Kufizim mbrojtës
+// që askush s'mund ta abuzojë për të spam-uar klientët e listës së pritjes.
+const rl = new Map<string, number[]>();
+function tooMany(bid: string, max = 10): boolean {
+  const now = Date.now();
+  const arr = (rl.get(bid) || []).filter((t) => now - t < 60000);
+  if (arr.length >= max) { rl.set(bid, arr); return true; }
+  arr.push(now); rl.set(bid, arr);
+  if (rl.size > 5000) rl.clear();
+  return false;
+}
+
 Deno.serve(async (req) => {
   try {
     const { business_id, date } = await req.json().catch(() => ({}));
     if (!business_id || !date) return json({ error: "business_id and date required" }, 400);
+    if (tooMany(String(business_id))) return json({ ok: true, throttled: true });
 
     // Biznesi (emër + gjuhë)
     const { data: biz } = await supabase.from("businesses").select("name, lang, telegram_token, wa_phone_id").eq("id", business_id).maybeSingle();

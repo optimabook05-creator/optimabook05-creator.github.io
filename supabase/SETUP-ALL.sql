@@ -522,3 +522,16 @@ create trigger trg_push_lead after insert on public.leads
 drop trigger if exists trg_push_aiq on public.ai_questions;
 create trigger trg_push_aiq after insert on public.ai_questions
   for each row execute function public.notify_push();
+
+-- =====================================================================
+-- BOT-I MASTER (lidhja 1-klik Telegram) — chat_links: klient → biznes
+-- (master-bot.sql; RLS pa policies = vetëm serveri i prek)
+-- =====================================================================
+create table if not exists public.chat_links (
+  channel      text not null,
+  chat_id      text not null,
+  business_id  uuid not null references public.businesses(id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  primary key (channel, chat_id)
+);
+alter table public.chat_links enable row level security;

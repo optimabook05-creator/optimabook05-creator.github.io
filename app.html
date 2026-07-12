@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=135">
-<link rel="modulepreload" href="config.js?v=135">
-<link rel="modulepreload" href="optima-app.js?v=135">
+<link rel="stylesheet" href="style.css?v=136">
+<link rel="modulepreload" href="config.js?v=136">
+<link rel="modulepreload" href="optima-app.js?v=136">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -495,7 +495,20 @@
 
       <div class="settings-block" id="channelBlock">
         <h3 class="set-h" data-t="setChannelH">🔗 Lidh kanalin (Telegram)</h3>
-        <p class="pane-desc" data-t="channelDesc">2 minuta: krijo një bot te @BotFather → kopjo token-in → ngjite këtu → Ruaj → kliko "Aktivizo".</p>
+
+        <!-- MËNYRA 1-KLIK: bot-i master i përbashkët — pa BotFather fare -->
+        <div class="tg-easy" id="tgEasy">
+          <div class="tg-easy-h" data-t="tgEasyH">⚡ Mënyra e lehtë (rekomandohet): ndaje këtë link</div>
+          <p class="pane-desc" data-t="tgEasyD">Klienti e hap linkun → i shkruan recepsionistit tënd AI menjëherë. Vëre në bio, WhatsApp status, poster — gati për 30 sekonda, pa asnjë konfigurim.</p>
+          <div class="settings-input">
+            <input type="text" id="tgEasyLink" readonly>
+            <button class="btn small primary" id="copyTgEasy" type="button" data-t="copyLink">Kopjo</button>
+          </div>
+        </div>
+
+        <details class="tg-adv" id="tgAdv">
+          <summary data-t="tgAdvH">🤖 E avancuar: bot me emrin TËND (opsionale)</summary>
+          <p class="pane-desc" data-t="channelDesc">2 minuta: krijo një bot te @BotFather → kopjo token-in → ngjite këtu → Ruaj → kliko "Aktivizo".</p>
         <div class="settings-row">
           <label for="tgToken" data-t="tgTokenLbl">Token-i i bot-it Telegram</label>
           <div class="settings-input">
@@ -505,6 +518,7 @@
         </div>
         <a id="tgWebhook" class="btn small primary" target="_blank" rel="noopener" hidden style="text-decoration:none;margin-top:4px" data-t="tgActivate">⚡ Aktivizo webhook-un ↗</a>
         <p style="font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-top:14px"><span data-t="bizIdLbl">ID e biznesit (për WhatsApp/Meta):</span> <code id="bizIdVal" class="biz-id"></code></p>
+        </details>
       </div>
 
       <div class="settings-block">
@@ -548,8 +562,10 @@
         <h3 class="set-h" data-t="setAiH">AI & Vlerësime</h3>
         <div class="settings-row">
           <label for="aiNotes" data-t="aiNotesLbl">🧠 Info për AI-në</label>
+          <p class="pane-desc" data-t="aiNotesHelp" style="margin:2px 0 8px">Shkruaj pyetjet që të bëjnë më shpesh klientët + përgjigjet. AI-ja u përgjigjet vetë me këto. Fillo me një shabllon dhe plotëso kllapat.</p>
+          <button class="btn small" id="aiTemplate" type="button" data-t="aiTemplateBtn" style="margin-bottom:8px">📋 Nis me një shabllon</button>
           <div class="settings-input">
-            <textarea id="aiNotes" rows="3" data-t-ph="aiNotesPh" placeholder="P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë."></textarea>
+            <textarea id="aiNotes" rows="6" data-t-ph="aiNotesPh" placeholder="P.sh. Web 1-3 faqe = 100€, dorëzim ~13 ditë."></textarea>
             <button class="btn small primary" id="saveAiNotes" data-t="save">Ruaj</button>
           </div>
         </div>
@@ -896,7 +912,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=135"></script>
-<script type="module" src="optima-app.js?v=135"></script>
+<script src="core.js?v=136"></script>
+<script type="module" src="optima-app.js?v=136"></script>
 </body>
 </html>

@@ -42,7 +42,8 @@
 <body>
 <div class="pub-wrap">
   <div class="pub-card" id="card"><div class="pub-msg"><div class="big">⏳</div><p>…</p></div></div>
-  <div class="pub-foot">⚡ <a href="index.html">OptimaBook</a></div>
+  <!-- Grepi i konvertimit: çdo klient që gjurmon porosinë është vetë pronar i mundshëm biznesi -->
+  <div class="pub-foot">⚡ Ky biznes përgjigjet 24/7 me <a href="index.html"><b>OptimaBook</b></a> — <a href="index.html">merre falas edhe ti →</a></div>
 </div>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -50,7 +51,7 @@ import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 const CUR = { EUR:"€", USD:"$", GBP:"£", ALL:"L", CHF:"CHF", CAD:"$", AUD:"$", AED:"AED", TRY:"₺", RSD:"din", MKD:"den", RON:"lei", BGN:"лв", SEK:"kr", INR:"₹", JPY:"¥", CNY:"¥" };
 const $ = (s) => document.querySelector(s);
-const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 const params = new URLSearchParams(location.search);
 const SQ = (navigator.language || "sq").toLowerCase().startsWith("sq");
 const L = SQ ? {

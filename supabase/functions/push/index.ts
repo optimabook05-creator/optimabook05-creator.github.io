@@ -30,6 +30,19 @@ const cors = {
 const json = (obj: unknown, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
+// Kufi thirrjesh për biznes: funksioni thirret pa JWT (nga triggers/pg_net), pra
+// teorikisht kushdo mund ta POST-onte për të spam-uar telefonin e pronarit me njoftime
+// të rreme. Breshëri realë ngjarjesh janë të vegjël → 6/min/biznes i mjafton; sulmi throttle-ohet.
+const rl = new Map<string, number[]>();
+function tooMany(bid: string, max = 6): boolean {
+  const now = Date.now();
+  const arr = (rl.get(bid) || []).filter((t) => now - t < 60000);
+  if (arr.length >= max) { rl.set(bid, arr); return true; }
+  arr.push(now); rl.set(bid, arr);
+  if (rl.size > 5000) rl.clear();
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -38,6 +51,7 @@ Deno.serve(async (req) => {
 
     const { business_id, title, body } = await req.json();
     if (!business_id || !title) return json({ error: "business_id and title required" }, 400);
+    if (tooMany(String(business_id))) return json({ ok: true, throttled: true });
 
     const { data: subs } = await supabase.from("push_subs")
       .select("id, endpoint, p256dh, auth").eq("business_id", business_id).limit(20);
