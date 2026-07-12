@@ -721,6 +721,37 @@ const dataSeq = OB.makeSeq();
 const drawnRev = {}; // key -> rev i fundit i vizatuar (mos rivizato pa nevojë)
 const ck = (name) => (biz ? biz.id + ":" : "") + name; // çelës për biznes
 
+/* ---------- RUAJTJA E KUJTESËS (paneli i menjëhershëm në telefon) ----------
+   iOS/Android e nxjerrin faqen nga memoria kur ndërron app; kur kthehesh,
+   faqja rifreskohet e gjitha → pa këtë, çdo pane do ribënte loading.
+   Ruajmë kujtesën në sessionStorage (mbijeton rifreskimin e telefonit brenda
+   të njëjtit tab) → kthehesh → sheh MENJËHERË të dhënat, freskim heshtur në sfond. */
+const CACHE_SS_KEY = "ob-cache-v1";
+let cacheSaveTimer = null;
+function persistCache() {
+  if (!biz) return;
+  try {
+    const snap = dataCache.snapshot();
+    const s = JSON.stringify({ biz: biz.id, at: Date.now(), data: snap });
+    if (s.length < 2_000_000) sessionStorage.setItem(CACHE_SS_KEY, s); // nën ~2MB (kufiri ~5MB)
+    else sessionStorage.removeItem(CACHE_SS_KEY); // katalog gjigant → mos ruaj (rrezik plot)
+  } catch (_e) { /* modaliteti privat etj. → thjesht s'ruhet */ }
+}
+function schedulePersist() { clearTimeout(cacheSaveTimer); cacheSaveTimer = setTimeout(persistCache, 400); }
+function hydrateCache() {
+  if (!biz) return;
+  try {
+    const raw = sessionStorage.getItem(CACHE_SS_KEY);
+    if (!raw) return;
+    const o = JSON.parse(raw);
+    // Vetëm nëse i njëjti biznes dhe jo më e vjetër se 10 min (të dhëna të arsyeshme)
+    if (o && o.biz === biz.id && o.data && Date.now() - (o.at || 0) < 600000) dataCache.hydrate(o.data);
+  } catch (_e) {}
+}
+// Ruaj kur je gati të largohesh (mbyll app-in, ndërron tab) — çasti kur humbet gjendja
+window.addEventListener("pagehide", persistCache);
+document.addEventListener("visibilitychange", () => { if (document.hidden) persistCache(); });
+
 /* Karta gabimi e dizajnuar (kur s'kemi as kujtesë, as rrjet) — kurrë tekst i thatë.
    Përdor të njëjtat klasa si emptyHTML → pamje konsistente në çdo pane. */
 function errorHTML(retryId) {
@@ -758,6 +789,7 @@ async function swr(name, fetcher, draw) {
   const rev = dataCache.get(key).rev;
   if (changed) { draw(fresh); }
   drawnRev[key] = rev; // edhe kur s'ndryshoi: pamja përfaqëson rev-in aktual
+  schedulePersist();   // ruaj kujtesën (kthimi në telefon → pa loading)
 }
 
 /* Detyro rivizatim në thirrjen e ardhshme (p.sh. ndryshoi një filtër lokal ose gjuha,
@@ -1076,9 +1108,38 @@ async function afterLogin() {
   } catch (e) { /* MFA i padisponueshëm → vazhdo normalisht */ }
   try { const { data } = await sb.auth.getUser(); myUserId = data.user ? data.user.id : null; myEmail = data.user ? (data.user.email || "") : ""; } catch (e) {}
   await loadBusiness();
-  if (biz) { renderBizSwitch(); showView("app"); await loadAll(); }   // shfaq panelin së pari → s'mbetet kurrë bosh
-  else { openOnboard(); showView("onboard"); }
+  if (biz) {
+    hydrateCache();                    // mbush kujtesën nga sessionStorage → paneli i menjëhershëm
+    renderBizSwitch(); showView("app");
+    restoreTab();                      // rikthe skedën ku ishte para rifreskimit
+    await loadAll();                   // shfaq panelin së pari → s'mbetet kurrë bosh
+    restoreScroll();                   // rikthe pozicionin e scroll-it
+  } else { openOnboard(); showView("onboard"); }
 }
+
+/* Rikthimi i skedës + scroll-it pas rifreskimit të telefonit (ndjesi native, s'humbet vendi) */
+function restoreTab() {
+  try {
+    const t = sessionStorage.getItem("ob-tab");
+    if (t) { const el = document.querySelector('.tab[data-tab="' + t + '"]'); if (el) el.click(); }
+  } catch (_e) {}
+}
+function restoreScroll() {
+  try {
+    const y = parseInt(sessionStorage.getItem("ob-scroll") || "0", 10);
+    if (y > 0) requestAnimationFrame(() => window.scrollTo(0, y));
+  } catch (_e) {}
+}
+// Ne e menaxhojmë vetë rikthimin e scroll-it (mos u përleshim me shfletuesin)
+try { if ("scrollRestoration" in history) history.scrollRestoration = "manual"; } catch (_e) {}
+// Ruaj scroll-in (throttle me rAF) + skedën aktive
+(function () {
+  let t = false;
+  addEventListener("scroll", () => {
+    if (t) return; t = true;
+    requestAnimationFrame(() => { t = false; try { sessionStorage.setItem("ob-scroll", String(Math.round(scrollY))); } catch (_e) {} });
+  }, { passive: true });
+})();
 
 /* ---------------- 2FA (TOTP) — porta e login-it + aktivizimi te Cilësimet ---------------- */
 function showMfaGate() {
@@ -1163,6 +1224,7 @@ async function logout() {
   // Higjienë: pastro KREJT kujtesën — një përdorues tjetër në të njëjtin
   // shfletues s'duhet të gjejë asnjë gjurmë të të dhënave të të parit
   dataCache.clear(); forceDrawAll();
+  try { sessionStorage.removeItem(CACHE_SS_KEY); sessionStorage.removeItem("ob-tab"); sessionStorage.removeItem("ob-scroll"); } catch (_e) {}
   biz = null; businesses = []; services = []; hours = {}; addingBiz = false;
   showView("auth");
 }
@@ -4309,6 +4371,7 @@ function wire() {
         catalog: renderCatalog, config: renderConfigHub,
       };
       const fn = lazy[tab.dataset.tab]; if (fn) fn();
+      try { sessionStorage.setItem("ob-tab", tab.dataset.tab); } catch (_e) {} // kujto skedën për kthimin
       closeSidebarDrawer(); syncBotnav(); // sirtar i telefonit + sinkronizim i barit poshtë
     };
   });

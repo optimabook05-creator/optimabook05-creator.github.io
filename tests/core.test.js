@@ -235,3 +235,18 @@ test("escapeHtml — mbron ÇDO kontekst (tekst + atribute), kundër XSS", () =>
   // & escape-ohet i pari → s'ka dyfishim (&quot; s'bëhet &amp;quot;)
   assert.strictEqual(OB.escapeHtml('"'), "&quot;");
 });
+
+test("makeCache snapshot/hydrate — kujtesa mbijeton rifreskimin (sessionStorage)", () => {
+  const c = OB.makeCache();
+  c.set("a", [{ id: 1 }]); c.set("b", [{ id: 2 }]);
+  const snap = c.snapshot();
+  const s = JSON.stringify(snap); // duhet të serializohet pastër
+  const c2 = OB.makeCache();
+  c2.hydrate(JSON.parse(s));
+  assert.deepStrictEqual(c2.get("a").data, [{ id: 1 }]);
+  assert.strictEqual(c2.get("b").data[0].id, 2);
+  // hydrate NUK mbishkruan një çelës që ekziston tashmë (i freskët > i ruajtur)
+  c2.set("a", [{ id: 99 }]);
+  c2.hydrate({ a: { data: [{ id: 1 }], rev: 1 } });
+  assert.strictEqual(c2.get("a").data[0].id, 99);
+});

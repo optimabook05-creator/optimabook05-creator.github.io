@@ -2328,3 +2328,14 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
   border-radius: 50%; border: 2.5px solid rgba(255,255,255,.45); border-top-color: #fff;
   animation: impSpin .7s linear infinite; }
 .btn.busy:not(.primary)::after { border-color: var(--accent-soft); border-top-color: var(--accent); }
+
+/* ============================================================
+   📱 FIX iOS "zmadhohet vetë": çdo fushë me font < 16px bën iPhone-in të
+   zoom-ojë kur e prek DHE s'kthehet — ndaj ÇDO fushë teksti ≥16px në prekje.
+   (!important: mbizotëron rregullat e shpërndara 14/15px; prek vetëm mobile.)
+   Zgjidhja standarde e rekomanduar; desktop-i i paprekur.
+   ============================================================ */
+@media (max-width: 820px), (pointer: coarse) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]),
+  select, textarea { font-size: 16px !important; }
+}

@@ -216,6 +216,20 @@
       },
       del(key) { m.delete(key); },
       clear() { m.clear(); },
+      // Serializim → ruajtje në sessionStorage (paneli i menjëhershëm edhe pas rifreskimit
+      // të telefonit, që s'ribën loading kur kthehesh). Kthen objekt të thjeshtë JSON.
+      snapshot() {
+        const o = {};
+        for (const [k, v] of m) o[k] = v;
+        return o;
+      },
+      // Rikthim nga sessionStorage — vetëm çelësat që s'i kemi ende (mos mbishkro të freskëtat).
+      hydrate(obj) {
+        if (!obj) return;
+        for (const k of Object.keys(obj)) {
+          if (!m.has(k) && obj[k] && "data" in obj[k]) m.set(k, obj[k]);
+        }
+      },
     };
   }
 
