@@ -190,6 +190,7 @@ const T = {
     tgEasyH: "⚡ Mënyra e lehtë (rekomandohet): ndaje këtë link",
     tgEasyD: "Klienti e hap linkun → i shkruan recepsionistit tënd AI menjëherë. Vëre në bio, status, poster — gati për 30 sekonda, pa asnjë konfigurim.",
     tgAdvH: "🤖 E avancuar: bot me emrin TËND (opsionale)",
+    itemMoreShow: "⚙️ Më shumë opsione (përshkrim, stok, kod, shumicë…)", itemMoreHide: "⚙️ Më pak opsione",
     pushH: "🔔 Njoftimet në telefon", pushBtn: "🔔 Aktivizo në këtë pajisje",
     pushDesc: "Merr «📅 Rezervim i ri» në telefon edhe me panelin TË MBYLLUR — si WhatsApp. Aktivizoje në çdo pajisje që përdor.",
     pushOn: "✅ Aktive në këtë pajisje", pushOk: "🔔 Njoftimet u aktivizuan — provoje me një rezervim!",
@@ -446,6 +447,7 @@ const T = {
     tgEasyH: "⚡ Easy way (recommended): share this link",
     tgEasyD: "The customer opens the link → chats with your AI receptionist instantly. Put it in your bio, status, poster — ready in 30 seconds, zero setup.",
     tgAdvH: "🤖 Advanced: a bot with YOUR name (optional)",
+    itemMoreShow: "⚙️ More options (description, stock, code, wholesale…)", itemMoreHide: "⚙️ Fewer options",
     pushH: "🔔 Phone notifications", pushBtn: "🔔 Enable on this device",
     pushDesc: "Get «📅 New booking» on your phone even with the panel CLOSED — like WhatsApp. Enable it on every device you use.",
     pushOn: "✅ Active on this device", pushOk: "🔔 Notifications enabled — try it with a booking!",
@@ -1933,9 +1935,24 @@ function openItem(s) {
   document.querySelectorAll("#itemModal .fit").forEach((c) => { c.checked = itemShowsField(s, c.dataset.f); c.onchange = applyItemFields; });
   $("#itemKind").onchange = applyItemFields;
   applyItemFields();
+  // Thjeshtësi: "Më shumë opsione" i palosur për artikuj të rinj; i hapur nëse
+  // artikulli ekzistues KA të dhëna të avancuara (që pronari të mos i humbasë nga sytë).
+  const hasAdv = !!(s && (s.description || s.unit_label || s.sku || (s.stock != null && s.stock !== 0) || s.track_stock
+    || (Array.isArray(s.variants) && s.variants.length) || (Array.isArray(s.addons) && s.addons.length)
+    || (s.kind !== "product" && ((s.duration_value != null && s.duration_value !== 30) || s.bookable === false))
+    || (priceTiers && s.id && priceTiers.some((t) => t.service_id === s.id))));
+  setItemAdv(hasAdv);
   $("#itemDelete").hidden = !s;
   $("#itemModal").hidden = false;
   setTimeout(() => $("#itemName").focus(), 60);
+}
+function setItemAdv(open) {
+  const adv = $("#itemAdv"), btn = $("#itemMore");
+  if (!adv || !btn) return;
+  adv.hidden = !open;
+  btn.setAttribute("aria-expanded", open ? "true" : "false");
+  btn.classList.toggle("open", open);
+  btn.querySelector("span").textContent = open ? tr("itemMoreHide") : tr("itemMoreShow");
 }
 
 // Default-i global për një fushë (toggle-t "Catalog fields") — për fushat pa toggle global → true
@@ -4305,6 +4322,7 @@ function wire() {
   };
   // Katalogu: editori i artikullit
   if ($("#btnAddItem")) $("#btnAddItem").onclick = () => openItem(null);
+  if ($("#itemMore")) $("#itemMore").onclick = () => setItemAdv($("#itemAdv").hidden);
   // Importi i katalogut: ngarko → shiko → konfirmo
   if ($("#btnImport")) $("#btnImport").onclick = openImport;
   if ($("#impFile")) $("#impFile").onchange = (e) => { const f = e.target.files && e.target.files[0]; if (f) impProcess(f); };
