@@ -180,6 +180,7 @@ const T = {
     qrOpen: "Rezervime edhe natën, çdo ditë",
     qrPopupBlocked: "Shfletuesi bllokoi dritaren e printimit — lejo pop-up për këtë faqe.",
     wkTitle: "Java jote me punonjësin AI", wkSub: "7 ditët e fundit · krahasuar me javën e kaluar",
+    ghostLbl: "fituar nga AI kur ishe i mbyllur ({n} klientë · 30 ditë) 🌙",
     wkConvos: "biseda të mbajtura", wkAnswered: "përgjigje të dhëna", wkBuyers: "blerës të kapur",
     wkHours: "orë të kursyera (≈)", wkValue: "vlerë e sjellë",
     wkEmpty: "Punonjësi yt AI është gati — por s'ka pasur ende biseda këtë javë. Ndaje faqen publike ose lidh kanalin, dhe këtu do shohësh çdo javë sa orë të kurseu e sa blerës të solli.",
@@ -437,6 +438,7 @@ const T = {
     qrOpen: "Bookings even at night, every day",
     qrPopupBlocked: "The browser blocked the print window — allow pop-ups for this page.",
     wkTitle: "Your week with the AI employee", wkSub: "last 7 days · vs previous week",
+    ghostLbl: "earned by the AI while you were closed ({n} customers · 30 days) 🌙",
     wkConvos: "conversations handled", wkAnswered: "answers given", wkBuyers: "buyers captured",
     wkHours: "hours saved (≈)", wkValue: "value brought in",
     wkEmpty: "Your AI employee is ready — but no conversations yet this week. Share your public page or connect a channel, and every week you'll see here how many hours it saved you and how many buyers it brought.",
@@ -3698,6 +3700,57 @@ function countUp(el, dur) {
 /* ---------------- RAPORTI JAVOR I VLERËS — çfarë bëri punonjësi AI për ty ----------------
    Arma kundër anulimit: pronari sheh çdo javë me shifra se AI-ja i kurseu orë
    dhe i solli blerës. Gjithçka nga të dhënat ekzistuese — zero SQL i ri. */
+/* ---------------- FITIMI FANTAZMË — paratë që AI-ja solli kur ti flije ----------------
+   Arma që e justifikon abonimin vetvetiu: rezervime/porosi që hynë nga AI kur
+   biznesi ishte i MBYLLUR (jashtë orarit / ditë pushimi, në timezone-in e biznesit).
+   "Muajin e fundit AI kapi X€ kur ti s'ishe në punë." Opsionale (cfg.ghostOff). */
+function ghostClosedAt(iso) {
+  // A ishte biznesi i mbyllur në çastin kur hyri kjo (koha lokale e biznesit)?
+  const tz = biz.timezone || "Europe/Tirane";
+  try {
+    const p = new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(iso));
+    const wd = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[p.find((x) => x.type === "weekday").value];
+    const min = (+p.find((x) => x.type === "hour").value) * 60 + (+p.find((x) => x.type === "minute").value);
+    const h = hours[wd];
+    if (!h) return true;                              // ditë pushimi → fantazmë
+    return min < toMin(h.open) || min >= toMin(h.close); // jashtë orarit → fantazmë
+  } catch (e) { return false; }                        // në dyshim → mos e numëro (i ndershëm)
+}
+async function renderGhost() {
+  if (!$("#ghostBox") || !biz) return;
+  if (biz.config && biz.config.ghostOff) { $("#ghostBox").innerHTML = ""; return; } // opsionale
+  return swr("ghost", async () => {
+    const since = new Date(Date.now() - 30 * 864e5).toISOString();
+    let appts = [], orders = [];
+    try { const { data } = await sb.from("appointments").select("created_at, source, status, services(price)").eq("business_id", biz.id).gte("created_at", since); appts = data || []; } catch (e) {}
+    try { const { data } = await sb.from("orders").select("total, created_by, status, placed_at").eq("business_id", biz.id).gte("placed_at", since); orders = data || []; } catch (e) {}
+    return { appts, orders };
+  }, drawGhost);
+}
+function drawGhost(d) {
+  const box = $("#ghostBox"); if (!box) return;
+  if (d === null || d.__error) { box.innerHTML = ""; return; } // heshtje, pa skeleton (kuti ndihmëse)
+  let count = 0, value = 0;
+  for (const a of d.appts) {
+    if (a.source === "ai" && a.status !== "cancelled" && ghostClosedAt(a.created_at)) {
+      count++; value += a.services ? Number(a.services.price) || 0 : 0;
+    }
+  }
+  for (const o of d.orders) {
+    if (o.created_by !== "manual" && o.status !== "cancelled" && ghostClosedAt(o.placed_at)) {
+      count++; value += Number(o.total) || 0;
+    }
+  }
+  if (!count) { box.innerHTML = ""; return; } // pa fantazmë ende → mos zër vend
+  box.innerHTML = `<div class="ghost-card">
+    <div class="ghost-ico" aria-hidden="true">🌙</div>
+    <div class="ghost-body">
+      <div class="ghost-big">${money(round2(value))}</div>
+      <div class="ghost-lbl">${tr("ghostLbl").replace("{n}", count)}</div>
+    </div>
+  </div>`;
+}
+
 async function renderWeekly() {
   if (!$("#weeklyBox") || !biz) return;
   return swr("weekly", async () => {
@@ -3763,6 +3816,7 @@ function drawWeekly(d) {
 
 async function renderStats() {
   renderInsights();
+  renderGhost();
   renderWeekly();
   // Marrim çdo takim me emrin/çmimin e shërbimit (edhe nëse shërbimi është çaktivizuar)
   return swr("statsAppts", async () => {
