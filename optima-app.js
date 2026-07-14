@@ -191,6 +191,9 @@ const T = {
     tgEasyH: "⚡ Mënyra e lehtë (rekomandohet): ndaje këtë link",
     tgEasyD: "Klienti e hap linkun → i shkruan recepsionistit tënd AI menjëherë. Vëre në bio, status, poster — gati për 30 sekonda, pa asnjë konfigurim.",
     tgAdvH: "🤖 E avancuar: bot me emrin TËND (opsionale)",
+    tgAlertH: "💬 Ose merr njoftimet në Telegram (më e sigurta — s'vonon kurrë)",
+    tgAlertD: "Hap këtë link një herë nga telefoni yt → çdo rezervim/porosi të vjen në Telegram në çast, edhe kur telefoni fle. Ideale për Android.",
+    tgAlertBtn: "💬 Lidh Telegram-in tim ↗", tgAlertOn: "✅ I lidhur",
     itemMoreShow: "⚙️ Më shumë opsione (përshkrim, stok, kod, shumicë…)", itemMoreHide: "⚙️ Më pak opsione",
     pushH: "🔔 Njoftimet në telefon", pushBtn: "🔔 Aktivizo në këtë pajisje",
     pushDesc: "Merr «📅 Rezervim i ri» në telefon edhe me panelin TË MBYLLUR — si WhatsApp. Aktivizoje në çdo pajisje që përdor.",
@@ -449,6 +452,9 @@ const T = {
     tgEasyH: "⚡ Easy way (recommended): share this link",
     tgEasyD: "The customer opens the link → chats with your AI receptionist instantly. Put it in your bio, status, poster — ready in 30 seconds, zero setup.",
     tgAdvH: "🤖 Advanced: a bot with YOUR name (optional)",
+    tgAlertH: "💬 Or get alerts on Telegram (most reliable — never delayed)",
+    tgAlertD: "Open this link once from your phone → every booking/order reaches you on Telegram instantly, even when your phone sleeps. Ideal for Android.",
+    tgAlertBtn: "💬 Connect my Telegram ↗", tgAlertOn: "✅ Connected",
     itemMoreShow: "⚙️ More options (description, stock, code, wholesale…)", itemMoreHide: "⚙️ Fewer options",
     pushH: "🔔 Phone notifications", pushBtn: "🔔 Enable on this device",
     pushDesc: "Get «📅 New booking» on your phone even with the panel CLOSED — like WhatsApp. Enable it on every device you use.",
@@ -2808,6 +2814,14 @@ function renderSettings() {
     te.hidden = !MASTER_BOT;
     const tl = $("#tgEasyLink");
     if (tl && MASTER_BOT) tl.value = `https://t.me/${MASTER_BOT}?start=${biz.id}`;
+  }
+  // Njoftimet e pronarit në Telegram (link me token sekret + statusi i lidhjes)
+  const ta = $("#tgAlertBlock");
+  if (ta) {
+    ta.hidden = !(MASTER_BOT && biz.owner_alert_token);
+    const link = $("#tgAlertLink"), stat = $("#tgAlertStatus");
+    if (link && biz.owner_alert_token) link.href = `https://t.me/${MASTER_BOT}?start=oa_${biz.owner_alert_token}`;
+    if (stat) { stat.textContent = biz.owner_tg_chat ? tr("tgAlertOn") : ""; stat.classList.toggle("ok", !!biz.owner_tg_chat); }
   }
   const op = $("#openPubLink"); if (op) op.href = pubBase;
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;

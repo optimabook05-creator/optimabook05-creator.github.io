@@ -53,13 +53,31 @@ Deno.serve(async (req) => {
     if (!business_id || !title) return json({ error: "business_id and title required" }, 400);
     if (tooMany(String(business_id))) return json({ ok: true, throttled: true });
 
+    const t = String(title).slice(0, 80), b = String(body || "").slice(0, 160);
+
+    // KANALI 1 — TELEGRAM te pronari (s'vonon kurrë; zgjidh vonesat e push-it në Android ekonomik)
+    let tg = 0;
+    try {
+      const { data: biz } = await supabase.from("businesses")
+        .select("owner_tg_chat, telegram_token").eq("id", business_id).maybeSingle();
+      if (biz && biz.owner_tg_chat) {
+        const token = biz.telegram_token || Deno.env.get("TELEGRAM_BOT_TOKEN") || "";
+        if (token) {
+          const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: biz.owner_tg_chat, text: `${t}\n${b}` }),
+          });
+          if (r.ok) tg = 1;
+        }
+      }
+    } catch (_e) { /* Telegram opsional → mos e ndal push-in */ }
+
+    // KANALI 2 — WEB PUSH te pajisjet e regjistruara
     const { data: subs } = await supabase.from("push_subs")
       .select("id, endpoint, p256dh, auth").eq("business_id", business_id).limit(20);
-    if (!subs || !subs.length) return json({ ok: true, sent: 0 });
-
-    const payload = JSON.stringify({ title: String(title).slice(0, 80), body: String(body || "").slice(0, 160) });
+    const payload = JSON.stringify({ title: t, body: b });
     let sent = 0;
-    for (const s of subs) {
+    for (const s of (subs || [])) {
       try {
         await webpush.sendNotification(
           { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
@@ -74,7 +92,7 @@ Deno.serve(async (req) => {
         }
       }
     }
-    return json({ ok: true, sent });
+    return json({ ok: true, sent, tg });
   } catch (e) {
     return json({ error: String(e && e.message || e).slice(0, 300) }, 500);
   }

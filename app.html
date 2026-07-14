@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=139">
-<link rel="modulepreload" href="config.js?v=139">
-<link rel="modulepreload" href="optima-app.js?v=139">
+<link rel="stylesheet" href="style.css?v=140">
+<link rel="modulepreload" href="config.js?v=140">
+<link rel="modulepreload" href="optima-app.js?v=140">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -543,6 +543,14 @@
           <span class="push-status" id="pushStatus"></span>
         </div>
         <p class="pane-desc" id="pushIosHint" data-t="pushIos" hidden>Në iPhone: së pari shto panelin në ekranin kryesor (Share → Add to Home Screen), pastaj hape prej aty dhe aktivizo.</p>
+
+        <!-- Njoftimet përmes Telegram-it: më të besueshme se push-i në Android ekonomik -->
+        <div class="tg-alert" id="tgAlertBlock" hidden>
+          <div class="tg-alert-h" data-t="tgAlertH">💬 Ose merr njoftimet në Telegram (më e sigurta — s'vonon kurrë)</div>
+          <p class="pane-desc" data-t="tgAlertD">Hap këtë link një herë nga telefoni yt → çdo rezervim/porosi të vjen në Telegram në çast, edhe kur telefoni fle. Ideale për Android.</p>
+          <a class="btn small primary" id="tgAlertLink" target="_blank" rel="noopener" data-t="tgAlertBtn">💬 Lidh Telegram-in tim ↗</a>
+          <span class="push-status" id="tgAlertStatus"></span>
+        </div>
       </div>
 
       <div class="settings-block" id="teamBlock" hidden>
@@ -918,7 +926,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=139"></script>
-<script type="module" src="optima-app.js?v=139"></script>
+<script src="core.js?v=140"></script>
+<script type="module" src="optima-app.js?v=140"></script>
 </body>
 </html>

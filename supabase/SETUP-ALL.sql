@@ -535,3 +535,12 @@ create table if not exists public.chat_links (
   primary key (channel, chat_id)
 );
 alter table public.chat_links enable row level security;
+
+-- =====================================================================
+-- NJOFTIMET E PRONARIT NË TELEGRAM (owner-alerts.sql; reliability)
+-- =====================================================================
+alter table public.businesses
+  add column if not exists owner_tg_chat text,
+  add column if not exists owner_alert_token uuid default gen_random_uuid();
+update public.businesses set owner_alert_token = gen_random_uuid()
+  where owner_alert_token is null;

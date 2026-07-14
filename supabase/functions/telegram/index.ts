@@ -47,6 +47,24 @@ Deno.serve(async (req) => {
     const chatId = String(msg.chat.id);
     const name = msg.from?.first_name || "Telegram";
 
+    /* ---- LIDHJA E PRONARIT PËR NJOFTIME (punon në ÇDO mënyrë webhook-u) ----
+       Pronari hap t.me/<BOT>?start=oa_<token_sekret> → këtu ruajmë chat_id-në
+       e tij si kanal njoftimesh. Token-i është sekret (vetëm pronari e sheh në
+       panel), ndaj askush s'mund të regjistrohet për njoftimet e një biznesi tjetër. */
+    const mOwner = msg.text.match(/^\/start\s+oa_([0-9a-f-]{36})\s*$/i);
+    if (mOwner) {
+      const token = mOwner[1].toLowerCase();
+      const { data: b } = await supabase.from("businesses").select("id, name, lang").eq("owner_alert_token", token).maybeSingle();
+      if (b) {
+        try { await supabase.from("businesses").update({ owner_tg_chat: chatId }).eq("id", b.id); } catch (_e) {}
+        const sq = (b.lang || "sq").toLowerCase().startsWith("sq");
+        await sendTelegram(chatId, sq
+          ? `✅ U lidh! Do të marrësh këtu çdo rezervim, porosi e kërkesë të re për "${b.name}" — në çast, edhe kur je jashtë.`
+          : `✅ Connected! You'll get every new booking, order and request for "${b.name}" right here — instantly, even when you're away.`, BOT);
+      }
+      return new Response("ok");
+    }
+
     /* ---- MËNYRA MASTER (lidhja 1-klik, pa business_id në URL) ----
        Klienti hap t.me/<BOT>?start=<business_id> → Telegram dërgon "/start <id>"
        → lidhja klient→biznes ruhet te chat_links → çdo mesazh i mëpasshëm
