@@ -63,17 +63,24 @@
   --r-lg: 26px;
   --r-xl: 32px;
 
+  /* Hije me SHTRESA (smooth shadow) — rënie e butë graduale = thellësi premium.
+     Statike (zero kosto GPU). Teknika e ekipeve elitare kundër hijeve "të forta". */
   --shadow-glass:
-    0 1px 1px rgba(22, 32, 28, .04),
-    0 8px 24px rgba(22, 32, 28, .07),
+    0 1px 2px rgba(22, 32, 28, .03),
+    0 4px 10px rgba(22, 32, 28, .045),
+    0 10px 24px rgba(22, 32, 28, .06),
     inset 0 1px 0 var(--glass-edge);
   --shadow-float:
-    0 2px 4px rgba(22, 32, 28, .05),
-    0 18px 48px rgba(22, 32, 28, .12),
+    0 1px 2px rgba(22, 32, 28, .04),
+    0 4px 8px rgba(22, 32, 28, .05),
+    0 12px 22px rgba(22, 32, 28, .07),
+    0 24px 48px rgba(22, 32, 28, .10),
     inset 0 1px 0 var(--glass-edge);
   --shadow-deep:
-    0 6px 16px rgba(22, 32, 28, .10),
-    0 40px 90px rgba(22, 32, 28, .22);
+    0 2px 6px rgba(22, 32, 28, .05),
+    0 8px 20px rgba(22, 32, 28, .09),
+    0 22px 48px rgba(22, 32, 28, .13),
+    0 46px 92px rgba(22, 32, 28, .20);
 }
 
 /* ---------- DARK MODE — "Milk Glass" netën ---------- */
@@ -99,17 +106,23 @@
   --red: #ff7a7a; --red-soft: rgba(224, 49, 49, .16);
   --amber: #f0a847; --amber-soft: rgba(245, 159, 26, .16);
 
+  /* Hije me shtresa edhe në errësirë (thellësi e butë, jo "vrimë e zezë") */
   --shadow-glass:
-    0 1px 1px rgba(0, 0, 0, .30),
-    0 8px 24px rgba(0, 0, 0, .40),
+    0 1px 2px rgba(0, 0, 0, .25),
+    0 4px 10px rgba(0, 0, 0, .32),
+    0 10px 24px rgba(0, 0, 0, .40),
     inset 0 1px 0 rgba(255, 255, 255, .05);
   --shadow-float:
-    0 2px 4px rgba(0, 0, 0, .35),
-    0 18px 48px rgba(0, 0, 0, .50),
+    0 1px 2px rgba(0, 0, 0, .30),
+    0 4px 8px rgba(0, 0, 0, .35),
+    0 12px 22px rgba(0, 0, 0, .42),
+    0 24px 48px rgba(0, 0, 0, .52),
     inset 0 1px 0 rgba(255, 255, 255, .05);
   --shadow-deep:
-    0 6px 16px rgba(0, 0, 0, .45),
-    0 40px 90px rgba(0, 0, 0, .65);
+    0 2px 6px rgba(0, 0, 0, .35),
+    0 8px 20px rgba(0, 0, 0, .45),
+    0 22px 48px rgba(0, 0, 0, .55),
+    0 46px 92px rgba(0, 0, 0, .68);
 }
 :root[data-theme="dark"] body::before { opacity: .6; filter: blur(72px) saturate(1.5); }   /* neon-glow mbi errësirë (si referencat) */
 :root[data-theme="dark"] body::after { opacity: .06; }
