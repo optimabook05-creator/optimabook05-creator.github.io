@@ -874,8 +874,14 @@ body::after {
 .stock-badge.low { background: var(--red-soft); color: var(--red); }
 
 /* ---------- Porositë ---------- */
-.order-line { display: flex; gap: 7px; align-items: center; margin-bottom: 7px; }
-.order-line select.ol-item { flex: 2; min-width: 0; }
+/* FIX scroll horizontal i modalit të porosisë (shkaku rrënjë: `.field input[type=number]{width:100%}`
+   e mbizotëronte `.ol-qty{width:58px}` → sasi/çmim 100% të gjera + flex-shrink:0 → overflow).
+   Zgjidhja: specificitet më i lartë (`.modal .order-line …`) që fiton mbi rregullin e .field,
+   + wrap si rrjetë sigurie kur ekrani është shumë i ngushtë. */
+.order-line { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; margin-bottom: 7px; }
+.modal .order-line select.ol-item { flex: 1 1 130px; min-width: 0; width: auto; }
+.modal .order-line .ol-qty { flex: 0 0 58px; width: 58px; }
+.modal .order-line .ol-price { flex: 0 0 76px; width: 76px; }
 .order-line .ol-qty { width: 58px; flex: 0 0 auto; }
 .order-line .ol-price { width: 76px; flex: 0 0 auto; }
 .order-line .ol-total { width: 64px; text-align: right; font-weight: 800; font-size: 13px; flex: 0 0 auto; color: var(--ink); }
@@ -968,7 +974,7 @@ body::after {
   border-radius: var(--r-xl); padding: 30px;
   width: 100%; max-width: 580px;
   box-shadow: var(--shadow-deep), inset 0 1px 0 #fff;
-  max-height: 92vh; overflow-y: auto;
+  max-height: 92vh; overflow-y: auto; overflow-x: hidden; /* rrjetë sigurie: asnjë scroll horizontal, kurrë */
   animation: modalIn .34s cubic-bezier(.18, 1, .35, 1);
 }
 @keyframes modalIn { from { opacity: 0; transform: translateY(20px) scale(.97); } }
