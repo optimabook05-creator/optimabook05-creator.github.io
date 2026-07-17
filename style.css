@@ -33,6 +33,11 @@
   --glass-edge: rgba(255, 255, 255, .75);
   --glass-line: rgba(22, 32, 28, .08);
 
+  /* Fushat e formularit: sfond solid + bordurë E DUKSHME (jo e bardhë mbi të bardhë,
+     që s'dallohej). Një pikë kontrolli për qartësinë e ÇDO fushe në aplikacion. */
+  --field-bg: #ffffff;
+  --field-border: rgba(22, 32, 28, .17);
+
   --accent: #0ca678;
   --accent-deep: #087f5b;
   --accent-bright: #20c997;
@@ -99,6 +104,10 @@
   --red: #ff7a7a; --red-soft: rgba(224, 49, 49, .16);
   --amber: #f0a847; --amber-soft: rgba(245, 159, 26, .16);
 
+  /* Fusha në errësirë: sfond që dallohet nga karta + bordurë e dukshme */
+  --field-bg: rgba(255, 255, 255, .07);
+  --field-border: rgba(255, 255, 255, .17);
+
   --shadow-glass:
     0 1px 1px rgba(0, 0, 0, .30),
     0 8px 24px rgba(0, 0, 0, .40),
@@ -130,7 +139,7 @@
 :root[data-theme="dark"] .stat-card { background: linear-gradient(165deg, rgba(255, 255, 255, .06), var(--glass-soft)); border-color: var(--glass-edge); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05); }
 :root[data-theme="dark"] .stat-card.highlight { background: linear-gradient(165deg, var(--accent-soft), rgba(32, 201, 151, .06)); }
 :root[data-theme="dark"] .stat-card.warn { background: linear-gradient(165deg, var(--red-soft), var(--glass-soft)); }
-:root[data-theme="dark"] .block-form input, :root[data-theme="dark"] .service-row input, :root[data-theme="dark"] .hours-row input[type="time"], :root[data-theme="dark"] .auth-card input, :root[data-theme="dark"] .onboard-card input, :root[data-theme="dark"] .settings-input input, :root[data-theme="dark"] .settings-input select { background: var(--glass-soft); border-color: var(--glass-edge); color: var(--ink); box-shadow: none; }
+:root[data-theme="dark"] .block-form input, :root[data-theme="dark"] .service-row input, :root[data-theme="dark"] .hours-row input[type="time"], :root[data-theme="dark"] .auth-card input, :root[data-theme="dark"] .onboard-card input, :root[data-theme="dark"] .settings-input input, :root[data-theme="dark"] .settings-input select { background: var(--field-bg); border-color: var(--field-border); color: var(--ink); box-shadow: none; }
 :root[data-theme="dark"] .block-item { background: repeating-linear-gradient(-45deg, rgba(224, 49, 49, .16) 0 10px, var(--glass-soft) 10px 20px); border-color: rgba(224, 49, 49, .3); }
 :root[data-theme="dark"] .notif-item { background: var(--glass-soft); border-color: var(--glass-edge); }
 :root[data-theme="dark"] .notif-item.unread { background: rgba(245, 159, 26, .14); }
@@ -612,10 +621,9 @@ body::after {
 .block-form { display: flex; gap: var(--sp-8); flex-wrap: wrap; margin-bottom: 18px; }
 .block-form input {
   font-family: var(--font-body);
-  background: rgba(255, 255, 255, .72);
-  border: 1px solid rgba(255, 255, 255, .8); border-radius: var(--r-sm);
+  background: var(--field-bg); color: var(--ink);
+  border: 1px solid var(--field-border); border-radius: var(--r-sm);
   padding: 9px 11px; font-size: 13.5px; font-weight: 600;
-  box-shadow: inset 0 1px 0 #fff;
   transition: border .16s, box-shadow .16s;
 }
 .block-form input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -894,8 +902,8 @@ body::after {
 .ot-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; padding: 3px 0; }
 .ot-row.total { border-top: 1px solid var(--glass-line); margin-top: 6px; padding-top: 9px; font-size: 16px; }
 .ot-row.total strong { color: var(--accent-deep); font-family: var(--font-display); }
-.ot-row input { width: 110px; text-align: right; font-family: var(--font-body); border: 1px solid var(--glass-edge);
-  background: var(--glass); border-radius: var(--r-sm); padding: 6px 9px; font-weight: 700; color: var(--ink); }
+.ot-row input { width: 110px; text-align: right; font-family: var(--font-body); border: 1px solid var(--field-border);
+  background: var(--field-bg); border-radius: var(--r-sm); padding: 6px 9px; font-weight: 700; color: var(--ink); }
 
 .order-card { display: flex; align-items: center; gap: var(--sp-12); padding: 13px 15px; cursor: pointer;
   background: var(--glass-soft); border: 1px solid var(--glass-line); border-radius: var(--r-md); margin-bottom: 9px;
@@ -992,11 +1000,11 @@ body::after {
 }
 .field input[type="text"], .field select, .field input[type="date"], .field input[type="number"], .field textarea {
   font-family: var(--font-body);
-  width: 100%; border: 1px solid rgba(255, 255, 255, .85);
-  background: rgba(255, 255, 255, .75);
+  width: 100%; border: 1px solid var(--field-border);
+  background: var(--field-bg);
   border-radius: var(--r-sm);
-  padding: 11px 13px; font-size: 14.5px; font-weight: 600; outline: none;
-  box-shadow: inset 0 1px 0 #fff, 0 1px 2px rgba(22, 32, 28, .04);
+  padding: 11px 13px; font-size: 14.5px; font-weight: 600; outline: none; color: var(--ink);
+  box-shadow: 0 1px 2px rgba(22, 32, 28, .04);
   transition: border .16s, box-shadow .16s;
 }
 .field textarea { resize: vertical; min-height: 54px; line-height: 1.55; }
@@ -1005,16 +1013,15 @@ body::after {
   box-shadow: 0 0 0 3.5px var(--accent-soft), inset 0 1px 0 #fff;
 }
 :root[data-theme="dark"] .field input, :root[data-theme="dark"] .field select, :root[data-theme="dark"] .field textarea {
-  background: var(--glass-soft); border-color: var(--glass-edge); color: var(--ink); box-shadow: none;
+  background: var(--field-bg); border-color: var(--field-border); color: var(--ink); box-shadow: none;
 }
 .service-row { display: flex; gap: var(--sp-8); margin-bottom: var(--sp-8); }
 .service-row input {
   font-family: var(--font-body);
-  border: 1px solid rgba(255, 255, 255, .85);
-  background: rgba(255, 255, 255, .75);
+  border: 1px solid var(--field-border);
+  background: var(--field-bg); color: var(--ink);
   border-radius: var(--r-sm);
   padding: 10px var(--sp-12); font-size: 14px; font-weight: 600;
-  box-shadow: inset 0 1px 0 #fff;
   transition: border .16s, box-shadow .16s;
 }
 .service-row input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -1022,7 +1029,7 @@ body::after {
 .service-row .s-dur { width: 60px; }
 .service-row .s-unit {
   width: 96px; font-family: var(--fb); font-weight: 600; font-size: 14px; color: var(--ink);
-  border: 1px solid rgba(255, 255, 255, .85); background: rgba(255, 255, 255, .75);
+  border: 1px solid var(--field-border); background: var(--field-bg);
   border-radius: var(--r-sm); padding: 0 var(--sp-8);
 }
 .service-row .s-price { width: 76px; }
@@ -1037,8 +1044,8 @@ body::after {
 .hours-row .day { width: 92px; font-weight: 800; }
 .hours-row input[type="time"] {
   font-family: var(--font-body);
-  border: 1px solid rgba(255, 255, 255, .85);
-  background: rgba(255, 255, 255, .75);
+  border: 1px solid var(--field-border);
+  background: var(--field-bg); color: var(--ink);
   border-radius: 10px; padding: 6px 9px; font-size: 13px; font-weight: 600;
 }
 .hours-row label.closed-toggle {

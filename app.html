@@ -19,9 +19,9 @@
 <link rel="preconnect" href="https://esm.sh" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=145">
-<link rel="modulepreload" href="config.js?v=145">
-<link rel="modulepreload" href="optima-app.js?v=145">
+<link rel="stylesheet" href="style.css?v=146">
+<link rel="modulepreload" href="config.js?v=146">
+<link rel="modulepreload" href="optima-app.js?v=146">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -36,9 +36,9 @@
   .auth-card label { display: block; font-weight: 800; font-size: 12px; text-transform: uppercase;
     letter-spacing: .06em; color: var(--ink-soft); margin: 14px 0 6px; }
   .auth-card input {
-    width: 100%; border: 1px solid rgba(255,255,255,.85); background: rgba(255,255,255,.75);
+    width: 100%; border: 1px solid var(--field-border); background: var(--field-bg); color: var(--ink);
     border-radius: var(--r-sm); padding: 12px 14px; font-family: var(--font-body); font-size: 15px;
-    font-weight: 600; outline: none; box-shadow: inset 0 1px 0 #fff;
+    font-weight: 600; outline: none;
     transition: border .15s, box-shadow .15s;
   }
   .auth-card input:focus { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
@@ -926,7 +926,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=145"></script>
-<script type="module" src="optima-app.js?v=145"></script>
+<script src="core.js?v=146"></script>
+<script type="module" src="optima-app.js?v=146"></script>
 </body>
 </html>
