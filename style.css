@@ -2396,3 +2396,24 @@ body::before { filter: blur(76px) saturate(1.3); opacity: .92; }
 :root[data-theme="dark"] .tg-alert-h { color: var(--accent-bright); }
 .push-status.ok { color: var(--accent-deep); font-weight: 800; }
 :root[data-theme="dark"] .push-status.ok { color: var(--accent-bright); }
+
+/* ============================================================
+   📲 Ftesa "Instalo aplikacionin" (PWA) — chip poshtë, jo ndërhyrës
+   ============================================================ */
+.install-chip { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom));
+  transform: translate(-50%, 140%); z-index: 90; display: flex; align-items: center; gap: var(--sp-12);
+  max-width: calc(100vw - 28px); padding: 10px 12px 10px var(--sp-16); border-radius: 999px;
+  background: rgba(255,255,255,.96); border: 1px solid var(--glass-edge);
+  box-shadow: 0 16px 40px -10px rgba(22,32,28,.35), inset 0 1px 0 #fff;
+  font-weight: 700; font-size: 14px; color: var(--ink);
+  transition: transform .38s cubic-bezier(.22,1,.36,1); }
+.install-chip.show { transform: translate(-50%, 0); }
+.install-chip .ic-go { border: none; cursor: pointer; font-family: var(--font-body); font-weight: 800; font-size: 13.5px;
+  color: #fff; padding: 8px 16px; border-radius: 999px; white-space: nowrap;
+  background: linear-gradient(160deg, var(--accent-bright), var(--accent)); box-shadow: 0 4px 12px var(--accent-glow); }
+.install-chip .ic-x { border: none; background: transparent; color: var(--ink-faint); font-size: 20px; line-height: 1;
+  cursor: pointer; padding: 2px 6px; border-radius: 8px; }
+.install-chip .ic-x:hover { background: var(--glass-soft); }
+.install-chip .ic-go:focus-visible, .install-chip .ic-x:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; }
+:root[data-theme="dark"] .install-chip { background: rgba(24,33,29,.97); border-color: rgba(255,255,255,.12); box-shadow: 0 16px 40px -10px rgba(0,0,0,.6); }
+@media (prefers-reduced-motion: reduce) { .install-chip { transition: none; } }

@@ -195,6 +195,7 @@ const T = {
     tgAlertD: "Hap këtë link një herë nga telefoni yt → çdo rezervim/porosi të vjen në Telegram në çast, edhe kur telefoni fle. Ideale për Android.",
     tgAlertBtn: "💬 Lidh Telegram-in tim ↗", tgAlertOn: "✅ I lidhur",
     itemMoreShow: "⚙️ Më shumë opsione (përshkrim, stok, kod, shumicë…)", itemMoreHide: "⚙️ Më pak opsione",
+    installApp: "Instaloje si aplikacion", installBtn: "Instalo",
     pushH: "🔔 Njoftimet në telefon", pushBtn: "🔔 Aktivizo në këtë pajisje",
     pushDesc: "Merr «📅 Rezervim i ri» në telefon edhe me panelin TË MBYLLUR — si WhatsApp. Aktivizoje në çdo pajisje që përdor.",
     pushOn: "✅ Aktive në këtë pajisje", pushOk: "🔔 Njoftimet u aktivizuan — provoje me një rezervim!",
@@ -456,6 +457,7 @@ const T = {
     tgAlertD: "Open this link once from your phone → every booking/order reaches you on Telegram instantly, even when your phone sleeps. Ideal for Android.",
     tgAlertBtn: "💬 Connect my Telegram ↗", tgAlertOn: "✅ Connected",
     itemMoreShow: "⚙️ More options (description, stock, code, wholesale…)", itemMoreHide: "⚙️ Fewer options",
+    installApp: "Install as an app", installBtn: "Install",
     pushH: "🔔 Phone notifications", pushBtn: "🔔 Enable on this device",
     pushDesc: "Get «📅 New booking» on your phone even with the panel CLOSED — like WhatsApp. Enable it on every device you use.",
     pushOn: "✅ Active on this device", pushOk: "🔔 Notifications enabled — try it with a booking!",
@@ -4240,10 +4242,38 @@ function setupMobileNav() {
   syncBotnav();
 }
 
+/* Ftesa "Instalo aplikacionin" (PWA) — shtesë e pastër, zero rrezik:
+   shfaqet VETËM kur shfletuesi e ofron (Android Chrome); iOS s'e mbështet
+   (aty vlen "Add to Home Screen" manual). Nëse s'ofrohet → s'shfaqet asgjë. */
+let deferredInstall = null;
+function setupInstallPrompt() {
+  // Tashmë i instaluar (hapur si app) → mos e shfaq kurrë
+  if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) return;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredInstall = e;
+    if (localStorage.getItem("ob-install-dismissed")) return; // e mbylli më parë → respekto
+    const bar = document.createElement("div");
+    bar.className = "install-chip";
+    bar.innerHTML = `<span>📲 ${tr("installApp")}</span><button class="ic-go" type="button">${tr("installBtn")}</button><button class="ic-x" type="button" aria-label="×">×</button>`;
+    document.body.appendChild(bar);
+    requestAnimationFrame(() => bar.classList.add("show"));
+    bar.querySelector(".ic-go").onclick = async () => {
+      bar.remove();
+      if (!deferredInstall) return;
+      deferredInstall.prompt();
+      try { await deferredInstall.userChoice; } catch (e2) {}
+      deferredInstall = null;
+    };
+    bar.querySelector(".ic-x").onclick = () => { bar.remove(); try { localStorage.setItem("ob-install-dismissed", "1"); } catch (e2) {} };
+  });
+}
+
 function wire() {
   setupModalA11y();
   setupInfoDots();
   setupMobileNav();
+  setupInstallPrompt();
   document.querySelectorAll("#langSwitch button").forEach((b) => {
     b.onclick = () => { lang = b.dataset.l; localStorage.setItem(LANG_KEY, lang); applyLang();
       if (!$("#onboardView").hidden) openOnboard();
