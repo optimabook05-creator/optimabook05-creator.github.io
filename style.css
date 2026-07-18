@@ -36,7 +36,7 @@
   /* Fushat e formularit: sfond solid + bordurë E DUKSHME (jo e bardhë mbi të bardhë,
      që s'dallohej). Një pikë kontrolli për qartësinë e ÇDO fushe në aplikacion. */
   --field-bg: #ffffff;
-  --field-border: rgba(22, 32, 28, .17);
+  --field-border: rgba(22, 32, 28, .22);
 
   --accent: #0ca678;
   --accent-deep: #087f5b;
@@ -106,7 +106,7 @@
 
   /* Fusha në errësirë: sfond që dallohet nga karta + bordurë e dukshme */
   --field-bg: rgba(255, 255, 255, .07);
-  --field-border: rgba(255, 255, 255, .17);
+  --field-border: rgba(255, 255, 255, .2);
 
   --shadow-glass:
     0 1px 1px rgba(0, 0, 0, .30),
