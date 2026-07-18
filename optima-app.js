@@ -1336,7 +1336,12 @@ async function loadAll() {
   renderCatalog();
   if (commerceOn()) renderOrders();
   renderConfigHub();
-  startRealtime(); // Faza 2: rezervimet e reja shfaqen vetë (idempotente për të njëjtin biznes)
+  // PERF: Realtime hap WebSocket + dëgjues → e shtyjmë te "koha e lirë" pas ngarkimit,
+  // që të mos konkurrojë me first-paint/interaktivitetin (ul Total Blocking Time).
+  // Idempotent për të njëjtin biznes; pa requestIdleCallback → timeout i shkurtër.
+  const startRt = () => { if (biz) startRealtime(); };
+  if ("requestIdleCallback" in window) requestIdleCallback(startRt, { timeout: 2500 });
+  else setTimeout(startRt, 1200);
 }
 
 /* ---------------- Qendra e konfigurimit (hub i udhëhequr "rregullo një herë") ---------------- */
