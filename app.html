@@ -21,9 +21,9 @@
 <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=149">
-<link rel="modulepreload" href="config.js?v=149">
-<link rel="modulepreload" href="optima-app.js?v=149">
+<link rel="stylesheet" href="style.css?v=150">
+<link rel="modulepreload" href="config.js?v=150">
+<link rel="modulepreload" href="optima-app.js?v=150">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -461,6 +461,10 @@
           <label class="commerce-toggle"><input type="checkbox" id="cfgSku" checked> <span data-t="cfgSkuLbl">Kodi (SKU)</span></label>
           <label class="commerce-toggle"><input type="checkbox" id="cfgTiers" checked> <span data-t="cfgTiersLbl">Çmime shumice</span></label>
         </div>
+        <div class="field-toggles" style="margin-top:10px">
+          <label class="commerce-toggle"><input type="checkbox" id="cfgVolatile"> <span data-t="cfgVolatileLbl">📈 Çmimet ndryshojnë shpesh</span></label>
+        </div>
+        <p class="pane-desc" data-t="cfgVolatileHint" style="margin-top:6px">Për tregti (telefona, parfume…): AI-ja jep çmim vetëm nëse është freskuar 7 ditët e fundit — përndryshe konfirmon artikullin, merr kontaktin e klientit dhe të pyet ty. Çmimet i freskon me ri-import të listës ose me një mesazh në Telegram: iPhone 15 = 430</p>
         <button class="btn small primary" id="saveFields" data-t="save" style="margin-top:12px">Ruaj</button>
       </div>
     </div>
@@ -928,7 +932,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=149"></script>
-<script type="module" src="optima-app.js?v=149"></script>
+<script src="core.js?v=150"></script>
+<script type="module" src="optima-app.js?v=150"></script>
 </body>
 </html>

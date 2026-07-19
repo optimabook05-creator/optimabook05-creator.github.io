@@ -544,3 +544,19 @@ alter table public.businesses
   add column if not exists owner_alert_token uuid default gen_random_uuid();
 update public.businesses set owner_alert_token = gen_random_uuid()
   where owner_alert_token is null;
+
+-- =====================================================================
+-- ÇMIMET E GJALLA (live-prices.sql; tregtarët me çmime që ndryshojnë)
+-- =====================================================================
+alter table public.services add column if not exists price_updated_at timestamptz not null default now();
+create or replace function public.touch_price_updated_at()
+returns trigger language plpgsql as $$
+begin
+  if new.price is distinct from old.price then
+    new.price_updated_at := now();
+  end if;
+  return new;
+end $$;
+drop trigger if exists services_price_touch on public.services;
+create trigger services_price_touch before update on public.services
+for each row execute function public.touch_price_updated_at();

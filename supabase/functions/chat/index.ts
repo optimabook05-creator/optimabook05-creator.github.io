@@ -83,7 +83,7 @@ function buildConfirmation(svc: any, dateStr: string, time: string, biz: any, la
   if (!isSqLang(biz, lang) && !isEnLang(biz, lang)) return null;
   const sq = isSqLang(biz, lang);
   const addr = biz.address ? `\n📍 ${biz.name}, ${biz.address}` : `\n📍 ${biz.name}`;
-  const price = Number(svc.price) ? ` · ${svc.price}€` : "";
+  const price = (Number(svc.price) && !priceStale(biz, svc)) ? ` · ${svc.price}€` : "";
   return sq
     ? `✅ U rezervua! ${svc.name} — ${humanDay(dateStr, true)}, ora ${time}${price}${addr}\nTë presim! 🙌`
     : `✅ Booked! ${svc.name} — ${humanDay(dateStr, false)}, ${time}${price}${addr}\nSee you! 🙌`;
@@ -92,7 +92,7 @@ function buildConfirmation(svc: any, dateStr: string, time: string, biz: any, la
 function buildPendingMsg(svc: any, dateStr: string, time: string, biz: any, lang?: string): string | null {
   if (!isSqLang(biz, lang) && !isEnLang(biz, lang)) return null;
   const sq = isSqLang(biz, lang);
-  const price = Number(svc.price) ? ` · ${svc.price}€` : "";
+  const price = (Number(svc.price) && !priceStale(biz, svc)) ? ` · ${svc.price}€` : "";
   return sq
     ? `📝 Kërkesa u regjistrua! ${svc.name} — ${humanDay(dateStr, true)}, ora ${time}${price}. Pronari do ta konfirmojë shpejt dhe të kthehet te ti. 🙌`
     : `📝 Request received! ${svc.name} — ${humanDay(dateStr, false)}, ${time}${price}. The owner will confirm shortly and get back to you. 🙌`;
@@ -460,9 +460,23 @@ function cappedNote(shown: number, total: number) {
     : "";
 }
 
-function svcListText(services: any[], sq = true) {
+/* ---- ÇMIMET E GJALLA (tregtarët: telefona, parfume…) ----
+   Kur biznesi ka config.volatilePrices, një çmim vlen VETËM nëse është
+   freskuar brenda dritares (parazgjedhje 7 ditë; config.priceFreshDays).
+   Çmim i vjetër NUK i thuhet kurrë klientit — konfirmohet disponibiliteti,
+   kapet klienti dhe pyetet pronari. Zero çmime të gabuara, përgjithmonë. */
+function priceStale(biz: any, s: any): boolean {
+  if (!biz?.config?.volatilePrices) return false;
+  const days = Number(biz?.config?.priceFreshDays) || 7;
+  const t = s?.price_updated_at ? Date.parse(s.price_updated_at) : NaN;
+  return Number.isNaN(t) || (Date.now() - t) > days * 86400000;
+}
+
+function svcListText(services: any[], sq = true, biz?: any) {
   return services.map((s) => {
     const d = durHuman(s, sq);
+    // Çmim i pafreskuar (biznes me çmime të gjalla) → s'shfaqet numri, konfirmohet
+    if (priceStale(biz, s)) return `• ${s.name}${d ? " — " + d : ""} — 💬 ${sq ? "çmimi konfirmohet sot" : "today's price on request"}`;
     let line = `• ${s.name}${d ? " — " + d : ""} — ${s.price}€`;
     const vars = Array.isArray(s.variants) ? s.variants : [];
     for (const v of vars) if (v && v.label) line += `\n   • ${v.label}: ${v.price}€`;
@@ -545,9 +559,16 @@ async function tryRules(ctx: any): Promise<any | null> {
   // Çmimet
   if (/(sa kushton|cmim|qmim|sa eshte|cmimet|sa ben|\bprice|\bcost|how much|pricing)/.test(tx)) {
     const notes = biz.ai_notes ? `\n\n${biz.ai_notes}` : "";
+    // Çmime të gjalla: nëse ndonjë artikull i shfaqur s'ka çmim të freskët → kap klientin
+    const shown = services.slice(0, 25);
+    const anyStale = shown.some((s: any) => priceStale(biz, s));
+    const capLine = anyStale
+      ? (sq ? `\n\nÇmimet lëvizin me tregun — më thuaj cilin artikull do + emrin dhe numrin tënd, dhe pronari ta konfirmon çmimin e minutës. 📲`
+            : `\n\nPrices move with the market — tell me which item you want plus your name and number, and the owner will confirm today's price right away. 📲`)
+      : "";
     const r = sq
-      ? `Ja shërbimet tona:\n${svcListText(services.slice(0, 25), true)}${services.length > 25 ? `\n…dhe ${services.length - 25} artikuj të tjerë — më thuaj çfarë kërkon dhe ta gjej. 🔎` : ""}${notes}\n\nTë rezervoj një orar? Më thuaj ditën. 📅`
-      : `Here are our services:\n${svcListText(services.slice(0, 25), false)}${services.length > 25 ? `\n…and ${services.length - 25} more items — tell me what you're looking for and I'll find it. 🔎` : ""}${notes}\n\nShall I book you a slot? Tell me the day. 📅`;
+      ? `Ja shërbimet tona:\n${svcListText(shown, true, biz)}${services.length > 25 ? `\n…dhe ${services.length - 25} artikuj të tjerë — më thuaj çfarë kërkon dhe ta gjej. 🔎` : ""}${notes}${capLine}\n\nTë rezervoj një orar? Më thuaj ditën. 📅`
+      : `Here are our services:\n${svcListText(shown, false, biz)}${services.length > 25 ? `\n…and ${services.length - 25} more items — tell me what you're looking for and I'll find it. 🔎` : ""}${notes}${capLine}\n\nShall I book you a slot? Tell me the day. 📅`;
     return { reply: r, via: "rule" };
   }
   // Orari / adresa
@@ -602,7 +623,7 @@ async function tryRules(ctx: any): Promise<any | null> {
       if (all.includes(time)) {
         // Orari i lirë → PROPOZO + prit "po" (mos rezervo pa konfirmim → zero gabime ore)
         await saveState({ ...st, business_id: businessId, channel: ctx.channel, chat_id: ctx.chat_id, intent: "booking", service_id: svc.id, appt_date: day, appt_time: time, step: "awaiting_confirm" });
-        const pr = Number(svc.price) ? " · " + svc.price + "€" : "";
+        const pr = (Number(svc.price) && !priceStale(biz, svc)) ? " · " + svc.price + "€" : "";
         return { reply: sq ? `Të konfirmoj: ${svc.name}, ${humanDay(day, true)}, ora ${time}${pr} — shkruaj "po" për ta rezervuar ✅` : `Confirm: ${svc.name}, ${humanDay(day, false)}, ${time}${pr} — reply "yes" to book ✅`, via: "rule" };
       }
       const alt = all.slice(0, 3);
@@ -836,11 +857,16 @@ async function runAI(ctx: any) {
     `SERVICES (name — minutes — price):`,
     // Katalogë të mëdhenj: vetëm shërbimet përkatëse hyjnë në prompt (kërkim i brendshëm)
     relevantServices(services, text, history).map((s: any) => {
+      // Çmim i pafreskuar → AI-ja NUK e sheh numrin fare (s'ka çfarë të citojë gabim)
+      if (priceStale(biz, s)) return `- ${s.name} — ${s.duration_min} min — PRICE VOLATILE (not listed — see VOLATILE PRICES rule)`;
       let line = `- ${s.name} — ${s.duration_min} min — ${s.price}`;
       if (Array.isArray(s.variants) && s.variants.length) line += " | PACKAGES (quote per choice): " + s.variants.map((v: any) => v.label + "=" + v.price).join(", ");
       return line;
     }).join("\n"),
     cappedNote(Math.min(services.length, 60), services.length),
+    (biz.config && biz.config.volatilePrices)
+      ? `VOLATILE PRICES (STRICT): this business's prices change frequently with the market. For any item marked "PRICE VOLATILE" you have NO trustworthy price — NEVER state, guess, estimate or repeat a price for it, not even one seen in learned answers or earlier messages (those are outdated). Instead: warmly confirm the item's availability, ask for the customer's name + phone number, promise the owner will confirm TODAY's price right away, and copy the item question (one short line) into "unanswered_question" so the owner is pinged instantly.`
+      : "",
     biz.ai_notes ? `BUSINESS INFO / FAQ (use to answer about packages, prices, delivery times, policies — do NOT book these as calendar slots; instead offer a consultation/meeting):\n${biz.ai_notes}` : "",
     knowledge,
     `LEARNING: if the customer asks a FACTUAL question about this business or its services/products (a detail, ingredient, policy, compatibility, what's included…) that the data above does NOT answer, still reply warmly that the owner will confirm it — AND copy that question (one short line, in ${bizLang}) into "unanswered_question". The owner answers it once and you will know it forever. Otherwise set "unanswered_question" to "". NEVER put booking/date/time requests there.`,
@@ -919,7 +945,7 @@ Also set "confidence" = the overall (the minimum of the three). Use LOW scores (
       } else if (free.includes(t)) {
         // PROPOZO + prit "po" (mos rezervo pa konfirmim → zero gabime ore)
         await saveState({ ...stx, business_id: businessId, channel: ctx.channel, chat_id: ctx.chat_id, intent: "booking", service_id: svc.id, appt_date: out.date, appt_time: t, step: "awaiting_confirm" });
-        const pr = Number(svc.price) ? " · " + svc.price + "€" : "";
+        const pr = (Number(svc.price) && !priceStale(biz, svc)) ? " · " + svc.price + "€" : "";
         reply = sqx ? `Të konfirmoj: ${svc.name}, ${humanDay(out.date, true)}, ora ${t}${pr} — shkruaj "po" për ta rezervuar ✅` : `Confirm: ${svc.name}, ${humanDay(out.date, false)}, ${t}${pr} — reply "yes" to book ✅`;
         proposed = true;
       } else {

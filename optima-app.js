@@ -249,6 +249,7 @@ const T = {
     addBiz: "+ Biznes", obBack: "← Kthehu",
     setFieldsH: "🧩 Fushat e katalogut (fik ato që s'të duhen)", fieldsDesc: "Çdo gjë është ndezur si parazgjedhje. Fik çfarë s'të duhet — paneli bëhet vetëm i yti.",
     cfgDescLbl: "Përshkrimi", cfgUnitLbl: "Njësia", cfgStockLbl: "Stoku", cfgSkuLbl: "Kodi (SKU)", cfgTiersLbl: "Çmime shumice",
+    cfgVolatileLbl: "📈 Çmimet ndryshojnë shpesh", cfgVolatileHint: "Për tregti (telefona, parfume…): AI-ja jep çmim vetëm nëse është freskuar 7 ditët e fundit — përndryshe konfirmon artikullin, merr kontaktin e klientit dhe të pyet ty. Çmimet i freskon me ri-import të listës ose me një mesazh në Telegram: iPhone 15 = 430",
     catalogPointerTxt: "Produktet & shërbimet me përshkrim, çmim, stok dhe çmime shumice menaxhohen te skeda 📦 Catalog lart.", goCatalogBtn: "📦 Hap Katalogun",
     bookableLbl: "📅 Prenotohet me kalendar", svcDesc: "Shto çdo shërbim ose produkt — me lloj, përshkrim, çmim dhe prenotim opsional.",
     itemCost: "Kosto (për ty)", profitOnLbl: "💰 Llogarit fitimin & marzhet (kërkon koston)", approveLbl: "🛡️ Mirato vetë prenotimet (AI propozon → ti aprovon te Takimet)", fixedLbl: "Shpenzime mujore fikse (qira, rroga…) — opsionale",
@@ -511,6 +512,7 @@ const T = {
     addBiz: "+ Business", obBack: "← Back",
     setFieldsH: "🧩 Catalog fields (turn off what you don't need)", fieldsDesc: "Everything is on by default. Turn off what you don't need — the panel becomes truly yours.",
     cfgDescLbl: "Description", cfgUnitLbl: "Unit", cfgStockLbl: "Stock", cfgSkuLbl: "Code (SKU)", cfgTiersLbl: "Wholesale pricing",
+    cfgVolatileLbl: "📈 My prices change often", cfgVolatileHint: "For retail (phones, perfumes…): the AI quotes a price only if it was refreshed in the last 7 days — otherwise it confirms the item, captures the customer's contact and asks you. Refresh prices by re-importing your list or with one Telegram message: iPhone 15 = 430",
     catalogPointerTxt: "Products & services with description, price, stock and wholesale pricing are managed in the 📦 Catalog tab above.", goCatalogBtn: "📦 Open Catalog",
     bookableLbl: "📅 Bookable on calendar", svcDesc: "Add any service or product — with type, description, price and optional booking.",
     itemCost: "Cost (your cost)", profitOnLbl: "💰 Calculate profit & margins (needs cost)", approveLbl: "🛡️ Approve bookings yourself (AI proposes → you approve in Appointments)", fixedLbl: "Fixed monthly expenses (rent, salaries…) — optional",
@@ -2852,6 +2854,8 @@ function renderSettings() {
   if ($("#cfgStock")) $("#cfgStock").checked = showField("catStock");
   if ($("#cfgSku")) $("#cfgSku").checked = showField("catSku");
   if ($("#cfgTiers")) $("#cfgTiers").checked = showField("catTiers");
+  // Çmimet e gjalla: NDEZUR vetëm kur pronari e ka zgjedhur vetë (parazgjedhja fikur)
+  if ($("#cfgVolatile")) $("#cfgVolatile").checked = !!(biz && biz.config && biz.config.volatilePrices);
   updateTgWebhookLink();
   renderSettingsHours();
 }
@@ -4409,6 +4413,7 @@ function wire() {
     const cfg = Object.assign({}, biz.config || {});
     cfg.catDesc = $("#cfgDesc").checked; cfg.catUnit = $("#cfgUnit").checked;
     cfg.catStock = $("#cfgStock").checked; cfg.catSku = $("#cfgSku").checked; cfg.catTiers = $("#cfgTiers").checked;
+    if ($("#cfgVolatile")) cfg.volatilePrices = $("#cfgVolatile").checked;
     try {
       await sb.from("businesses").update({ config: cfg }).eq("id", biz.id);
       biz.config = cfg; renderCatalog(); toast(tr("toastSaved"));
