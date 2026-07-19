@@ -73,41 +73,91 @@ Deno.serve(async (req) => {
         try { await supabase.from("businesses").update({ owner_tg_chat: chatId }).eq("id", b.id); } catch (_e) {}
         const sq = (b.lang || "sq").toLowerCase().startsWith("sq");
         await sendTelegram(chatId, sq
-          ? `✅ U lidh! Do të marrësh këtu çdo rezervim, porosi e kërkesë të re për "${b.name}" — në çast, edhe kur je jashtë.\n\n💡 Truk: ndrysho çmimet që këtu — shkruaj: iPhone 15 = 430`
-          : `✅ Connected! You'll get every new booking, order and request for "${b.name}" right here — instantly, even when you're away.\n\n💡 Tip: update prices right here — write: iPhone 15 = 430`, BOT);
+          ? `✅ U lidh! Do të marrësh këtu çdo rezervim, porosi e kërkesë të re për "${b.name}" — në çast, edhe kur je jashtë.\n\n💡 Truk: ndrysho çmimet që këtu:\n• Një artikull: iPhone 15 = 430\n• Gjithë familja: iphone 17 = -10%\n• Gjithë katalogu: * = +5%`
+          : `✅ Connected! You'll get every new booking, order and request for "${b.name}" right here — instantly, even when you're away.\n\n💡 Tip: update prices right here:\n• One item: iPhone 15 = 430\n• A whole family: iphone 17 = -10%\n• Whole catalog: * = +5%`, BOT);
       }
       return new Response("ok");
     }
 
-    /* ---- ÇMIMI ME NJË MESAZH (vetëm pronari i lidhur për njoftime) ----
-       Pronari i shkruan bot-it: "iphone 15 128gb = 430" → çmimi përditësohet
-       aty për aty; trigger-i në bazë e freskon price_updated_at vetë, kështu
-       AI-ja e citon sërish me besim (modaliteti "çmime të gjalla").
-       Klientët s'preken kurrë: ndërhyn VETËM kur chat_id-ja është kanal
-       pronari DHE mesazhi ka trajtën "emër = numër". */
-    const mPrice = msg.text.match(/^([^=\n]{2,80}?)\s*=\s*([\d.,]+)\s*(?:€|eur|euro|lek|lekë)?\s*$/i);
-    if (mPrice) {
+    /* ---- ÇMIMET ME NJË MESAZH (vetëm pronari i lidhur për njoftime) ----
+       NJË artikull:   "iphone 15 128gb = 430"      → vendos çmimin saktë
+       FAMILJE me %:   "iphone 17 = -10%"           → TË GJITHË variantet (Pro,
+                       Pro Max, 128GB…) njëherësh; edhe paketat (variants) shkallëzohen
+       GJITHË katalogu:"* = +5%"  (ose "te gjitha = -5%")
+       Trigger-i në bazë e freskon price_updated_at vetë → AI-ja i citon sërish
+       me besim (modaliteti "çmime të gjalla"). Klientët s'preken kurrë:
+       ndërhyn VETËM kur chat_id-ja është kanal pronari DHE trajta "emër = numër". */
+    const mPrice = msg.text.match(/^([^=\n]{1,80}?)\s*=\s*([+-]?[\d.,]+)\s*(%)?\s*(?:€|eur|euro|lek|lekë)?\s*$/i);
+    if (mPrice && !/https?:\/\//i.test(msg.text)) {
       const { data: owned } = await supabase.from("businesses").select("id, name, lang").eq("owner_tg_chat", chatId).limit(5);
       if (owned && owned.length) {
         const sq = (owned[0].lang || "sq").toLowerCase().startsWith("sq");
-        const newPrice = parsePriceNum(mPrice[2]);
+        const isPct = !!mPrice[3];
+        const rawNum = mPrice[2];
         const q = normTxt(mPrice[1]);
-        if (!q || !Number.isFinite(newPrice) || newPrice < 0 || newPrice > 100000000) {
-          await sendTelegram(chatId, sq
-            ? `Çmimi s'u lexua. Shkruaj: emri i artikullit = çmimi (p.sh. iPhone 15 = 430)`
-            : `Couldn't read that. Write: item name = price (e.g. iPhone 15 = 430)`, BOT);
-          return new Response("ok");
-        }
+        const round2 = (n: number) => Math.round(n * 100) / 100;
         const ids = owned.map((b: any) => b.id);
         const { data: svcs } = await supabase.from("services")
-          .select("id, name, sku, price").in("business_id", ids).eq("active", true).limit(10000);
+          .select("id, business_id, name, sku, price, variants").in("business_id", ids).eq("active", true).limit(10000);
+        const all = svcs || [];
+        // "*", "te gjitha", "gjithcka", "all" → i gjithë katalogu
+        const wantAll = /^(\*|te gjitha|të gjitha|gjithcka|gjithçka|all|everything)$/.test(q) || mPrice[1].trim() === "*";
         const qWords = q.split(" ").filter(Boolean);
-        const cands = (svcs || []).filter((s: any) => {
+        const cands = wantAll ? all : all.filter((s: any) => {
           const nn = normTxt(s.name), ns = normTxt(s.sku || "");
           return (ns && ns === q) || nn === q || qWords.every((w: string) => nn.includes(w));
         });
-        // Përputhja e plotë (emër/SKU) fiton mbi përputhjet e pjesshme
+        // Përputhja e plotë (emër/SKU) fiton mbi të pjesshmet — VETËM për vendosje absolute
         const exact = cands.filter((s: any) => normTxt(s.name) === q || normTxt(s.sku || "") === q);
+
+        if (isPct) {
+          /* ---- NDRYSHIM MASIV ME PËRQINDJE: një mesazh → gjithë familja ---- */
+          const pct = Number(rawNum.replace(",", "."));
+          if (!/^[+-]/.test(rawNum) || !Number.isFinite(pct) || pct < -90 || pct > 500) {
+            await sendTelegram(chatId, sq
+              ? `Për ndryshim masiv shkruaj me shenjë: "iphone 17 = -10%" (ulje) ose "= +5%" (rritje). Kufijtë: -90% deri +500%.`
+              : `For bulk changes use a sign: "iphone 17 = -10%" (down) or "= +5%" (up). Limits: -90% to +500%.`, BOT);
+            return new Response("ok");
+          }
+          const targets = cands.filter((s: any) => Number(s.price) > 0); // pa çmim = "me kërkesë" → s'shkallëzohet
+          if (!targets.length) {
+            await sendTelegram(chatId, sq
+              ? `S'gjeta artikuj me çmim që përputhen me "${mPrice[1].trim()}".`
+              : `No priced items match "${mPrice[1].trim()}".`, BOT);
+            return new Response("ok");
+          }
+          const factor = 1 + pct / 100;
+          const rows = targets.map((s: any) => {
+            const r: any = { id: s.id, business_id: s.business_id, name: s.name, price: round2(Number(s.price) * factor) };
+            // Paketat/variantet shkallëzohen bashkë (të mos mbeten me çmim të vjetër)
+            if (Array.isArray(s.variants) && s.variants.length) {
+              r.variants = s.variants.map((v: any) => (v && Number(v.price) > 0) ? { ...v, price: round2(Number(v.price) * factor) } : v);
+            }
+            return r;
+          });
+          for (let i = 0; i < rows.length; i += 300) {
+            const { error: upErr } = await supabase.from("services").upsert(rows.slice(i, i + 300));
+            if (upErr) {
+              await sendTelegram(chatId, sq ? `Diçka dështoi — provo sërish.` : `Something failed — try again.`, BOT);
+              return new Response("ok");
+            }
+          }
+          const ex = targets.slice(0, 3).map((s: any, i: number) => `• ${s.name}: ${s.price}€ → ${rows[i].price}€`).join("\n");
+          const more = targets.length > 3 ? (sq ? `\n…dhe ${targets.length - 3} të tjerë` : `\n…and ${targets.length - 3} more`) : "";
+          await sendTelegram(chatId, sq
+            ? `✅ ${targets.length} artikuj u përditësuan (${pct > 0 ? "+" : ""}${pct}%):\n${ex}${more}\n\nÇmimet u freskuan tani.`
+            : `✅ ${targets.length} items updated (${pct > 0 ? "+" : ""}${pct}%):\n${ex}${more}\n\nPrices refreshed now.`, BOT);
+          return new Response("ok");
+        }
+
+        /* ---- VENDOSJE ABSOLUTE (një artikull i vetëm, kërkon saktësi) ---- */
+        const newPrice = parsePriceNum(rawNum);
+        if (!q || wantAll || !Number.isFinite(newPrice) || newPrice < 0 || newPrice > 100000000) {
+          await sendTelegram(chatId, sq
+            ? `Çmimi s'u lexua. Shkruaj: emri i artikullit = çmimi (p.sh. iPhone 15 = 430), ose masivisht me %: iphone 17 = -10%`
+            : `Couldn't read that. Write: item name = price (e.g. iPhone 15 = 430), or in bulk with %: iphone 17 = -10%`, BOT);
+          return new Response("ok");
+        }
         const hits = exact.length ? exact : cands;
         if (!hits.length) {
           await sendTelegram(chatId, sq
@@ -118,8 +168,8 @@ Deno.serve(async (req) => {
         if (hits.length > 1) {
           const list = hits.slice(0, 5).map((s: any) => `• ${s.name}${s.sku ? " (" + s.sku + ")" : ""}`).join("\n");
           await sendTelegram(chatId, sq
-            ? `Gjeta ${hits.length} artikuj që përputhen:\n${list}\n\nShkruaje emrin e plotë (ose SKU-në) = çmimi.`
-            : `Found ${hits.length} matching items:\n${list}\n\nWrite the full name (or SKU) = price.`, BOT);
+            ? `Gjeta ${hits.length} artikuj që përputhen:\n${list}\n\nShkruaje emrin e plotë (ose SKU-në) = çmimi.\n💡 Për t'i ndryshuar TË GJITHË njëherësh: ${mPrice[1].trim()} = -10%`
+            : `Found ${hits.length} matching items:\n${list}\n\nWrite the full name (or SKU) = price.\n💡 To change them ALL at once: ${mPrice[1].trim()} = -10%`, BOT);
           return new Response("ok");
         }
         const hit = hits[0];

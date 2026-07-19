@@ -475,6 +475,8 @@ function priceStale(biz: any, s: any): boolean {
 function svcListText(services: any[], sq = true, biz?: any) {
   return services.map((s) => {
     const d = durHuman(s, sq);
+    // Pa çmim fare (punë me porosi / prodhim vetjak) → ofertë personale, kurrë "0€"
+    if (!Number(s.price)) return `• ${s.name}${d ? " — " + d : ""} — 💬 ${sq ? "çmimi me kërkesë" : "price on request"}`;
     // Çmim i pafreskuar (biznes me çmime të gjalla) → s'shfaqet numri, konfirmohet
     if (priceStale(biz, s)) return `• ${s.name}${d ? " — " + d : ""} — 💬 ${sq ? "çmimi konfirmohet sot" : "today's price on request"}`;
     let line = `• ${s.name}${d ? " — " + d : ""} — ${s.price}€`;
@@ -857,6 +859,8 @@ async function runAI(ctx: any) {
     `SERVICES (name — minutes — price):`,
     // Katalogë të mëdhenj: vetëm shërbimet përkatëse hyjnë në prompt (kërkim i brendshëm)
     relevantServices(services, text, history).map((s: any) => {
+      // Pa çmim fare (punë me porosi / prodhim vetjak) → AI mbledh kërkesën, pronari çon ofertën
+      if (!Number(s.price)) return `- ${s.name} — ${s.duration_min} min — PRICE ON REQUEST (see PRICE ON REQUEST rule)`;
       // Çmim i pafreskuar → AI-ja NUK e sheh numrin fare (s'ka çfarë të citojë gabim)
       if (priceStale(biz, s)) return `- ${s.name} — ${s.duration_min} min — PRICE VOLATILE (not listed — see VOLATILE PRICES rule)`;
       let line = `- ${s.name} — ${s.duration_min} min — ${s.price}`;
@@ -864,6 +868,9 @@ async function runAI(ctx: any) {
       return line;
     }).join("\n"),
     cappedNote(Math.min(services.length, 60), services.length),
+    services.some((s: any) => !Number(s.price))
+      ? `PRICE ON REQUEST (STRICT): items marked "PRICE ON REQUEST" are quoted personally per customer (custom / made-to-order work). NEVER invent, guess or estimate a number for them. Instead: warmly ask WHAT exactly the customer needs (size/quantity/details), collect their name + phone number, and promise the owner will send a personal offer shortly. Copy their request (one short line) into "unanswered_question" so the owner is pinged instantly.`
+      : "",
     (biz.config && biz.config.volatilePrices)
       ? `VOLATILE PRICES (STRICT): this business's prices change frequently with the market. For any item marked "PRICE VOLATILE" you have NO trustworthy price — NEVER state, guess, estimate or repeat a price for it, not even one seen in learned answers or earlier messages (those are outdated). Instead: warmly confirm the item's availability, ask for the customer's name + phone number, promise the owner will confirm TODAY's price right away, and copy the item question (one short line) into "unanswered_question" so the owner is pinged instantly.`
       : "",
