@@ -79,14 +79,15 @@
 ::selection{background:rgba(12,166,120,.22);color:var(--accent-deep)}
 html{scroll-behavior:smooth}
 body{font-family:var(--fb);font-size:16px;background:var(--milk);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden}
-body::before{content:"";position:fixed;inset:-30%;z-index:-2;
+body::before{content:"";position:fixed;inset:-8%;z-index:-2;/* PERF: -8% → ~gjysma e memorjes GPU */
   background:
     radial-gradient(38% 34% at 24% 26%,rgba(32,201,151,.34),transparent 70%),
     radial-gradient(34% 32% at 78% 16%,rgba(116,173,255,.32),transparent 70%),
     radial-gradient(36% 34% at 72% 82%,rgba(255,196,145,.30),transparent 70%),
     radial-gradient(28% 28% at 16% 86%,rgba(196,156,255,.22),transparent 70%);
-  filter:blur(70px) saturate(1.25);animation:aurora 28s ease-in-out infinite alternate}
-@keyframes aurora{from{transform:translate3d(-2.5%,-1.5%,0) rotate(-1.5deg)}to{transform:translate3d(2.5%,2%,0) rotate(2deg) scale(1.06)}}
+  filter:blur(56px) saturate(1.25);animation:aurora 28s ease-in-out infinite alternate}
+/* PERF: VETËM translate (pa rotate/scale) → blur-i rasterizohet një herë, GPU vetëm e rrëshqet */
+@keyframes aurora{from{transform:translate3d(-2%,-1.2%,0)}to{transform:translate3d(2%,1.6%,0)}}
 body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.035;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E")}
 @media (prefers-reduced-motion:reduce){body::before{animation:none}*{transition-duration:.01ms!important;animation-duration:.01ms!important}}
@@ -528,7 +529,7 @@ img,svg,video,table{max-width:100%}
 /* Browser-i kapërcen renderimin (përfshi backdrop-filter) e kartave JASHTË ekranit */
 /* KUJDES: mos i vër content-visibility .bchip-ave — me karuselin (marquee) u jepte
    lartësi rezervë 180px chips-ave jashtë ekranit → balona gjigante */
-.step,.feat,.faq details,.cmp-scroll{content-visibility:auto;contain-intrinsic-size:auto 180px}
+.step,.feat,.faq details,.cmp-scroll{contain:layout paint}
 /* KUJDES: overscroll-behavior:contain (të dy akset) mbi tabelën BLLOKONTE scroll-in
    vertikal të faqes kur mausi/gishti ishte mbi të → vetëm aksi X kufizohet */
 .cmp-scroll{overscroll-behavior-x:contain;overscroll-behavior-y:auto}
@@ -855,6 +856,8 @@ footer::before{content:"";position:absolute;top:0;left:50%;transform:translateX(
   .chat{animation:none;-webkit-backdrop-filter:blur(14px) saturate(1.6);backdrop-filter:blur(14px) saturate(1.6)}
   /* Thjerrëzat dekorative (duken vetëm në tablet >900px): pa animacion, blur i lehtë */
   .hero::after,.hero-demo::before{animation:none;-webkit-backdrop-filter:blur(8px) saturate(1.5);backdrop-filter:blur(8px) saturate(1.5)}
+  /* PERF KRITIKE: aurora e animuar poshtë xhamit = çdo element blur ri-kampionon çdo frame → statike në prekje */
+  body::before{animation:none}
 }
 
 /* Përdoruesi ka kërkuar në sistem "më pak transparencë" (a11y) → xham opak, zero blur */

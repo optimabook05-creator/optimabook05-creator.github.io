@@ -2097,11 +2097,12 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
 /* ===================================================================
    ⚡ SMOOTHNESS MAX — optimizime pa asnjë ndryshim pamjeje
    =================================================================== */
-/* Shfletuesi kapërcen renderimin e kartave JASHTË ekranit në lista të gjata
-   → scroll shumë më i lëmuar (kur dalin në ekran, renderohen normalisht). */
+/* KUJDES (mësim i paguar 2×): content-visibility + contain-intrinsic-size mbi
+   karta me LARTËSI TË NDRYSHUESHME shkakton MBIVENDOSJE (tekst mbi tekst) në
+   telefon — rezerva e gabuar e lartësisë prish layout-in gjatë scroll-it.
+   Përdorim vetëm `contain: layout paint` = izolim i sigurt PA rezervë madhësie. */
 .appt-card, .order-card, .cat-item, .block-item, .service-card {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 84px;
+  contain: layout paint;
 }
 /* Pa "scroll-chaining" (jank kur arrin fundin e listës/modalit) */
 .panel-col, .appt-list, .block-list, .modal, .timeline, .sidebar.open {
@@ -2139,6 +2140,11 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
   .sidebar.open { -webkit-backdrop-filter: blur(20px) saturate(1.7); backdrop-filter: blur(20px) saturate(1.7); }
   .today-card  { -webkit-backdrop-filter: none; backdrop-filter: none; }   /* sfond gradient i mjafton */
   body::before { filter: blur(46px) saturate(1.4); }                        /* aurora: blur më i vogël në telefon */
+  /* PERF KRITIKE NË TELEFON: aurora e ANIMUAR poshtë xhamit e detyron ÇDO
+     element me backdrop-filter (topbar/botnav/modal/panel) të ri-kampionojë
+     blur-in ÇDO frame, përjetësisht → ngecje e vazhdueshme në GPU të dobëta.
+     E ndalim → sfondi mbetet po aq shumëngjyrësh, xhami kampionohet një herë. */
+  body::before { animation: none; }
 }
 
 /* ⚡ FAZA 3 — Përdoruesi ka kërkuar në sistem "më pak transparencë" (a11y):
@@ -2156,8 +2162,9 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
   .modal-backdrop { -webkit-backdrop-filter: none; backdrop-filter: none; }
   body::before { filter: blur(46px); opacity: .5; } /* aurora më e qetë */
 }
-/* Kartat shtesë që scroll-ojnë → browser-i i kapërcen jashtë ekranit (Safari 18+) */
-.cv-card, .ins-card, .bi-box { content-visibility: auto; contain-intrinsic-size: auto 110px; }
+/* Kartat me lartësi të ndryshueshme (Economy/Inbox/këshillat): PA content-visibility
+   (shkaktonte "best seller" MBI "returning customers" në telefon) — vetëm izolim i sigurt. */
+.cv-card, .ins-card, .bi-box { contain: layout paint; }
 
 /* ============================================================
    🍎 NAV BAR iOS-STYLE në telefon: i NGJITUR sipër (flush, edge-to-edge),
@@ -2207,7 +2214,6 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
 .cv-card {
   background: var(--glass); border: 1px solid var(--glass-edge);
   border-radius: var(--r-md); padding: 14px var(--sp-16); box-shadow: 0 1px 3px rgba(0,0,0,.06);
-  content-visibility: auto; contain-intrinsic-size: auto 120px;
 }
 .cv-head { font-weight: 800; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); margin-bottom: 10px; }
 .cv-body { display: flex; flex-direction: column; gap: 7px; }
