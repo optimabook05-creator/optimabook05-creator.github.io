@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>(function(){try{var t=localStorage.getItem('ob-theme');if(!t)t=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
-<script src="v.js"></script>
+<script src="v.js" defer></script>
 <title>OptimaBook — Hyr</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="OptimaBook — paneli i biznesit tënd. Hyr ose krijo llogarinë.">
@@ -18,11 +18,12 @@
 <meta name="theme-color" content="#0ca678">
 <link rel="preconnect" href="https://mhbrhrsjlxluxvwjhcne.supabase.co" crossorigin>
 <link rel="preconnect" href="https://esm.sh" crossorigin>
+<link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=148">
-<link rel="modulepreload" href="config.js?v=148">
-<link rel="modulepreload" href="optima-app.js?v=148">
+<link rel="stylesheet" href="style.css?v=149">
+<link rel="modulepreload" href="config.js?v=149">
+<link rel="modulepreload" href="optima-app.js?v=149">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -927,7 +928,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=148"></script>
-<script type="module" src="optima-app.js?v=148"></script>
+<script src="core.js?v=149"></script>
+<script type="module" src="optima-app.js?v=149"></script>
 </body>
 </html>
