@@ -62,9 +62,11 @@ self.addEventListener("fetch", (e) => {
   if (url.pathname.endsWith("version.txt")) return;   // auto-version → gjithmonë rrjeti
 
   // HTML / navigime → network-first (i freskët gjithmonë), offline → cache
+  // ignoreSearch: app.html?v=150 i ruajtur shërben edhe kur URL-ja kërkon ?v=151
+  // (ndryshe pas çdo ndryshimi versioni PWA-ja s'hapej dot offline)
   if (req.mode === "navigate") {
     e.respondWith(
-      fetch(req).then((res) => putInCache(req, res)).catch(() => caches.match(req))
+      fetch(req).then((res) => putInCache(req, res)).catch(() => caches.match(req, { ignoreSearch: true }))
     );
     return;
   }
@@ -80,7 +82,15 @@ self.addEventListener("fetch", (e) => {
   // Asete me ?v= (immutable) → cache-first (i menjëhershëm)
   if (url.searchParams.has("v")) {
     e.respondWith(
-      caches.match(req).then((cached) => cached || fetch(req).then((res) => putInCache(req, res)))
+      caches.match(req).then((cached) => cached || fetch(req).then((res) => {
+        // Version i ri i të njëjtit aset → fshi të vjetrit (cache-i s'fryhet pafund)
+        caches.open(CACHE).then((c) => c.keys().then((keys) => {
+          keys.forEach((k) => {
+            try { const ku = new URL(k.url); if (ku.pathname === url.pathname && ku.search !== url.search) c.delete(k); } catch (_e) {}
+          });
+        })).catch(() => {});
+        return putInCache(req, res);
+      }))
     );
     return;
   }
