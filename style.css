@@ -1204,14 +1204,22 @@ body::after {
   .block-form input { flex: 1 1 46%; min-width: 0; font-size: 13px; }
   .block-form .btn { flex: 1 1 100%; }
 
-  /* Statistikat */
+  /* Statistikat — HERO layout: karta e parë (metrika kryesore) gjithë gjerësinë,
+     të tjerat çift; asnjë kartë "jetime" gjysmake në fund (amatore në sy). */
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 9px; }
   .stats-grid-top { grid-template-columns: repeat(2, 1fr); gap: 9px; }
+  .stats-grid-top .stat-card:first-child { grid-column: 1 / -1; }
+  .stats-grid-top .stat-card:last-child:nth-child(even) { grid-column: 1 / -1; }
+  .stats-grid .stat-card:last-child:nth-child(odd):not(:only-child) { grid-column: 1 / -1; }
   .stat-card { padding: 15px 13px 13px; }
   .stat-card .num { font-size: 25px; }
   .stat-card .lbl { font-size: 11px; }
   .bi-cols { grid-template-columns: 1fr; gap: 11px; }
   .bi-load { height: 110px; }
+  /* Emrat e produkteve TË PLOTË në telefon (jo "iPhone 15 Pr…"): etiketa
+     sipër në rreshtin e vet, shiriti + shuma poshtë saj. */
+  .bi-bar-row { grid-template-columns: 1fr auto; row-gap: 4px; }
+  .bi-bar-lbl { grid-column: 1 / -1; white-space: normal; line-height: 1.3; }
 
   /* Modalet: fletë nga fundi, si iOS */
   .modal-backdrop { padding: 10px; align-items: end; }
@@ -1863,7 +1871,8 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
   @keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
   .modal-actions { position: sticky; bottom: 0; background: linear-gradient(transparent, var(--glass-strong) 30%); padding-top: 14px; margin: var(--sp-8) -2px 0; }
 }
-@media (max-width: 380px) { .stats-grid-top { grid-template-columns: 1fr; } }
+/* (hequr rregulli 1-kolonësh ≤380px — kartat gjigante të stivuara dukeshin amatore;
+   tani vlen HERO layout-i i bllokut 640px: e para e madhe, të tjerat çift) */
 
 @media (prefers-reduced-motion: reduce) {
   #appView, .stat-card, .modal { animation: none !important; }
@@ -2046,6 +2055,7 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
 
 /* FAB — butoni rrethor pluskues (vetëm telefon), nën gishtin e djathtë */
 .fab { display: none; }
+.fab[hidden] { display: none !important; } /* hidden duhet të fitojë edhe mbi display:grid të mobile */
 @media (max-width: 900px) {
   .fab { display: grid; place-items: center; position: fixed; right: 18px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 52;
     width: 58px; height: 58px; border-radius: 50%; border: none; cursor: pointer; color: #fff; font-size: 32px; font-weight: 300; line-height: 1;

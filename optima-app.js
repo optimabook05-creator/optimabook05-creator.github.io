@@ -4240,6 +4240,7 @@ function setupMobileNav() {
   const cl = $("#sidebarClose"); if (cl) cl.onclick = closeSidebarDrawer;
   const bd = $("#sidebarBackdrop"); if (bd) bd.onclick = closeSidebarDrawer;
   setupSheetDrag();
+  updateFab(); // gjendja fillestare (skeda aktive e nisjes)
   const fab = $("#fab"); if (fab) fab.onclick = () => {
     haptic(12);
     const cur = (document.querySelector(".tab.active") || {}).dataset ? document.querySelector(".tab.active").dataset.tab : "";
@@ -4249,6 +4250,16 @@ function setupMobileNav() {
     else openManual();
   };
   syncBotnav();
+}
+
+/* FAB-i kontekstual shfaqet VETËM në skedat ku "+ shto" ka kuptim.
+   Mbi Ekonominë/Bisedat/Cilësimet notonte mbi numrat e raporteve
+   (mbivendosje reale e parë në telefon) pa asnjë veprim të dobishëm. */
+const FAB_TABS = ["stats", "calendar", "appointments", "orders", "catalog"];
+function updateFab(tabName) {
+  const f = $("#fab"); if (!f) return;
+  const cur = tabName || ((document.querySelector(".tab.active") || {}).dataset || {}).tab || "";
+  f.hidden = !FAB_TABS.includes(cur);
 }
 
 /* Ftesa "Instalo aplikacionin" (PWA) — shtesë e pastër, zero rrezik:
@@ -4498,6 +4509,7 @@ function wire() {
       };
       const fn = lazy[tab.dataset.tab]; if (fn) fn();
       try { sessionStorage.setItem("ob-tab", tab.dataset.tab); } catch (_e) {} // kujto skedën për kthimin
+      updateFab(tab.dataset.tab); // FAB-i vetëm ku "+ shto" ka kuptim (mbi raportet mbulonte numrat)
       closeSidebarDrawer(); syncBotnav(); // sirtar i telefonit + sinkronizim i barit poshtë
     };
   });
