@@ -295,6 +295,48 @@
   }
 
   /* -------------------------------------------------------------------
+     RREGULLAT E PAKETIMIT (shtesat me kushte) — çdo kombinim i botës reale:
+       • opsionale        → posta, kur klienti mund të vijë vetë në dyqan
+       • e detyrueshme    → makina SHITET vetëm me transportin e shitësit
+       • të përziera      → disa të detyrueshme, disa jo, në të njëjtin artikull
+       • me KUSHT sasie   → "nga 3 copë, transporti FALAS"
+                          → "nga 10 copë, paketimi bëhet i DETYRUESHËM"
+       • me KUSHT vlere   → "mbi 500€, montimi falas"
+     Modeli (prapa-përputhshëm 100%): shtesa mban `required` si sot; nëse ka
+     edhe `when` + `then`, rregulli zbatohet SIPËR tij kur plotësohet pragu.
+     KJO ËSHTË E VËRTETA E VETME — e njëjta logjikë përdoret nga faqja publike,
+     paneli dhe AI-ja; serveri (public_order) e pasqyron identike në SQL.
+     ------------------------------------------------------------------- */
+  function resolveAddons(addons, qty, lineTotal) {
+    const q = Number(qty) || 0;
+    const tot = Number(lineTotal) || 0;
+    return (Array.isArray(addons) ? addons : []).map((a) => {
+      const base = Number(a && a.price) || 0;
+      let required = !!(a && a.required);
+      let price = base, freed = false, unlocked = false;
+      const w = a && a.when, t = a && a.then;
+      const thr = w ? (w.qty != null ? Number(w.qty) : (w.total != null ? Number(w.total) : null)) : null;
+      if (w && t && thr != null && !Number.isNaN(thr)) {
+        const met = w.qty != null ? q >= thr : tot >= thr;
+        if (met) {
+          unlocked = true;
+          if (t === "required") required = true;
+          if (t === "free") { price = 0; freed = true; }
+        }
+      }
+      return {
+        name: (a && a.name) || "",
+        price, basePrice: base, required, freed, unlocked,
+        // sa i mungon klientit për ta shkaktuar rregullin (0 = i plotësuar/pa rregull)
+        needQty: (w && w.qty != null && !unlocked) ? Math.max(0, thr - q) : 0,
+        needTotal: (w && w.total != null && !unlocked) ? Math.max(0, thr - tot) : 0,
+        then: (w && t) ? t : null,
+        threshold: (w && t) ? thr : null,
+      };
+    });
+  }
+
+  /* -------------------------------------------------------------------
      RADHA OFFLINE — veprimet e pronarit nuk humbin kurrë pa internet.
      Pronari punon në bodrum/treg/makinë: shënon "erdhi", konfirmon një
      porosi — pa sinjal. Këto rreshtohen dhe dërgohen VETË kur kthehet
@@ -337,7 +379,7 @@
     };
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged, normKey, planImport, escapeHtml, isOfflineError, makeQueue };
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged, normKey, planImport, escapeHtml, isOfflineError, makeQueue, resolveAddons };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);

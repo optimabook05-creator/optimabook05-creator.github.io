@@ -294,3 +294,56 @@ test("makeQueue — pranon vetëm update/delete, ruan gjendjen finale, mbijeton 
   assert.strictEqual(q2.remove(only.qid), false);
   assert.strictEqual(q2.size(), 0);
 });
+
+test("resolveAddons — çdo kombinim i botës reale (opsionale/detyrueshme/të kushtëzuara)", () => {
+  // 1) POSTA: opsionale — klienti mund të vijë vetë në dyqan
+  let r = OB.resolveAddons([{ name: "Postë", price: 5 }], 1, 100);
+  assert.strictEqual(r[0].required, false);
+  assert.strictEqual(r[0].price, 5);
+
+  // 2) MAKINA: shitet VETËM me transportin e shitësit → gjithmonë e detyrueshme
+  r = OB.resolveAddons([{ name: "Transport", price: 900, required: true }], 1, 12000);
+  assert.strictEqual(r[0].required, true);
+
+  // 3) TË PËRZIERA në të njëjtin artikull
+  r = OB.resolveAddons([{ name: "Montim", price: 50, required: true }, { name: "Garanci+", price: 30 }], 1, 500);
+  assert.strictEqual(r[0].required, true);
+  assert.strictEqual(r[1].required, false);
+
+  // 4) "NGA 3 COPË, TRANSPORTI FALAS"
+  const freeAt3 = [{ name: "Transport", price: 200, when: { qty: 3 }, then: "free" }];
+  r = OB.resolveAddons(freeAt3, 2, 0);
+  assert.strictEqual(r[0].price, 200);      // ende me pagesë
+  assert.strictEqual(r[0].freed, false);
+  assert.strictEqual(r[0].needQty, 1);      // "edhe 1 copë dhe e ke falas"
+  r = OB.resolveAddons(freeAt3, 3, 0);
+  assert.strictEqual(r[0].price, 0);        // pragu u plotësua
+  assert.strictEqual(r[0].freed, true);
+  assert.strictEqual(r[0].basePrice, 200);  // çmimi bazë mbetet i dukshëm (kursimi)
+  assert.strictEqual(r[0].needQty, 0);
+
+  // 5) "NGA 10 COPË, PAKETIMI BËHET I DETYRUESHËM"
+  const reqAt10 = [{ name: "Paketim industrial", price: 40, when: { qty: 10 }, then: "required" }];
+  assert.strictEqual(OB.resolveAddons(reqAt10, 9, 0)[0].required, false);
+  assert.strictEqual(OB.resolveAddons(reqAt10, 10, 0)[0].required, true);
+  assert.strictEqual(OB.resolveAddons(reqAt10, 10, 0)[0].price, 40); // bëhet i detyrueshëm, JO falas
+
+  // 6) KUSHT MBI VLERËN: "mbi 500€, montimi falas"
+  const freeOver500 = [{ name: "Montim", price: 60, when: { total: 500 }, then: "free" }];
+  assert.strictEqual(OB.resolveAddons(freeOver500, 1, 499)[0].price, 60);
+  assert.strictEqual(OB.resolveAddons(freeOver500, 1, 499)[0].needTotal, 1);
+  assert.strictEqual(OB.resolveAddons(freeOver500, 1, 500)[0].price, 0);
+
+  // 7) Një shtesë E DETYRUESHME që bëhet FALAS me sasi — mbetet e detyrueshme
+  r = OB.resolveAddons([{ name: "Transport", price: 100, required: true, when: { qty: 5 }, then: "free" }], 5, 0);
+  assert.strictEqual(r[0].required, true);
+  assert.strictEqual(r[0].price, 0);
+
+  // 8) Prapa-përputhshmëria + hyrje të prishura s'rrëzojnë asgjë
+  assert.deepStrictEqual(OB.resolveAddons(null, 1, 0), []);
+  assert.deepStrictEqual(OB.resolveAddons(undefined, 1, 0), []);
+  r = OB.resolveAddons([{ name: "X", price: 10, when: { qty: "abc" }, then: "free" }], 99, 0);
+  assert.strictEqual(r[0].price, 10);   // prag i pavlefshëm → rregulli injorohet, çmimi normal
+  r = OB.resolveAddons([{ name: "Y", price: 10, when: { qty: 2 } }], 99, 0); // pa `then`
+  assert.strictEqual(r[0].price, 10);
+});

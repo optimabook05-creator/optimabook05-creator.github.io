@@ -1745,6 +1745,11 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
 .addon-row { display: grid; grid-template-columns: 1fr 92px auto auto; gap: var(--sp-8); align-items: center; margin-bottom: var(--sp-8); }
 .addon-row .a-cost[hidden] { display: none; }
 .addon-row .a-req { font-size: 12.5px; white-space: nowrap; }
+/* Rregulli me kusht: rreshti i dytë i shtesës, zë gjithë gjerësinë e rrjetës */
+.addon-row .a-rule { grid-column: 1 / -1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+.addon-row .a-rule select, .addon-row .a-rule input { font-size: 12.5px; padding: 7px 9px; }
+.addon-row .a-rule .a-thr { width: 88px; }
+.addon-row .a-rule [hidden] { display: none !important; }
 .addon-row .t-del { flex: 0 0 auto; }
 @media (max-width: 560px) { .addon-row { grid-template-columns: 1fr 1fr; } .addon-row .a-req { grid-column: 1 / -1; } }
 :root[data-theme="dark"] .item-sec { background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border-color: rgba(255,255,255,.1); }

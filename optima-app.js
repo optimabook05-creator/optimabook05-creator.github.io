@@ -143,6 +143,7 @@ const T = {
     addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
     secBasics: "📝 Bazat", secTime: "⏱ Koha & prenotimi", secPricing: "💶 Çmimi", secStock: "📦 Stoku & kodi",
     itemAddons: "➕ Shtesa (montim, postë, garanci…)", addAddon: "+ Shto shtesë", addonNamePh: "p.sh. Montim, Postë, Garanci…", addonRequired: "E detyrueshme",
+    ruleNone: "Pa kusht", ruleFree: "Bëhet FALAS kur…", ruleReq: "Bëhet e DETYRUESHME kur…", ruleQty: "sasia arrin", ruleTotal: "vlera arrin", ruleFrom: "nga…",
     itemVariants: "🧩 Paketa / çmime të shumta", addVariant: "+ Shto paketë", variantNamePh: "p.sh. 1-3 faqe, 4-6 faqe…",
     variantsHint: "Opsione me çmime të ndryshme për të njëjtin artikull (p.sh. '1-3 faqe → 120€', '4-6 faqe → 200€'). AI tregon çmimin sipas asaj që zgjedh klienti.",
     addonsHint: "Gjëra që shiten BASHKË me këtë artikull. Secila 'e detyrueshme' (shtohet vetë) ose 'opsionale' (klienti zgjedh). E përdor kush i duhet, si çmimet me shumicë.",
@@ -408,6 +409,7 @@ const T = {
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
     secBasics: "📝 Basics", secTime: "⏱ Time & booking", secPricing: "💶 Price", secStock: "📦 Stock & code",
     itemAddons: "➕ Add-ons (installation, shipping, warranty…)", addAddon: "+ Add add-on", addonNamePh: "e.g. Installation, Shipping, Warranty…", addonRequired: "Required",
+    ruleNone: "No condition", ruleFree: "Becomes FREE when…", ruleReq: "Becomes REQUIRED when…", ruleQty: "quantity reaches", ruleTotal: "value reaches", ruleFrom: "from…",
     itemVariants: "🧩 Packages / multiple prices", addVariant: "+ Add package", variantNamePh: "e.g. 1-3 pages, 4-6 pages…",
     variantsHint: "Options with different prices for the same item (e.g. '1-3 pages → 120€', '4-6 pages → 200€'). The AI quotes the price based on what the customer picks.",
     addonsHint: "Things sold TOGETHER with this item. Each 'required' (added automatically) or 'optional' (customer chooses). Use it if you need it, like wholesale pricing.",
@@ -2028,7 +2030,7 @@ function openItem(s) {
   $("#itemTiers").innerHTML = "";
   (s ? priceTiers.filter((t) => t.service_id === s.id) : []).forEach((t) => addTierRow(t.min_qty, t.unit_price));
   // Shtesat (montim, postë, garanci…)
-  if ($("#itemAddons")) { $("#itemAddons").innerHTML = ""; ((s && Array.isArray(s.addons)) ? s.addons : []).forEach((a) => addAddonRow(a.name, a.price, a.cost, a.required)); }
+  if ($("#itemAddons")) { $("#itemAddons").innerHTML = ""; ((s && Array.isArray(s.addons)) ? s.addons : []).forEach((a) => addAddonRow(a.name, a.price, a.cost, a.required, a.when, a.then)); }
   // Paketat / çmimet e shumta
   if ($("#itemVariants")) { $("#itemVariants").innerHTML = ""; ((s && Array.isArray(s.variants)) ? s.variants : []).forEach((v) => addVariantRow(v.label, v.price)); }
   // Çelësat per-seksion: vendosi nga override-i i artikullit (ose default-i global)
@@ -2070,8 +2072,10 @@ function applyItemFields() {
     blk.classList.toggle("off", !cb.checked);                  // off → trupi mblidhet (CSS)
   });
 }
-// Një rresht shtese (emër + çmim + kosto opsionale + e detyrueshme?)
-function addAddonRow(name, price, cost, required) {
+/* Një rresht shtese: emër + çmim + kosto + "e detyrueshme?" + RREGULL ME KUSHT.
+   Rregulli mbulon rastet reale: "nga 3 copë transporti FALAS", "nga 10 copë
+   paketimi i DETYRUESHËM", "mbi 500€ montimi falas". Pa rregull → sillet si më parë. */
+function addAddonRow(name, price, cost, required, when, thenWhat) {
   const row = document.createElement("div");
   row.className = "addon-row";
   const n = document.createElement("input");
@@ -2087,6 +2091,27 @@ function addAddonRow(name, price, cost, required) {
   const del = document.createElement("button");
   del.type = "button"; del.className = "t-del"; del.textContent = "✕"; del.onclick = () => row.remove();
   row.append(n, p, c, reqWrap, del);
+
+  // ---- Rregulli me kusht (rreshti i dytë, i palosur derisa të zgjidhet) ----
+  const rule = document.createElement("div"); rule.className = "a-rule";
+  const rThen = document.createElement("select"); rThen.className = "a-then";
+  [["", tr("ruleNone")], ["free", tr("ruleFree")], ["required", tr("ruleReq")]]
+    .forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; rThen.appendChild(o); });
+  const rBasis = document.createElement("select"); rBasis.className = "a-basis";
+  [["qty", tr("ruleQty")], ["total", tr("ruleTotal")]]
+    .forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; rBasis.appendChild(o); });
+  const rVal = document.createElement("input");
+  rVal.type = "number"; rVal.min = 1; rVal.step = "any"; rVal.className = "a-thr"; rVal.placeholder = tr("ruleFrom");
+  const sync = () => { const on = !!rThen.value; rBasis.hidden = !on; rVal.hidden = !on; };
+  rThen.onchange = sync;
+  if (when && thenWhat) {
+    rThen.value = thenWhat;
+    rBasis.value = when.qty != null ? "qty" : "total";
+    rVal.value = when.qty != null ? when.qty : (when.total != null ? when.total : "");
+  }
+  sync();
+  rule.append(rThen, rBasis, rVal);
+  row.appendChild(rule);
   $("#itemAddons").appendChild(row);
 }
 
@@ -2148,7 +2173,12 @@ async function saveItem() {
     const ap = Number(r.querySelector(".a-price").value) || 0;
     const acEl = r.querySelector(".a-cost");
     const ac = (acEl && acEl.value !== "") ? (Number(acEl.value) || 0) : null;
-    addons.push({ name: an, price: ap, cost: ac, required: r.querySelector(".a-required").checked });
+    const entry = { name: an, price: ap, cost: ac, required: r.querySelector(".a-required").checked };
+    // Rregulli me kusht ruhet VETËM kur është i plotë (veprim + prag numerik > 0)
+    const tSel = r.querySelector(".a-then"), bSel = r.querySelector(".a-basis"), thrEl = r.querySelector(".a-thr");
+    const thr = thrEl ? Number(thrEl.value) : 0;
+    if (tSel && tSel.value && thr > 0) { entry.when = bSel.value === "total" ? { total: thr } : { qty: thr }; entry.then = tSel.value; }
+    addons.push(entry);
   });
   payload.addons = addons.length ? addons : null;
   // Paketat / çmimet e shumta (etiketë + çmim)
@@ -4537,7 +4567,7 @@ function wire() {
   // Kërkimi në katalog (lokal, pa rrjet — i domosdoshëm pas importeve të mëdha)
   if ($("#catSearch")) $("#catSearch").oninput = debounce(renderCatalog, 150);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
-  if ($("#addAddon")) $("#addAddon").onclick = () => { addAddonRow("", "", "", false); const rows = document.querySelectorAll("#itemAddons .addon-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".a-name").focus(); };
+  if ($("#addAddon")) $("#addAddon").onclick = () => { addAddonRow("", "", "", false, null, null); const rows = document.querySelectorAll("#itemAddons .addon-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".a-name").focus(); };
   if ($("#addVariant")) $("#addVariant").onclick = () => { addVariantRow("", ""); const rows = document.querySelectorAll("#itemVariants .variant-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".v-label").focus(); };
   if ($("#itemSave")) $("#itemSave").onclick = saveItem;
   if ($("#itemDelete")) $("#itemDelete").onclick = deleteItem;

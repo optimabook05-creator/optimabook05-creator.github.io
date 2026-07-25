@@ -292,6 +292,7 @@ drop function if exists public.public_order(uuid, text, text, jsonb, text);
 create or replace function public.public_order(bid uuid, p_name text, p_contact text, p_items jsonb, p_notes text, p_idem uuid default null)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare oid uuid; sub numeric := 0; cur text; r record; sid uuid; q numeric; up numeric; ar record; ap numeric; recent int;
+        lt numeric; a_req boolean; a_then text; a_qthr numeric; a_tthr numeric;
 begin
   if bid is null then return jsonb_build_object('ok', false, 'error', 'missing'); end if;
   -- Idempotencë: nëse kjo porosi është dërguar tashmë me të njëjtin çelës, ktheje (pa dublikatë)
@@ -316,10 +317,23 @@ begin
     insert into order_items (order_id, business_id, service_id, name, qty, unit_price, line_total)
     values (oid, bid, sid, coalesce((select name from services where id = sid), '-'), q, up, q * up);
     sub := sub + q * up;
+    lt := q * up;   -- vlera e rreshtit → për kushtet e tipit "mbi 500€"
     -- Shtesat: të detyrueshme gjithmonë + opsionalet e zgjedhura nga klienti (çmimi merret nga baza, jo nga klienti)
     for ar in select value as av from jsonb_array_elements(coalesce((select addons from services where id = sid), '[]'::jsonb)) loop
-      if (ar.av->>'required')::boolean is true or (coalesce(r.v->'addons','[]'::jsonb) ? (ar.av->>'name')) then
-        ap := coalesce((ar.av->>'price')::numeric, 0);
+      /* RREGULLAT E PAKETIMIT — pasqyrë EKZAKTE e OB.resolveAddons (core.js).
+         Nëse këto dy divergjojnë, klienti sheh një çmim dhe paguan një tjetër.
+         Pragjet lexohen VETËM nëse janë numra të vlefshëm (një varg si "abc"
+         do të rrëzonte gjithë porosinë me gabim cast-i). */
+      a_req  := coalesce((ar.av->>'required')::boolean, false);
+      ap     := coalesce((ar.av->>'price')::numeric, 0);
+      a_then := ar.av->>'then';
+      a_qthr := case when (ar.av->'when'->>'qty')   ~ '^[0-9]+(\.[0-9]+)?$' then (ar.av->'when'->>'qty')::numeric   else null end;
+      a_tthr := case when (ar.av->'when'->>'total') ~ '^[0-9]+(\.[0-9]+)?$' then (ar.av->'when'->>'total')::numeric else null end;
+      if a_then is not null and ((a_qthr is not null and q >= a_qthr) or (a_tthr is not null and lt >= a_tthr)) then
+        if a_then = 'required' then a_req := true; end if;
+        if a_then = 'free'     then ap := 0;       end if;
+      end if;
+      if a_req or (coalesce(r.v->'addons','[]'::jsonb) ? (ar.av->>'name')) then
         insert into order_items (order_id, business_id, service_id, name, qty, unit_price, line_total)
         values (oid, bid, sid, left('+ ' || (ar.av->>'name'), 60), q, ap, q * ap);
         sub := sub + q * ap;

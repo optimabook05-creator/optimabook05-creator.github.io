@@ -483,7 +483,18 @@ function svcListText(services: any[], sq = true, biz?: any) {
     const vars = Array.isArray(s.variants) ? s.variants : [];
     for (const v of vars) if (v && v.label) line += `\n   • ${v.label}: ${v.price}€`;
     const adds = Array.isArray(s.addons) ? s.addons : [];
-    for (const a of adds) if (a && a.name) line += `\n   + ${a.name} ${a.price}€${a.required ? (sq ? " (e detyrueshme)" : " (required)") : (sq ? " (opsionale)" : " (optional)")}`;
+    for (const a of adds) {
+      if (!a || !a.name) continue;
+      // Kushti shpjegohet me fjalë njerëzore ("nga 3 copë falas") — ndryshe klienti s'e merr vesh
+      const thr = a.when ? (a.when.qty != null ? a.when.qty : a.when.total) : null;
+      const unit = a.when && a.when.qty != null ? (sq ? " copë" : " pcs") : "€";
+      const cond = (thr != null && a.then)
+        ? (a.then === "free"
+            ? (sq ? ` — nga ${thr}${unit} FALAS` : ` — free from ${thr}${unit}`)
+            : (sq ? ` — nga ${thr}${unit} bëhet i detyrueshëm` : ` — becomes required from ${thr}${unit}`))
+        : "";
+      line += `\n   + ${a.name} ${a.price}€${a.required ? (sq ? " (e detyrueshme)" : " (required)") : (sq ? " (opsionale)" : " (optional)")}${cond}`;
+    }
     return line;
   }).join("\n");
 }
@@ -865,9 +876,21 @@ async function runAI(ctx: any) {
       if (priceStale(biz, s)) return `- ${s.name} — ${s.duration_min} min — PRICE VOLATILE (not listed — see VOLATILE PRICES rule)`;
       let line = `- ${s.name} — ${s.duration_min} min — ${s.price}`;
       if (Array.isArray(s.variants) && s.variants.length) line += " | PACKAGES (quote per choice): " + s.variants.map((v: any) => v.label + "=" + v.price).join(", ");
+      // Shtesat + rregullat e paketimit → AI-ja s'gabon kurrë çfarë hyn e çfarë jo në çmim
+      const ad = Array.isArray(s.addons) ? s.addons : [];
+      if (ad.length) line += " | ADD-ONS: " + ad.filter((a: any) => a && a.name).map((a: any) => {
+        const thr = a.when ? (a.when.qty != null ? a.when.qty : a.when.total) : null;
+        const unit = a.when && a.when.qty != null ? " pcs" : " currency";
+        const cond = (thr != null && a.then)
+          ? (a.then === "free" ? `, FREE from ${thr}${unit}` : `, becomes MANDATORY from ${thr}${unit}`) : "";
+        return `${a.name}=${a.price}${a.required ? " (always mandatory)" : " (optional)"}${cond}`;
+      }).join("; ");
       return line;
     }).join("\n"),
     cappedNote(Math.min(services.length, 60), services.length),
+    services.some((s: any) => Array.isArray(s.addons) && s.addons.some((a: any) => a && (a.required || a.when)))
+      ? `BUNDLING (STRICT): some items ship with ADD-ONS. "(always mandatory)" = the customer CANNOT buy the item without it — always include its price in any quote and say so plainly. "(optional)" = they may decline it (e.g. delivery when they can pick up in store) — ask, never assume. "FREE from N" / "becomes MANDATORY from N" = a threshold rule: below N it is charged/optional, at N or more it becomes free/mandatory — state the exact threshold and, when they are close, tell them how many more they need ("one more and delivery is free"). Never invent thresholds or bundle items that are not listed as add-ons.`
+      : "",
     services.some((s: any) => !Number(s.price))
       ? `PRICE ON REQUEST (STRICT): items marked "PRICE ON REQUEST" are quoted personally per customer (custom / made-to-order work). NEVER invent, guess or estimate a number for them. Instead: warmly ask WHAT exactly the customer needs (size/quantity/details), collect their name + phone number, and promise the owner will send a personal offer shortly. Copy their request (one short line) into "unanswered_question" so the owner is pinged instantly.`
       : "",

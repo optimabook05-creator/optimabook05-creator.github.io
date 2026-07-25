@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=160">
+<link rel="stylesheet" href="style.css?v=161">
 <style>
   .pub-wrap { max-width: 560px; margin: 30px auto 80px; padding: 0 16px; }
   .pub-card { background: var(--glass); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6);
@@ -109,7 +109,9 @@
   <div class="pub-foot">⚡ <span id="poweredTxt">Mundësuar nga</span> <a href="index.html">OptimaBook</a></div>
 </div>
 
-<script>(function(){var v=new URLSearchParams(location.search).get('v');document.write('<script src="core.js'+(v?'?v='+encodeURIComponent(v):'')+'"><\/script>');})();</script>
+<!-- Etiketë STATIKE e versionuar (jo document.write: ai bllokon skanerin e parangarkimit
+     — mësim i v80/v81). Skripti klasik ekzekutohet gjithmonë PARA modulit poshtë. -->
+<script src="core.js?v=161"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
@@ -127,12 +129,14 @@ const T = {
     service:"Shërbimi", date:"Data", pickSlot:"Zgjedh orarin", noSlots:"S'ka orare të lira këtë ditë.", closed:"Mbyllur këtë ditë.",
     name:"Emri yt", phone:"Telefoni", contact:"Telefon / email", notes:"Shënime (opsionale)", total:"Totali", send:"Dërgo",
     okBook:"U rezervua! 🎉", okBookP:"Pronari do ta konfirmojë së shpejti.", okOrder:"Porosia u dërgua! 🎉", okOrderP:"Pronari do të kontaktojë së shpejti.",
-    needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", rate:"Shumë kërkesa njëherësh — prit pak dhe provo sërish.", another:"Bëj një tjetër", track:"📦 Gjurmo statusin", addonInc:"përfshihet", priceAsk:"çmimi me kërkesë" },
+    needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", rate:"Shumë kërkesa njëherësh — prit pak dhe provo sërish.", another:"Bëj një tjetër", track:"📦 Gjurmo statusin", addonInc:"përfshihet", priceAsk:"çmimi me kërkesë",
+    addonFree:"FALAS", addonNeedQty:"— edhe {n} copë dhe e ke falas!" },
   en: { loading:"Loading…", notfound:"Business not found.", powered:"Powered by", book:"Book an appointment", order:"Place your order",
     service:"Service", date:"Date", pickSlot:"Pick a time", noSlots:"No free times this day.", closed:"Closed this day.",
     name:"Your name", phone:"Phone", contact:"Phone / email", notes:"Notes (optional)", total:"Total", send:"Send",
     okBook:"Booked! 🎉", okBookP:"The owner will confirm shortly.", okOrder:"Order sent! 🎉", okOrderP:"The owner will contact you shortly.",
-    needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", rate:"Too many requests at once — wait a moment and try again.", another:"Make another", track:"📦 Track status", addonInc:"included", priceAsk:"price on request" },
+    needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", rate:"Too many requests at once — wait a moment and try again.", another:"Make another", track:"📦 Track status", addonInc:"included", priceAsk:"price on request",
+    addonFree:"FREE", addonNeedQty:"— {n} more and it's free!" },
 };
 const tr = (k) => (SQ ? T.sq : T.en)[k];
 
@@ -292,16 +296,12 @@ function itemRow(s) {
   const showUnit = OB.fieldVisible("unit", s.hidden_fields, cfg.catUnit !== false);
   const showAddons = OB.fieldVisible("addons", s.hidden_fields, true);
   const adds = (showAddons && Array.isArray(s.addons)) ? s.addons : [];
-  const addHtml = adds.length ? `<div class="pi-addons">${adds.map((a, i) => a.required
-    ? `<div class="pi-addon req">+ ${esc(a.name)} ${money(a.price)} · ${tr("addonInc")}</div>`
-    : `<label class="pi-addon"><input type="checkbox" data-addon="${s.id}" data-i="${i}"> + ${esc(a.name)} ${money(a.price)}</label>`
-  ).join("")}</div>` : "";
   return `<div class="pub-item">
     <div class="pi-grow">
       <div class="pi-name">${esc(s.name)}</div>
       ${showDesc && s.description ? `<div class="pi-desc">${esc(s.description)}</div>` : ""}
       <div class="pi-price">${Number(s.price) ? money(s.price) + (showUnit && s.unit_label ? " / " + esc(s.unit_label) : "") : "💬 " + tr("priceAsk")}</div>
-      ${addHtml}
+      ${adds.length ? `<div class="pi-addons" id="ad-${s.id}">${addonsHtml(s)}</div>` : ""}
     </div>
     <div class="qty">
       <button type="button" data-m="${s.id}">−</button>
@@ -310,26 +310,57 @@ function itemRow(s) {
     </div>
   </div>`;
 }
+/* Shtesat me RREGULLA (OB.resolveAddons = e vërteta e vetme, e njëjtë me serverin):
+   të detyrueshme s'çkiqen dot; ato që bëhen falas/të detyrueshme me sasi
+   rivizatohen sa herë ndryshon sasia, me nxitje të qartë ("edhe 1 → FALAS"). */
+function addonsHtml(s) {
+  const qty = cart[s.id] || 0;
+  const line = unitPrice(s, qty) * qty;
+  return OB.resolveAddons(s.addons, qty, line).map((a, i) => {
+    const price = a.freed
+      ? `<s style="opacity:.55">${money(a.basePrice)}</s> <b style="color:var(--accent-deep)">${tr("addonFree")}</b>`
+      : money(a.price);
+    if (a.required) return `<div class="pi-addon req">+ ${esc(a.name)} ${price} · ${tr("addonInc")}</div>`;
+    const checked = (cartAddons[s.id] && cartAddons[s.id].has(i)) ? " checked" : "";
+    const hint = a.needQty > 0 && a.then === "free"
+      ? ` <small style="color:var(--accent-deep);font-weight:700">${tr("addonNeedQty").replace("{n}", a.needQty)}</small>` : "";
+    return `<label class="pi-addon"><input type="checkbox" data-addon="${s.id}" data-i="${i}"${checked}> + ${esc(a.name)} ${price}${hint}</label>`;
+  }).join("");
+}
+// Rivizato shtesat e një artikulli pas ndryshimit të sasisë (rregullat mund të kenë ndryshuar)
+function redrawAddons(id) {
+  const box = document.getElementById("ad-" + id); if (!box) return;
+  const s = svcById(id); if (!s) return;
+  box.innerHTML = addonsHtml(s);
+  wireAddons(box);
+}
+function wireAddons(root) {
+  root.querySelectorAll("input[data-addon]").forEach((c) => c.onchange = () => {
+    const id = c.dataset.addon, i = +c.dataset.i;
+    cartAddons[id] = cartAddons[id] || new Set();
+    if (c.checked) cartAddons[id].add(i); else cartAddons[id].delete(i);
+    recompute();
+  });
+}
 function recompute() {
   let total = 0;
   for (const id in cart) {
     const it = svcById(id); if (!it) continue;
     const qty = cart[id];
-    total += unitPrice(it, qty) * qty;
-    const adds = Array.isArray(it.addons) ? it.addons : [];
-    adds.forEach((a, i) => { if (a.required || (cartAddons[id] && cartAddons[id].has(i))) total += (Number(a.price) || 0) * qty; });
+    const line = unitPrice(it, qty) * qty;
+    total += line;
+    // Çmimi i shtesës vjen nga rregullat (falas mbi prag), jo nga fusha e papërpunuar
+    OB.resolveAddons(it.addons, qty, line).forEach((a, i) => {
+      if (a.required || (cartAddons[id] && cartAddons[id].has(i))) total += a.price * qty;
+    });
   }
   $("#oTotal").textContent = money(total);
 }
 function wireOrder() {
-  $("#oItems").querySelectorAll("button[data-p]").forEach((b) => b.onclick = () => { const id = b.dataset.p; cart[id] = (cart[id] || 0) + 1; $("#q-" + id).textContent = cart[id]; recompute(); });
-  $("#oItems").querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => { const id = b.dataset.m; cart[id] = Math.max(0, (cart[id] || 0) - 1); $("#q-" + id).textContent = cart[id]; if (!cart[id]) delete cart[id]; recompute(); });
-  $("#oItems").querySelectorAll("input[data-addon]").forEach((c) => c.onchange = () => {
-    const id = c.dataset.addon, i = +c.dataset.i;
-    (cartAddons[id] = cartAddons[id] || new Set());
-    if (c.checked) cartAddons[id].add(i); else cartAddons[id].delete(i);
-    recompute();
-  });
+  // Ndryshimi i sasisë RIVIZATON shtesat: pragu mund të ketë hyrë/dalë në fuqi
+  $("#oItems").querySelectorAll("button[data-p]").forEach((b) => b.onclick = () => { const id = b.dataset.p; cart[id] = (cart[id] || 0) + 1; $("#q-" + id).textContent = cart[id]; redrawAddons(id); recompute(); });
+  $("#oItems").querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => { const id = b.dataset.m; cart[id] = Math.max(0, (cart[id] || 0) - 1); $("#q-" + id).textContent = cart[id]; if (!cart[id]) delete cart[id]; redrawAddons(id); recompute(); });
+  wireAddons($("#oItems"));
   $("#oGo").onclick = async () => {
     const items = Object.keys(cart).map((id) => {
       const it = svcById(id); const adds = (it && Array.isArray(it.addons)) ? it.addons : [];
