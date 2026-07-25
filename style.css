@@ -1914,30 +1914,36 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
   .panel-body { display: block; }
 
   /* Backdrop: errëson + turbullon LEHTË përmbajtjen (pa nesting të rëndë blur-i) */
+  /* SMOOTHNESS: perdja ANIMOHET (fade) → PA backdrop-blur (blur i animuar mbi
+     gjithë ekranin = ngecja e hapjes së "Më shumë"); errësirë më e thellë e zë vendin. */
   .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 65;
-    background: rgba(10,16,14,.32); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-    animation: opx-backdrop .25s ease; }
+    background: rgba(8,13,11,.46);
+    animation: opx-backdrop .22s ease; }
   .sidebar-backdrop[hidden] { display: none; }
 
   /* FLETË "Menu" — QELQ I ERRËT TRANSPARENT me blur (sheh faqen pas, stil iOS si referenca) */
   .sidebar { display: none; }
   /* QELQ TRANSPARENT që përshtatet me temën (dritë=qumësht, errësirë=i errët) — glassmorphism i vërtetë */
   .sidebar.open {
-    display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 70; max-height: 86vh; overflow-y: auto;
+    /* top:auto është KRITIK: `.sidebar{top:88px}` i rregullit bazë mbetej aktiv dhe
+       e ankoronte fletën lart → me max-height 86vh mbetej rrip i pambuluar poshtë,
+       ku dukej bari i navigimit nën fletë (bug real i parë në laborator). */
+    display: block; position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 70; max-height: 86vh; overflow-y: auto;
     -webkit-overflow-scrolling: touch; color: var(--ink);
-    /* SMOOTHNESS: fleta animohet (sheetUp) → sfond SOLID, jo blur(36) i animuar (jank në iOS) */
-    background: #fbfaf8;
+    /* SMOOTHNESS: fleta animohet (sheetUp) → sfond SOLID, jo blur(36) i animuar (jank në iOS).
+       BUKURIA pa koston: gradient statik me puhi smeraldi — duket premium, kushton zero. */
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbf8 45%, #edf6f0 100%);
     border-top: 1px solid var(--glass-edge); border-radius: 28px 28px 0 0;
     box-shadow: 0 -30px 80px rgba(8,14,11,.28), inset 0 1px 0 rgba(255,255,255,.5);
     padding-bottom: calc(18px + env(safe-area-inset-bottom));
     animation: sheetUp .4s cubic-bezier(.2,.95,.3,1);
   }
-  :root[data-theme="dark"] .sidebar.open { background: #141c19; }
+  :root[data-theme="dark"] .sidebar.open { background: linear-gradient(180deg, #182420 0%, #121b17 55%, #0e1613 100%); }
   /* header me sfond qelqi (mbulon rreshtat që rrëshqasin poshtë) + vijë ndarëse */
   .sidebar-mhead { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 2;
     padding: var(--sp-20) var(--sp-20) 12px; color: var(--ink); font-family: var(--font-display); font-weight: 800; font-size: 20px;
-    background: #fbfaf8; border-bottom: 1px solid var(--glass-line); border-radius: 28px 28px 0 0; }
-  :root[data-theme="dark"] .sidebar-mhead { background: #141c19; }
+    background: #ffffff; border-bottom: 1px solid var(--glass-line); border-radius: 28px 28px 0 0; }
+  :root[data-theme="dark"] .sidebar-mhead { background: #182420; }
   .sidebar-mhead::before { content: ""; position: absolute; top: 9px; left: 50%; transform: translateX(-50%);
     width: 42px; height: 5px; border-radius: 3px; background: var(--ink-soft); opacity: .4; }
   .sidebar-mhead button { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; color: var(--ink); font-size: 17px; font-weight: 700;
@@ -2040,7 +2046,7 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
   .sidebar.open .tabs > *:nth-child(7){animation-delay:.21s} .sidebar.open .tabs > *:nth-child(8){animation-delay:.24s}
   .sidebar.open .tabs > *:nth-child(9){animation-delay:.27s} .sidebar.open .tabs > *:nth-child(n+10){animation-delay:.3s}
 }
-@keyframes menuItemIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes menuItemIn { from { opacity: 0; transform: translate3d(0, 8px, 0); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .sidebar.open .tabs > * { animation: none !important; } }
 
 /* ===================================================================
@@ -2477,3 +2483,128 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
    gjithmonë të dukshme) — ky rregull e vret përgjithmonë klasën.
    ============================================================ */
 [hidden] { display: none !important; }
+
+/* ============================================================
+   ✨ SHTRESA E FUNDIT — BUKURI PREMIUM PA KOSTO (v158)
+   Parimi: pamja e materialit vjen nga GRADIENTËT + DRITA E BRENDSHME
+   (kushtojnë zero), jo nga blur i shtuar. Rregullat e sigurisë
+   (barra ≥.86 opake, zero content-visibility, [hidden]) mbeten të paprekura.
+   ============================================================ */
+
+/* --- Kartat e statistikave: xham me dritë nga lart-majtas + skaj që shkëlqen --- */
+.stat-card {
+  background:
+    linear-gradient(158deg, rgba(255,255,255,.92) 0%, rgba(255,255,255,.62) 46%, rgba(240,251,246,.58) 100%);
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow:
+    0 1px 2px rgba(22,32,28,.05),
+    0 8px 22px -14px rgba(22,32,28,.30),
+    inset 0 1px 0 rgba(255,255,255,.95);
+}
+.stat-card.highlight {
+  background:
+    linear-gradient(158deg, rgba(255,255,255,.95) 0%, rgba(214,247,233,.78) 55%, rgba(190,240,222,.62) 100%);
+  border-color: rgba(12,166,120,.30);
+  box-shadow: 0 1px 2px rgba(12,166,120,.10), 0 12px 30px -16px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.95);
+}
+.stat-card.warn {
+  background: linear-gradient(158deg, rgba(255,255,255,.95) 0%, rgba(255,231,231,.72) 55%, rgba(255,219,219,.6) 100%);
+  border-color: rgba(224,86,86,.24);
+}
+:root[data-theme="dark"] .stat-card {
+  background: linear-gradient(158deg, rgba(46,62,56,.72) 0%, rgba(26,37,33,.62) 50%, rgba(20,29,26,.58) 100%);
+  border-color: rgba(255,255,255,.10);
+  box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 26px -16px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.07);
+}
+:root[data-theme="dark"] .stat-card.highlight {
+  background: linear-gradient(158deg, rgba(32,201,151,.20) 0%, rgba(26,45,39,.66) 55%, rgba(20,32,28,.6) 100%);
+  border-color: rgba(32,201,151,.30);
+}
+
+/* --- Kutitë e mëdha (Ekonomia/BI): i njëjti material, një shkallë më i qetë --- */
+.bi-box, .wk-card, .cv-card, .ins-card, .settings-block, .cfg-card {
+  background: linear-gradient(158deg, rgba(255,255,255,.86) 0%, rgba(255,255,255,.56) 60%, rgba(240,251,246,.5) 100%);
+  border: 1px solid rgba(255,255,255,.85);
+  box-shadow: 0 1px 2px rgba(22,32,28,.04), 0 10px 26px -18px rgba(22,32,28,.28), inset 0 1px 0 rgba(255,255,255,.9);
+}
+:root[data-theme="dark"] .bi-box, :root[data-theme="dark"] .wk-card,
+:root[data-theme="dark"] .cv-card, :root[data-theme="dark"] .ins-card,
+:root[data-theme="dark"] .settings-block, :root[data-theme="dark"] .cfg-card {
+  background: linear-gradient(158deg, rgba(44,60,54,.6) 0%, rgba(24,35,31,.56) 60%, rgba(19,28,25,.52) 100%);
+  border-color: rgba(255,255,255,.09);
+  box-shadow: 0 1px 2px rgba(0,0,0,.25), 0 10px 26px -18px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+/* --- Butoni kryesor: smerald me thellësi, shkëlqim sipër, shtyp me susta --- */
+.btn.primary {
+  background: linear-gradient(165deg, #23d3a0 0%, var(--accent) 52%, var(--accent-deep) 100%);
+  border: 1px solid rgba(255,255,255,.28);
+  box-shadow:
+    0 1px 2px rgba(6,84,60,.28),
+    0 10px 24px -10px var(--accent-glow),
+    inset 0 1px 0 rgba(255,255,255,.55),
+    inset 0 -1px 0 rgba(0,0,0,.10);
+  letter-spacing: -.01em;
+}
+.btn.primary:hover {
+  box-shadow: 0 2px 4px rgba(6,84,60,.3), 0 16px 34px -12px var(--accent-glow),
+    inset 0 1px 0 rgba(255,255,255,.6), inset 0 -1px 0 rgba(0,0,0,.10);
+  filter: saturate(1.06) brightness(1.02);
+}
+.btn.primary:active { transform: scale(.965); box-shadow: 0 1px 2px rgba(6,84,60,.3), inset 0 2px 6px rgba(0,0,0,.16); }
+
+/* Butonat dytësorë: xham i vërtetë me skaj drite (jo "të bardhë të sheshtë") */
+.btn:not(.primary):not(.danger) {
+  background: linear-gradient(165deg, rgba(255,255,255,.88), rgba(255,255,255,.62));
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 1px 2px rgba(22,32,28,.05), inset 0 1px 0 rgba(255,255,255,.95);
+}
+.btn:not(.primary):not(.danger):hover {
+  background: linear-gradient(165deg, #fff, rgba(255,255,255,.78));
+  box-shadow: 0 6px 18px -10px rgba(22,32,28,.4), inset 0 1px 0 #fff;
+}
+:root[data-theme="dark"] .btn:not(.primary):not(.danger) {
+  background: linear-gradient(165deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+  border-color: rgba(255,255,255,.14);
+  box-shadow: 0 1px 2px rgba(0,0,0,.3), inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* --- Barrat: opake (lexueshmëri) POR me dritë sipër → duken material, jo bojë --- */
+.topbar {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.93) 0%, rgba(255,255,255,.80) 100%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 10px 30px -14px rgba(22,32,28,.28);
+}
+:root[data-theme="dark"] .topbar {
+  background: linear-gradient(180deg, rgba(38,52,47,.94) 0%, rgba(18,26,23,.86) 100%);
+}
+@media (max-width: 900px) {
+  .botnav {
+    background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(250,253,251,.92) 100%);
+    box-shadow: 0 -1px 0 rgba(255,255,255,.9) inset, 0 -10px 34px -12px rgba(22,32,28,.18);
+  }
+  :root[data-theme="dark"] .botnav {
+    background: linear-gradient(180deg, rgba(26,36,32,.96) 0%, rgba(16,23,20,.94) 100%);
+  }
+  /* Pilula aktive: gradient me thellësi + unazë e butë drite */
+  .botnav button.active::before {
+    background: linear-gradient(165deg, #23d3a0, var(--accent) 58%, var(--accent-deep));
+    box-shadow: 0 6px 18px -6px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.45);
+  }
+}
+
+/* --- Fusha hyrjeje: thellësi e brendshme (si iOS), jo kuti të sheshta --- */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea {
+  box-shadow: inset 0 1px 2px rgba(22,32,28,.05);
+}
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+:root[data-theme="dark"] select, :root[data-theme="dark"] textarea {
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.25);
+}
+
+/* --- Shiritat e "Më të shiturat": gradient i gjallë + shkëlqim i brendshëm --- */
+.bi-bar { box-shadow: inset 0 1px 2px rgba(22,32,28,.10); }
+.bi-bar-fill {
+  background: linear-gradient(90deg, var(--accent-deep), var(--accent) 45%, #2ee0ab);
+  box-shadow: 0 0 12px -2px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.35);
+}
