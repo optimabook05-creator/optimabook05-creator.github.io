@@ -294,7 +294,50 @@
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged, normKey, planImport, escapeHtml };
+  /* -------------------------------------------------------------------
+     RADHA OFFLINE — veprimet e pronarit nuk humbin kurrë pa internet.
+     Pronari punon në bodrum/treg/makinë: shënon "erdhi", konfirmon një
+     porosi — pa sinjal. Këto rreshtohen dhe dërgohen VETË kur kthehet
+     lidhja. Pranohen VETËM update/delete me id → riprovimi është i
+     PASIGURT vetëm për insert (dublikatë), ndaj insert-et s'hyjnë kurrë.
+     ------------------------------------------------------------------- */
+  // A është ky gabim "mungesë rrjeti" (rreshtohet) apo gabim i vërtetë serveri (shfaqet)?
+  // Gabimet e serverit (RLS, validim) KANË kod/status → s'duhen rreshtuar kurrë.
+  function isOfflineError(err, online) {
+    if (online === false) return true;
+    if (!err) return false;
+    if (err.code || err.status) return false;          // përgjigje reale serveri → jo offline
+    const m = String(err.message || err).toLowerCase();
+    return /failed to fetch|networkerror|network request failed|load failed|connection|timeout|offline/.test(m);
+  }
+  // Radhë e qëndrueshme (persistuese te vetë thirrësi: save(list) / load())
+  function makeQueue(opts) {
+    opts = opts || {};
+    const max = opts.max || 100;
+    let list = [];
+    let seq = 0;
+    const ALLOWED = { update: 1, delete: 1 };
+    return {
+      hydrate(arr) { list = Array.isArray(arr) ? arr.filter((x) => x && ALLOWED[x.op] && x.table && x.match) .slice(-max) : []; return list.length; },
+      list() { return list.slice(); },
+      size() { return list.length; },
+      // Kthen hyrjen e shtuar, ose null nëse veprimi s'lejohet (p.sh. insert)
+      add(entry) {
+        if (!entry || !ALLOWED[entry.op] || !entry.table || !entry.match) return null;
+        const e = Object.assign({}, entry, { qid: (++seq) + ":" + Date.now() });
+        // I njëjti veprim mbi TË NJËJTIN rresht → mbaje vetëm të fundit (gjendja finale fiton)
+        const key = e.table + "|" + e.op + "|" + JSON.stringify(e.match);
+        list = list.filter((x) => (x.table + "|" + x.op + "|" + JSON.stringify(x.match)) !== key);
+        list.push(e);
+        while (list.length > max) list.shift();
+        return e;
+      },
+      remove(qid) { const n = list.length; list = list.filter((x) => x.qid !== qid); return n !== list.length; },
+      clear() { list = []; },
+    };
+  }
+
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged, normKey, planImport, escapeHtml, isOfflineError, makeQueue };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);

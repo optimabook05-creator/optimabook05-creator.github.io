@@ -151,6 +151,8 @@ const T = {
     errGeneric: "Diçka shkoi keq. Provo sërish.", itemDescTitle: "📝 Përshkrimi",
     errLoadT: "S'u ngarkua dot", errLoadH: "Kontrollo internetin dhe provo sërish.", retry: "Provo sërish",
     netOffline: "📡 Pa internet — po shfaqen të dhënat e fundit",
+    qSaved: "📥 Pa internet — u ruajt, dërgohet vetë kur të kthehet lidhja",
+    qSent: "✅ {n} ndryshime u dërguan", qPending: "{n} presin dërgimin", qPendingOnline: "📤 Po dërgohen ndryshimet…",
     rtNewAppt: "📅 Rezervim i ri", rtNewOrder: "🧾 Porosi e re", rtNewLead: "📥 Kërkesë e re", rtSee: "Shiko",
     rtNewQ: "❓ Pyetje e re — mësoje AI-në", aiqTitle: "Pyetje pa përgjigje",
     aiqHint: "Klientët pyetën këto dhe AI s'kishte përgjigjen. Përgjigju NJË herë — AI e mëson përgjithmonë.",
@@ -414,6 +416,8 @@ const T = {
     errGeneric: "Something went wrong. Try again.", itemDescTitle: "📝 Description",
     errLoadT: "Couldn't load", errLoadH: "Check your internet connection and try again.", retry: "Try again",
     netOffline: "📡 Offline — showing your latest data",
+    qSaved: "📥 Offline — saved, it will send itself once you're back online",
+    qSent: "✅ {n} changes sent", qPending: "{n} waiting to send", qPendingOnline: "📤 Sending your changes…",
     rtNewAppt: "📅 New booking", rtNewOrder: "🧾 New order", rtNewLead: "📥 New request", rtSee: "View",
     rtNewQ: "❓ New question — teach the AI", aiqTitle: "Unanswered questions",
     aiqHint: "Customers asked these and the AI didn't have the answer. Answer ONCE — the AI learns it forever.",
@@ -824,18 +828,93 @@ function mutateData(name, fn, draw) {
   return () => { undo(); const u = dataCache.get(key); dataSeq.bump(key); draw(u.data); drawnRev[key] = u.rev; };
 }
 
-/* Banderola "pa internet" + rifreskim automatik kur kthehet lidhja/vëmendja */
+/* =====================================================================
+   RADHA OFFLINE — asnjë veprim i pronarit nuk humbet pa internet.
+   Pronari punon në treg/bodrum/makinë: shënon "erdhi", konfirmon porosinë.
+   Pa sinjal, veprimi RRESHTOHET (UI-ja optimiste ka ndryshuar tashmë, pra
+   për të duket sikur punoi) dhe dërgohet VETË kur kthehet lidhja.
+   SIGURIA: vetëm update/delete me id → riprovimi s'krijon kurrë dublikatë
+   (OB.makeQueue i refuzon insert-et); gabimet e VËRTETA të serverit (RLS,
+   validim) NUK rreshtohen — ato duhen parë menjëherë (OB.isOfflineError).
+   ===================================================================== */
+const QKEY = "ob-queue-v1";
+const obQueue = OB.makeQueue({ max: 100 });
+try { obQueue.hydrate(JSON.parse(localStorage.getItem(QKEY) || "[]")); } catch (_e) {}
+function saveQueue() { try { localStorage.setItem(QKEY, JSON.stringify(obQueue.list())); } catch (_e) {} }
+
+/* Shkrim i mbrojtur: provo tani → nëse s'ka rrjet, rreshtoje.
+   Kthen të njëjtën formë si Supabase ({error}) + flamurin `queued`. */
+async function writeQ(table, op, match, values) {
+  const attempt = async () => {
+    try {
+      const q = sb.from(table);
+      return op === "update" ? await q.update(values).match(match) : await q.delete().match(match);
+    } catch (ex) { return { error: ex }; }
+  };
+  // Offline i njohur → mos prit 30s për një kërkesë që s'ka ku shkojë
+  if (!navigator.onLine) {
+    if (obQueue.add({ table, op, match, values })) { saveQueue(); netBanner(true); toast(tr("qSaved")); return { error: null, queued: true }; }
+    return { error: { message: tr("netOffline") } };
+  }
+  const res = await attempt();
+  if (res && res.error && OB.isOfflineError(res.error, navigator.onLine)) {
+    if (obQueue.add({ table, op, match, values })) { saveQueue(); netBanner(true); toast(tr("qSaved")); return { error: null, queued: true }; }
+  }
+  return { error: (res && res.error) || null };
+}
+
+let qFlushing = false;
+async function flushQueue() {
+  // KRITIKE: `biz` do të thotë "sesioni është gati". Pa këtë roje, kthimi i lidhjes
+  // NË EKRANIN E HYRJES do t'i provonte shkrimet pa sesion → do dështonin me gabim
+  // RLS (jo-rrjeti) → hyrjet do FSHIHESHIN si "gabim i vërtetë" = humbje veprimesh.
+  if (qFlushing || !navigator.onLine || !obQueue.size() || !sb || !biz) return;
+  qFlushing = true;
+  let sent = 0;
+  for (const e of obQueue.list()) {
+    let r;
+    try {
+      const q = sb.from(e.table);
+      r = e.op === "update" ? await q.update(e.values).match(e.match) : await q.delete().match(e.match);
+    } catch (ex) { r = { error: ex }; }
+    if (r && r.error) {
+      // Ende pa rrjet → ndal, provo herën tjetër (radha ruhet e paprekur)
+      if (OB.isOfflineError(r.error, navigator.onLine)) break;
+      // Gabim i vërtetë serveri (rreshti u fshi ndërkohë, RLS…) → hiqe që të mos ngecë radha përjetë
+      obQueue.remove(e.qid); logClientError("queue-drop", r.error.message || "queue item failed", r.error);
+      continue;
+    }
+    obQueue.remove(e.qid); sent++;
+  }
+  saveQueue();
+  qFlushing = false;
+  if (sent) { toast(tr("qSent").replace("{n}", sent)); revalidateVisible(); }
+  netBanner(!navigator.onLine);
+}
+
+/* Banderola "pa internet" + rifreskim automatik kur kthehet lidhja/vëmendja.
+   Kur ka veprime në pritje, banderola e thotë numrin — pronari e di që s'humbi asgjë. */
 function netBanner(showIt) {
   const b = $("#netBanner"); if (!b) return;
-  if (showIt) { b.textContent = tr("netOffline"); b.hidden = false; requestAnimationFrame(() => b.classList.add("show")); }
-  else { b.classList.remove("show"); setTimeout(() => { b.hidden = true; }, 250); }
+  // Numri i pritjes ka kuptim vetëm brenda panelit (jo në ekranin e hyrjes).
+  // Përdorim #appView, JO `biz`: kjo funksion thirret edhe në nivel moduli
+  // (hapje offline) ku `biz` është ende në zonën e vdekur (TDZ) → do jepte gabim.
+  const inApp = !!($("#appView") && !$("#appView").hidden);
+  const pending = inApp ? obQueue.size() : 0;
+  const show = showIt || pending > 0;
+  if (show) {
+    b.textContent = (navigator.onLine ? tr("qPendingOnline") : tr("netOffline")) + (pending ? " · " + tr("qPending").replace("{n}", pending) : "");
+    b.hidden = false; requestAnimationFrame(() => b.classList.add("show"));
+  } else { b.classList.remove("show"); setTimeout(() => { b.hidden = true; }, 250); }
 }
 window.addEventListener("offline", () => netBanner(true));
-window.addEventListener("online", () => { netBanner(false); revalidateVisible(); });
+window.addEventListener("online", () => { netBanner(false); flushQueue(); revalidateVisible(); });
 if (!navigator.onLine) netBanner(true); // faqja u hap TASHMË offline → eventi s'vjen kurrë, kontrollo tani
+else if (obQueue.size()) netBanner(false); // u mbyll offline, u hap online → dërgoji sapo të hyjë sesioni
 let hiddenAt = 0;
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
+  flushQueue(); // u kthye te aplikacioni → provo t'i dërgosh veprimet e pritjes
   // Zgjimi i faqes: nëse kanali Realtime ra në gjumë (telefoni e ngriu WebSocket-in),
   // rilidhe — callback-u SUBSCRIBED bën vetë pajtimin e pamjes me serverin.
   // ("joining" = ende duke u lidhur vetë → mos e prek)
@@ -1345,7 +1424,7 @@ async function loadAll() {
   // PERF: Realtime hap WebSocket + dëgjues → e shtyjmë te "koha e lirë" pas ngarkimit,
   // që të mos konkurrojë me first-paint/interaktivitetin (ul Total Blocking Time).
   // Idempotent për të njëjtin biznes; pa requestIdleCallback → timeout i shkurtër.
-  const startRt = () => { if (biz) startRealtime(); };
+  const startRt = () => { if (biz) { startRealtime(); flushQueue(); } }; // sesioni gati → dërgo çka ka mbetur nga offline
   if ("requestIdleCallback" in window) requestIdleCallback(startRt, { timeout: 2500 });
   else setTimeout(startRt, 1200);
 }
@@ -3266,7 +3345,7 @@ function drawLeads(rows) {
     if (l.status !== "contacted") {
       const b = document.createElement("button");
       b.className = "btn small ghost"; b.textContent = tr("markContacted");
-      b.onclick = async () => { await sb.from("leads").update({ status: "contacted" }).eq("id", l.id); await renderLeads(); };
+      b.onclick = async () => { const r = await writeQ("leads", "update", { id: l.id }, { status: "contacted" }); if (r.error) { errToast(r.error); return; } if (!r.queued) await renderLeads(); };
       item.appendChild(b);
     }
     list.appendChild(item);
@@ -3517,8 +3596,9 @@ async function rescheduleAppt(card, a) {
         (d) => drawCalendar(d, nd)) : null,
     ].filter(Boolean);
     toast(tr("toastRescheduled"));
-    const { error } = await sb.from("appointments").update({ appt_date: nd, appt_time: nt, status: "pending" }).eq("id", a.id);
+    const { error, queued } = await writeQ("appointments", "update", { id: a.id }, { appt_date: nd, appt_time: nt, status: "pending" });
     if (error) { undos.forEach((u) => u()); errToast(error); return; }
+    if (queued) return;
     renderAppointments(); // pajtim i heshtur me serverin
   };
   no.onclick = () => { forceDraw("appts"); renderAppointments(); }; // rikthe butonat e kartës
@@ -3548,8 +3628,10 @@ async function setStatus(id, status, prev) {
   // Undo për veprime të rrezikshme (parandalon humbjen e takimit nga prekje aksidentale)
   const undoable = (status === "cancelled" || status === "no_show") && prev && prev !== status;
   toast(m, null, undoable ? { label: tr("undo"), fn: () => setStatus(id, prev) } : null);
-  const { error } = await sb.from("appointments").update({ status }).eq("id", id);
+  // Pa internet → rreshtohet dhe dërgohet vetë (UI-ja optimiste tashmë e tregon si të kryer)
+  const { error, queued } = await writeQ("appointments", "update", { id }, { status });
   if (error) { undos.forEach((u) => u()); errToast(error); return; }
+  if (queued) return; // s'ka çfarë të pajtohet me serverin ende
   renderAppointments(); // pajtim i heshtur me serverin (asnjë prekje DOM-i po s'pati ndryshim)
 }
 
@@ -3588,8 +3670,9 @@ async function deleteBlock(id) {
     row ? mutateData("cal:" + row.block_date, (d) => { d.blocks = d.blocks.filter((x) => x.id !== id); return d; },
       (d) => drawCalendar(d, row.block_date)) : null,
   ].filter(Boolean);
-  const { error } = await sb.from("time_blocks").delete().eq("id", id);
+  const { error, queued } = await writeQ("time_blocks", "delete", { id });
   if (error) { undos.forEach((u) => u()); errToast(error); return; }
+  if (queued) return;
   renderBlocks(); // pajtim i heshtur
 }
 

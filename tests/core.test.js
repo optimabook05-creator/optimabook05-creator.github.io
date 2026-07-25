@@ -250,3 +250,47 @@ test("makeCache snapshot/hydrate — kujtesa mbijeton rifreskimin (sessionStorag
   c2.hydrate({ a: { data: [{ id: 1 }], rev: 1 } });
   assert.strictEqual(c2.get("a").data[0].id, 99);
 });
+
+test("isOfflineError — dallon mungesën e rrjetit nga gabimi i vërtetë i serverit", () => {
+  // offline i deklaruar nga shfletuesi → gjithmonë rreshtohet
+  assert.strictEqual(OB.isOfflineError(null, false), true);
+  assert.strictEqual(OB.isOfflineError({ message: "Failed to fetch" }, true), true);
+  assert.strictEqual(OB.isOfflineError({ message: "NetworkError when attempting to fetch" }, true), true);
+  // Gabimet REALE të serverit (RLS/validim) kanë kod ose status → NUK rreshtohen kurrë,
+  // ndryshe një veprim i ndaluar do "ruhej" gënjeshtër dhe do riprovohej pafund.
+  assert.strictEqual(OB.isOfflineError({ code: "42501", message: "permission denied" }, true), false);
+  assert.strictEqual(OB.isOfflineError({ status: 400, message: "invalid input" }, true), false);
+  assert.strictEqual(OB.isOfflineError({ message: "duplicate key value" }, true), false);
+  assert.strictEqual(OB.isOfflineError(null, true), false);
+});
+
+test("makeQueue — pranon vetëm update/delete, ruan gjendjen finale, mbijeton rifreskimin", () => {
+  const q = OB.makeQueue({ max: 3 });
+  // INSERT-et refuzohen: riprovimi do krijonte dublikatë
+  assert.strictEqual(q.add({ op: "insert", table: "orders", values: {} }), null);
+  assert.strictEqual(q.add({ op: "update", table: "appointments" }), null); // pa match → refuzohet
+  const a = q.add({ op: "update", table: "appointments", match: { id: 1 }, values: { status: "confirmed" } });
+  assert.ok(a && a.qid);
+  assert.strictEqual(q.size(), 1);
+  // I njëjti rresht i prekur sërish → mbetet VETËM gjendja e fundit (jo dy shkrime)
+  q.add({ op: "update", table: "appointments", match: { id: 1 }, values: { status: "attended" } });
+  assert.strictEqual(q.size(), 1);
+  assert.strictEqual(q.list()[0].values.status, "attended");
+  // rreshta të ndryshëm → hyrje të ndara
+  q.add({ op: "update", table: "appointments", match: { id: 2 }, values: { status: "cancelled" } });
+  q.add({ op: "delete", table: "time_blocks", match: { id: 9 } });
+  assert.strictEqual(q.size(), 3);
+  // kapaku: më e vjetra bie
+  q.add({ op: "update", table: "orders", match: { id: 7 }, values: { status: "new" } });
+  assert.strictEqual(q.size(), 3);
+  assert.ok(!q.list().some((x) => x.match.id === 1 && x.table === "appointments"));
+  // hydrate: filtron mbeturinat/insertet e ruajtura gabimisht
+  const q2 = OB.makeQueue();
+  q2.hydrate([{ op: "update", table: "orders", match: { id: 5 }, values: {} }, { op: "insert", table: "orders" }, null, {}]);
+  assert.strictEqual(q2.size(), 1);
+  // remove
+  const only = q2.list()[0];
+  assert.strictEqual(q2.remove(only.qid), true);
+  assert.strictEqual(q2.remove(only.qid), false);
+  assert.strictEqual(q2.size(), 0);
+});
