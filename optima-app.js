@@ -1131,11 +1131,15 @@ async function afterLogin() {
   } else { openOnboard(); showView("onboard"); }
 }
 
-/* Rikthimi i skedës + scroll-it pas rifreskimit të telefonit (ndjesi native, s'humbet vendi) */
+/* Rikthimi i skedës + scroll-it pas rifreskimit të telefonit (ndjesi native, s'humbet vendi).
+   Shkurtoret e aplikacionit (shtyp gjatë ikonën në telefon → "Kalendari"/"Porositë") vijnë
+   si ?tab=… dhe kanë PËRPARËSI mbi skedën e fundit — përndryshe shkurtorja s'do bënte gjë. */
 function restoreTab() {
   try {
-    const t = sessionStorage.getItem("ob-tab");
-    if (t) { const el = document.querySelector('.tab[data-tab="' + t + '"]'); if (el) el.click(); }
+    let t = null;
+    try { t = new URLSearchParams(location.search).get("tab"); } catch (_e) {}
+    if (!t) t = sessionStorage.getItem("ob-tab");
+    if (t) { const el = document.querySelector('.tab[data-tab="' + t + '"]'); if (el && !el.hidden) el.click(); }
   } catch (_e) {}
 }
 function restoreScroll() {

@@ -8,6 +8,29 @@
   "orientation": "portrait",
   "background_color": "#f5f3ef",
   "theme_color": "#0ca678",
+  "shortcuts": [
+    {
+      "name": "Kalendari",
+      "short_name": "Kalendari",
+      "description": "Shiko takimet e sotme",
+      "url": "./app.html?tab=calendar",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Porositë",
+      "short_name": "Porositë",
+      "description": "Porositë dhe kërkesat e reja",
+      "url": "./app.html?tab=orders",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ekonomia",
+      "short_name": "Ekonomia",
+      "description": "Të ardhurat dhe fitimi",
+      "url": "./app.html?tab=reports",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "icon-192.png",
