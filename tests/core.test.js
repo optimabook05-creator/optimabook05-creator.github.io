@@ -347,3 +347,38 @@ test("resolveAddons — çdo kombinim i botës reale (opsionale/detyrueshme/të 
   r = OB.resolveAddons([{ name: "Y", price: 10, when: { qty: 2 } }], 99, 0); // pa `then`
   assert.strictEqual(r[0].price, 10);
 });
+
+test("auditImport — kap gabimet që AI-ja s'i sheh (gabim shtypi, dublikatë, çmim bosh)", () => {
+  // Katalog realist: 10 artikuj rreth 100€ + një gabim shtypi 12000 (duhej 120)
+  const items = [];
+  for (let i = 0; i < 10; i++) items.push({ name: "Artikull " + i, price: 100 + i, sku: "SKU" + i });
+  items.push({ name: "Gabim shtypi", price: 12000, sku: "SKU-X" });     // 100× mbi medianen
+  items.push({ name: "", price: 50 });                                   // pa emër
+  items.push({ name: "Pa çmim", price: 0 });                             // çmim bosh / "me kërkesë"
+  items.push({ name: "Artikull 0", price: 999, sku: "SKU-Y" });          // emër i dyfishuar
+  items.push({ name: "Tjetër", price: 60, sku: "SKU3" });                // SKU i dyfishuar
+  items.push({ name: "Stok minus", price: 70, stock: -5 });
+  items.push({ name: "AI dyshon", price: 80, uncertain: true });
+
+  const a = OB.auditImport(items);
+  const iss = (i) => a[i].issues;
+  assert.deepStrictEqual(iss(1), []);                       // artikull normal → pa probleme
+  assert.ok(iss(10).includes("outlier"));                   // gabimi i shtypit u kap
+  assert.ok(iss(11).includes("noName"));
+  assert.ok(iss(12).includes("zeroPrice"));
+  // TË DYJA anët e dublikatës flamurohen — pronari duhet t'i krahasojë e të vendosë
+  assert.ok(iss(13).includes("dupName"));
+  assert.ok(iss(0).includes("dupName"));
+  assert.ok(iss(14).includes("dupSku") && iss(3).includes("dupSku")); // SKU3: rreshti i ri + origjinali
+  assert.ok(iss(15).includes("badStock"));
+  assert.ok(iss(16).includes("aiUnsure"));
+  // Numri i rreshtave për kontroll = ai që sheh pronari te filtri
+  const flagged = a.filter((x) => x.issues.length).length;
+  assert.strictEqual(flagged, 9);  // 2 dupName + 2 dupSku + outlier + noName + zeroPrice + badStock + aiUnsure
+
+  // Mostër e VOGËL → zbulimi i vlerave të jashtëzakonshme fiket (një artikull i shtrenjtë s'është gabim)
+  const few = OB.auditImport([{ name: "Laptop", price: 1200 }, { name: "Mi", price: 10 }]);
+  assert.deepStrictEqual(few[0].issues, []);
+  // Hyrje boshe s'rrëzojnë asgjë
+  assert.deepStrictEqual(OB.auditImport(null), []);
+});

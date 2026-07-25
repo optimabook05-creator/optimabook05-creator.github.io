@@ -172,6 +172,10 @@ const T = {
     impErrEmpty: "S'u gjet asnjë artikull në skedar.",
     impStats: "U lexuan {n} artikuj: {i} të rinj · {u} përditësime",
     impUncertainN: "⚠️ {n} për kontroll (me të verdhë)",
+    impFAll: "Të gjitha ({n})", impFBad: "Për kontroll ({n})",
+    impIss_noName: "pa emër", impIss_badPrice: "çmim i pavlefshëm", impIss_zeroPrice: "çmimi 0 — kontrollo (ose lëre nëse është 'me kërkesë')",
+    impIss_outlier: "çmim shumë jashtë radhe — mos është gabim shtypi?", impIss_badStock: "stok negativ",
+    impIss_dupName: "emri përsëritet në listë", impIss_dupSku: "kodi (SKU) përsëritet në listë",
     impCurWarn: "Lista duket në {a}, biznesi yt përdor {b} — kontrollo çmimet.",
     impMore: "…dhe {n} rreshta të tjerë (hyjnë të gjithë në katalog kur konfirmon).",
     impConfirm: "✓ Fut në katalog", impSaving: "Duke ruajtur… {x}/{y}",
@@ -438,6 +442,10 @@ const T = {
     impErrEmpty: "No items found in the file.",
     impStats: "Read {n} items: {i} new · {u} updates",
     impUncertainN: "⚠️ {n} to review (highlighted)",
+    impFAll: "All ({n})", impFBad: "Needs review ({n})",
+    impIss_noName: "no name", impIss_badPrice: "invalid price", impIss_zeroPrice: "price 0 — check (or leave it if it's 'on request')",
+    impIss_outlier: "price way out of line — could this be a typo?", impIss_badStock: "negative stock",
+    impIss_dupName: "name repeats in this list", impIss_dupSku: "code (SKU) repeats in this list",
     impCurWarn: "The list looks like {a}, but your business uses {b} — double-check prices.",
     impMore: "…and {n} more rows (all will be imported when you confirm).",
     impConfirm: "✓ Add to catalog", impSaving: "Saving… {x}/{y}",
@@ -1558,7 +1566,7 @@ function impShow(step) { // pick | busy | preview | saving
   }
 }
 function openImport() {
-  impItems = []; impCurrency = "";
+  impItems = []; impCurrency = ""; impOnlyIssues = false; // filtri nis gjithmonë te "Të gjitha"
   const f = $("#impFile"); if (f) f.value = "";
   impShow("pick");
   $("#impModal").hidden = false;
@@ -1645,11 +1653,19 @@ async function impProcess(file) {
   }
 }
 
+let impOnlyIssues = false;   // filtri: shfaq VETËM rreshtat për kontroll
+
+/* Tabela paraprake e importit. ÇELËSI për katalogët e mëdhenj: auditimi
+   (OB.auditImport) gjen vetë rreshtat e dyshimtë — gabim shtypi te çmimi,
+   emra/kode të dyfishuar, çmim bosh — dhe filtri "Për kontroll (N)" i sjell
+   VETËM ata. Kështu 5000 rreshta kontrollohen duke parë 37, jo duke i lexuar
+   të gjithë. Të katër fushat janë të redaktueshme drejt në tabelë. */
 function impPreview(warnings) {
   const plan = OB.planImport(services, impItems);
-  const unc = impItems.filter((p) => p.uncertain).length;
+  const audit = OB.auditImport(impItems);
+  const flagged = audit.filter((a) => a.issues.length).length;
   let stats = tr("impStats").replace("{n}", impItems.length).replace("{i}", plan.inserts.length).replace("{u}", plan.updates.length);
-  if (unc) stats += " · " + tr("impUncertainN").replace("{n}", unc);
+  if (flagged) stats += " · " + tr("impUncertainN").replace("{n}", flagged);
   // Monedha e listës ndryshe nga e biznesit → paralajmërim i qartë
   if (impCurrency && biz.currency && impCurrency.toUpperCase() !== String(biz.currency).toUpperCase()) {
     warnings = [tr("impCurWarn").replace("{a}", impCurrency.toUpperCase()).replace("{b}", biz.currency), ...(warnings || [])];
@@ -1658,28 +1674,47 @@ function impPreview(warnings) {
   const w = $("#impWarn");
   if (warnings && warnings.length) { w.textContent = "⚠️ " + warnings.slice(0, 4).join(" · "); w.hidden = false; } else w.hidden = true;
 
+  // Filtri (shfaqet vetëm kur ka çfarë të filtrosh)
+  const fb = $("#impFilter");
+  if (fb) {
+    fb.hidden = !flagged;
+    if (flagged) {
+      fb.innerHTML = `<button type="button" class="imp-fbtn${impOnlyIssues ? "" : " active"}" data-f="all">${tr("impFAll").replace("{n}", impItems.length)}</button>
+        <button type="button" class="imp-fbtn${impOnlyIssues ? " active" : ""}" data-f="bad">⚠️ ${tr("impFBad").replace("{n}", flagged)}</button>`;
+      fb.querySelectorAll(".imp-fbtn").forEach((b) => b.onclick = () => { impOnlyIssues = b.dataset.f === "bad"; impPreview(warnings); });
+    } else impOnlyIssues = false;
+  }
+
+  // Rreshtat: filtro → pastaj prit (kapaku vlen mbi ata që shfaqen vërtet)
+  const rows = audit.filter((a) => !impOnlyIssues || a.issues.length);
   const tb = $("#impRows"); tb.innerHTML = "";
-  impItems.slice(0, IMP_SHOW_MAX).forEach((p, i) => {
+  rows.slice(0, IMP_SHOW_MAX).forEach((a) => {
+    const i = a.i, p = impItems[i];
     const trow = document.createElement("tr");
-    if (p.uncertain) trow.className = "imp-unc";
+    if (a.issues.length) trow.className = "imp-unc";
+    const why = a.issues.filter((k) => k !== "aiUnsure").map((k) => tr("impIss_" + k)).filter(Boolean).join(" · ");
+    const note = [why, p.note].filter(Boolean).join(" · ");
     trow.innerHTML = `
       <td><input type="text" value="${esc(p.name)}" data-i="${i}" data-f="name" maxlength="120"></td>
       <td><input type="number" value="${p.price}" data-i="${i}" data-f="price" min="0" step="0.01"></td>
-      <td>${p.stock || ""}</td><td>${esc(p.sku || "")}</td>
-      <td class="imp-note">${p.uncertain ? "⚠️ " : ""}${esc(p.note || "")}</td>`;
+      <td><input type="number" value="${p.stock != null ? p.stock : ""}" data-i="${i}" data-f="stock" min="0" step="1"></td>
+      <td><input type="text" value="${esc(p.sku || "")}" data-i="${i}" data-f="sku" maxlength="40"></td>
+      <td class="imp-note">${a.issues.length ? "⚠️ " : ""}${esc(note)}</td>`;
     tb.appendChild(trow);
   });
-  if (impItems.length > IMP_SHOW_MAX) {
+  if (rows.length > IMP_SHOW_MAX) {
     const trow = document.createElement("tr");
-    trow.innerHTML = `<td colspan="5" class="imp-note">${tr("impMore").replace("{n}", impItems.length - IMP_SHOW_MAX)}</td>`;
+    trow.innerHTML = `<td colspan="5" class="imp-note">${tr("impMore").replace("{n}", rows.length - IMP_SHOW_MAX)}</td>`;
     tb.appendChild(trow);
   }
-  // Redaktimet shkruhen direkt te artikujt (emri/çmimi — më të rëndësishmit)
+  // Redaktimet shkruhen direkt te artikujt (të katër fushat)
   tb.oninput = (e) => {
     const el = e.target; const i = +el.dataset.i, f = el.dataset.f;
     if (!Number.isInteger(i) || !impItems[i]) return;
     if (f === "name") impItems[i].name = el.value;
     if (f === "price") impItems[i].price = Math.max(0, Number(el.value) || 0);
+    if (f === "stock") impItems[i].stock = el.value === "" ? 0 : Math.max(0, Number(el.value) || 0);
+    if (f === "sku") impItems[i].sku = el.value.trim();
   };
   impShow("preview");
 }

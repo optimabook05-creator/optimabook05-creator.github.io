@@ -286,6 +286,46 @@
     return { inserts, updates, skipped };
   }
 
+  /* -------------------------------------------------------------------
+     AUDITIMI I IMPORTIT — gjetja e gabimeve në lista me mijëra rreshta.
+     AI-ja shënon vetë atë PËR TË CILËN dyshon; por gabimi më i rrezikshëm
+     është ai që duket i sigurt: një gabim shtypi 1.200 → 12.000, një kod
+     i dyfishuar, një çmim bosh. Këto kapen me statistikë, jo me lexim.
+     Pronari pastaj filtron VETËM rreshtat me problem (37 nga 5000) —
+     ndryshe një katalog i madh s'kontrollohet dot kurrë.
+     Kthen për çdo rresht: { i, issues: [kod...] } (bosh = në rregull).
+     ------------------------------------------------------------------- */
+  function auditImport(items) {
+    const list = Array.isArray(items) ? items : [];
+    const prices = list.map((p) => Number(p && p.price)).filter((v) => Number.isFinite(v) && v > 0).sort((a, b) => a - b);
+    const median = prices.length ? prices[Math.floor(prices.length / 2)] : 0;
+    // Zbulimi i vlerave të jashtëzakonshme ka kuptim vetëm me mostër të mjaftueshme
+    const canOutlier = prices.length >= 8 && median > 0;
+    const nameCount = new Map(), skuCount = new Map();
+    for (const p of list) {
+      const n = normKey(p && p.name);
+      if (n) nameCount.set(n, (nameCount.get(n) || 0) + 1);
+      const s = normKey(p && p.sku);
+      if (s) skuCount.set(s, (skuCount.get(s) || 0) + 1);
+    }
+    return list.map((p, i) => {
+      const issues = [];
+      const name = String((p && p.name) || "").trim();
+      const price = Number(p && p.price);
+      if (!name) issues.push("noName");
+      if (!Number.isFinite(price) || price < 0) issues.push("badPrice");
+      else if (price === 0) issues.push("zeroPrice");           // ose "me kërkesë" — pronari vendos
+      else if (canOutlier && (price > median * 25 || price * 25 < median)) issues.push("outlier"); // gabim shtypi
+      const stock = Number(p && p.stock);
+      if (Number.isFinite(stock) && stock < 0) issues.push("badStock");
+      if (name && nameCount.get(normKey(name)) > 1) issues.push("dupName");
+      const sku = normKey(p && p.sku);
+      if (sku && skuCount.get(sku) > 1) issues.push("dupSku");
+      if (p && p.uncertain) issues.push("aiUnsure");            // dyshimi i vetë AI-së
+      return { i, issues };
+    });
+  }
+
   // Escape i sigurt për ÇDO kontekst HTML (tekst DHE atribute). Burim i vetëm i së vërtetës,
   // i testuar nga CI → mbrojtja XSS s'prishet dot pa u kapur nga testet.
   function escapeHtml(s) {
@@ -379,7 +419,7 @@
     };
   }
 
-  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged, normKey, planImport, escapeHtml, isOfflineError, makeQueue, resolveAddons };
+  const OB = { pad, hm, toMin, toHM, round2, durToMin, bestUnitPrice, computeSlots, overlaps, fieldVisible, extractAmounts, replyPriceOk, looksLikeInjection, parseTime, parseDay, makeCache, makeSeq, listChanged, normKey, planImport, escapeHtml, isOfflineError, makeQueue, resolveAddons, auditImport };
   root.OB = OB;
   if (typeof module !== "undefined" && module.exports) module.exports = OB;
 })(typeof globalThis !== "undefined" ? globalThis : this);
