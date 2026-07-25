@@ -16,7 +16,7 @@
       "title": "title",
       "text": "text",
       "files": [
-        { "name": "file", "accept": ["image/*", "text/csv", "application/pdf", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] }
+        { "name": "file", "accept": ["image/*", "text/csv", "text/plain", "application/pdf", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"] }
       ]
     }
   },

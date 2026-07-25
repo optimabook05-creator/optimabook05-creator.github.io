@@ -21,9 +21,9 @@
 <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=163">
-<link rel="modulepreload" href="config.js?v=163">
-<link rel="modulepreload" href="optima-app.js?v=163">
+<link rel="stylesheet" href="style.css?v=164">
+<link rel="modulepreload" href="config.js?v=164">
+<link rel="modulepreload" href="optima-app.js?v=164">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -675,7 +675,7 @@
       <label class="imp-drop" for="impFile">
         <span class="imp-drop-ico" aria-hidden="true">📄</span>
         <span data-t="impDrop">Kliko dhe zgjidh skedarin (Excel/CSV, PDF, ose foto)</span>
-        <input type="file" id="impFile" accept=".csv,.xlsx,.xls,.pdf,image/*" hidden>
+        <input type="file" id="impFile" accept=".csv,.txt,.xlsx,.xls,.docx,.pdf,image/*" hidden>
       </label>
       <p class="imp-hint" data-t="impHint">Këshillë: nga Excel-i bëj "Save As → CSV" për leximin më të saktë. Fotot punojnë shumë mirë për çmimore të shtypura.</p>
     </div>
@@ -933,7 +933,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=163"></script>
-<script type="module" src="optima-app.js?v=163"></script>
+<script src="core.js?v=164"></script>
+<script type="module" src="optima-app.js?v=164"></script>
 </body>
 </html>

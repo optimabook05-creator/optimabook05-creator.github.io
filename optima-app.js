@@ -1595,6 +1595,24 @@ async function impReadFile(file) {
     for (const sn of wb.SheetNames) text += XLSX.utils.sheet_to_csv(wb.Sheets[sn]) + "\n";
     return impChunkText(text);
   }
+  if (name.endsWith(".docx")) {
+    /* Word: shumë furnitorë e dërgojnë çmimoren si tabelë në Word.
+       Nxjerrim HTML (jo tekst të papërpunuar) sepse vetëm ashtu ruhet
+       STRUKTURA e tabelës — qelizat ndahen me " | " dhe rreshtat me rresht
+       të ri, pikërisht formati që AI-ja lexon më saktë. */
+    const mammoth = await import("https://esm.sh/mammoth@1.8.0/mammoth.browser.min.js");
+    const lib = mammoth.default || mammoth;
+    const { value: html } = await lib.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+    const text = String(html || "")
+      .replace(/<\/(td|th)>/gi, " | ")
+      .replace(/<\/(tr|p|h[1-6]|li)>/gi, "\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+      .replace(/[ \t]*\|\s*\n/g, "\n")   // pastro ndarësin e fundit të rreshtit
+      .replace(/\n{3,}/g, "\n\n").trim();
+    if (!text) throw new Error(tr("impErrEmpty"));
+    return impChunkText(text);
+  }
   if (name.endsWith(".pdf")) {
     // PDF me tekst: pdf.js; PDF i skanuar (pa tekst) → udhëzim për foto
     const pdfjs = await import("https://esm.sh/pdfjs-dist@4.10.38/legacy/build/pdf.min.mjs");
