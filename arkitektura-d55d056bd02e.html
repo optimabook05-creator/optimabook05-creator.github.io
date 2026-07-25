@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OptimaBook — Arkitektura teknike</title>
+<meta name="robots" content="noindex, nofollow, noarchive">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>*{box-sizing:border-box;margin:0;padding:0}</style>
+
+<style>
+  :root {
+    --paper: #fbfcfb;
+    --paper-2: #f2f6f4;
+    --ink: #12211c;
+    --ink-2: #3d4f48;
+    --slate: #61736c;
+    --line: #dde6e2;
+    --accent: #0ca678;
+    --accent-deep: #05654c;
+    --accent-wash: #e8f6f1;
+    --amber: #96620a;
+    --amber-wash: #fdf3e2;
+    --rose: #a51f38;
+    --rose-wash: #fdeef0;
+    --code-bg: #f1f5f3;
+
+    --f-body: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --f-ui: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --f-mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0e1613; --paper-2: #16211d; --ink: #e6efeb; --ink-2: #b3c3bc;
+      --slate: #8b9c95; --line: #27332e; --accent: #35c99b; --accent-deep: #6fdcb8;
+      --accent-wash: #122b23; --amber: #e0a748; --amber-wash: #2b2113;
+      --rose: #f08098; --rose-wash: #2e161c; --code-bg: #18231f;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0e1613; --paper-2: #16211d; --ink: #e6efeb; --ink-2: #b3c3bc;
+    --slate: #8b9c95; --line: #27332e; --accent: #35c99b; --accent-deep: #6fdcb8;
+    --accent-wash: #122b23; --amber: #e0a748; --amber-wash: #2b2113;
+    --rose: #f08098; --rose-wash: #2e161c; --code-bg: #18231f;
+  }
+  :root[data-theme="light"] {
+    --paper: #fbfcfb; --paper-2: #f2f6f4; --ink: #12211c; --ink-2: #3d4f48;
+    --slate: #61736c; --line: #dde6e2; --accent: #0ca678; --accent-deep: #05654c;
+    --accent-wash: #e8f6f1; --amber: #96620a; --amber-wash: #fdf3e2;
+    --rose: #a51f38; --rose-wash: #fdeef0; --code-bg: #f1f5f3;
+  }
+
+  body {
+    background: var(--paper); color: var(--ink);
+    font-family: var(--f-body); font-size: 17px; line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .shell { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px;
+    display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 56px; align-items: start; }
+  @media (max-width: 900px) { .shell { grid-template-columns: 1fr; gap: 0; padding: 0 20px 72px; } }
+
+  /* ---- Kreu ---- */
+  .masthead { grid-column: 1 / -1; padding: 56px 0 34px; border-bottom: 2px solid var(--ink); margin-bottom: 40px; }
+  .eyebrow { font-family: var(--f-ui); font-size: 11.5px; font-weight: 700; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--accent-deep); margin-bottom: 14px; }
+  .masthead h1 { font-family: var(--f-ui); font-size: clamp(30px, 5vw, 46px); font-weight: 800;
+    letter-spacing: -.03em; line-height: 1.08; text-wrap: balance; margin-bottom: 14px; }
+  .standfirst { font-size: 19px; color: var(--ink-2); max-width: 60ch; }
+  .meta { font-family: var(--f-mono); font-size: 12.5px; color: var(--slate); margin-top: 22px;
+    display: flex; flex-wrap: wrap; gap: 8px 22px; }
+
+  /* ---- Përmbajtja anash ---- */
+  nav.toc { position: sticky; top: 24px; font-family: var(--f-ui); font-size: 13.5px; }
+  @media (max-width: 900px) {
+    nav.toc { position: static; margin-bottom: 40px; padding: 18px 20px; background: var(--paper-2);
+      border-radius: 10px; border: 1px solid var(--line); }
+  }
+  nav.toc .toc-h { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--slate); margin-bottom: 12px; }
+  nav.toc ol { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  nav.toc a { color: var(--ink-2); text-decoration: none; display: flex; gap: 9px; line-height: 1.35; }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent-deep); }
+  nav.toc a .n { font-family: var(--f-mono); font-size: 11.5px; color: var(--slate); flex: none; padding-top: 1px; }
+
+  /* ---- Seksionet ---- */
+  main { min-width: 0; display: flex; flex-direction: column; gap: 52px; }
+  section { scroll-margin-top: 20px; }
+  section > h2 { font-family: var(--f-ui); font-size: 24px; font-weight: 800; letter-spacing: -.02em;
+    line-height: 1.2; text-wrap: balance; padding-bottom: 12px; border-bottom: 1px solid var(--line);
+    margin-bottom: 20px; display: flex; gap: 14px; align-items: baseline; }
+  section > h2 .n { font-family: var(--f-mono); font-size: 15px; color: var(--accent); flex: none; }
+  h3 { font-family: var(--f-ui); font-size: 16.5px; font-weight: 700; letter-spacing: -.01em;
+    margin: 28px 0 10px; color: var(--ink); }
+  p { max-width: 68ch; margin-bottom: 14px; }
+  p.lede { font-size: 18px; color: var(--ink-2); border-left: 3px solid var(--line);
+    padding-left: 18px; margin-bottom: 22px; }
+  p:last-child { margin-bottom: 0; }
+  strong { font-weight: 700; }
+  em { font-style: italic; color: var(--ink-2); }
+  a { color: var(--accent-deep); }
+
+  ul.body-list { list-style: none; display: flex; flex-direction: column; gap: 9px;
+    margin: 4px 0 16px; max-width: 68ch; }
+  ul.body-list li { padding-left: 20px; position: relative; }
+  ul.body-list li::before { content: ""; position: absolute; left: 3px; top: .68em;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  code { font-family: var(--f-mono); font-size: .88em; background: var(--code-bg);
+    padding: 1.5px 5px; border-radius: 4px; }
+  pre { font-family: var(--f-mono); font-size: 13px; line-height: 1.55; background: var(--code-bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto;
+    margin: 12px 0 18px; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .tw { overflow-x: auto; margin: 12px 0 20px; border: 1px solid var(--line); border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-family: var(--f-ui); font-size: 13.5px;
+    font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 700; font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--slate); background: var(--paper-2); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.num { font-family: var(--f-mono); white-space: nowrap; }
+
+  /* ---- Kallëpe ---- */
+  .note { border-left: 3px solid var(--accent); background: var(--accent-wash);
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 18px 0; }
+  .note.gap { border-left-color: var(--rose); background: var(--rose-wash); }
+  .note.ask { border-left-color: var(--amber); background: var(--amber-wash); }
+  .note .lbl { font-family: var(--f-ui); font-size: 10.5px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; margin-bottom: 7px; color: var(--accent-deep); }
+  .note.gap .lbl { color: var(--rose); }
+  .note.ask .lbl { color: var(--amber); }
+  .note p { max-width: 62ch; }
+  .note p:last-child { margin-bottom: 0; }
+
+  .flow { font-family: var(--f-mono); font-size: 12.5px; line-height: 1.9; background: var(--paper-2);
+    border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; overflow-x: auto;
+    margin: 14px 0 20px; white-space: pre; color: var(--ink-2); }
+
+  footer { grid-column: 1 / -1; margin-top: 72px; padding-top: 24px; border-top: 2px solid var(--ink);
+    font-family: var(--f-ui); font-size: 13px; color: var(--slate); }
+
+  :focus-visible { outline: 2.5px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div class="eyebrow">Dokument teknik · për shqyrtim nga konsulenti</div>
+    <h1>OptimaBook — si është ndërtuar</h1>
+    <p class="standfirst">Recepsionist me inteligjencë artificiale për biznese të vogla: u përgjigjet klientëve në WhatsApp, Telegram dhe faqen e vet 24/7, rezervon takime, merr porosi, kap blerësit me emër e numër, dhe i tregon pronarit fitimin.</p>
+    <div class="meta">
+      <span>Versioni 164</span>
+      <span>Front-end pa build step</span>
+      <span>Supabase · Postgres + Deno</span>
+      <span>23 tabela · 10 edge functions · 27 teste</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Përmbajtja">
+    <div class="toc-h">Përmbajtja</div>
+    <ol>
+      <li><a href="#s1"><span class="n">1</span><span>Ç'është dhe si fiton para</span></a></li>
+      <li><a href="#s2"><span class="n">2</span><span>Arkitektura dhe stack-u</span></a></li>
+      <li><a href="#s3"><span class="n">3</span><span>Të dhënat dhe siguria</span></a></li>
+      <li><a href="#s4"><span class="n">4</span><span>Truri i AI-së</span></a></li>
+      <li><a href="#s5"><span class="n">5</span><span>Katalogu dhe çmimet<br><span style="color:var(--slate);font-size:12px">gjashtë mënyrat · shtesat · importi</span></span></a></li>
+      <li><a href="#s6"><span class="n">6</span><span>Paneli i pronarit</span></a></li>
+      <li><a href="#s7"><span class="n">7</span><span>PWA dhe offline</span></a></li>
+      <li><a href="#s8"><span class="n">8</span><span>Kanalet</span></a></li>
+      <li><a href="#s9"><span class="n">9</span><span>Çfarë NUK ka</span></a></li>
+      <li><a href="#s10"><span class="n">10</span><span>Pyetje për konsulentin</span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="s1">
+      <h2><span class="n">1</span>Ç'është dhe si fiton para</h2>
+      <p>Një biznes i vogël — parfumeri, sallon, taksi, dyqan telefonash, klinikë — humbet klientë sepse nuk u përgjigjet dot mesazheve gjatë punës, natën, ose në pushim. OptimaBook është një punonjës artificial që rri gjithmonë në linjë.</p>
+      <h3>Tri dyert e sistemit</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Faqja</th><th>Kush e përdor</th><th>Për çfarë</th></tr></thead>
+        <tbody>
+          <tr><td><code>app.html</code></td><td>Pronari (pas hyrjes)</td><td>Paneli: kalendar, porosi, katalog, ekonomi, biseda AI, cilësime</td></tr>
+          <tr><td><code>book.html</code></td><td>Klienti i biznesit</td><td>Faqja publike: rezervon vetë ose bën porosi</td></tr>
+          <tr><td><code>track.html</code></td><td>Klienti i biznesit</td><td>Gjurmon statusin e porosisë pa llogari</td></tr>
+        </tbody>
+      </table></div>
+      <p>Plus <code>index.html</code> (faqja tregtare), <code>demo.html</code> (demo live) dhe dy faqe ligjore. Modeli i të ardhurave: abonim mujor — Start €15, Pro €49, Premium €99.</p>
+      <div class="note gap">
+        <div class="lbl">Boshllëk kritik</div>
+        <p>Nuk ekziston asnjë mekanizëm arkëtimi. Nuk ka Stripe, nuk ka Paddle, nuk ka faturim. Abonimi është sot vetëm një çmim në faqen tregtare. Ky është boshllëku i vetëm që e ndalon produktin të jetë biznes.</p>
+      </div>
+    </section>
+
+    <section id="s2">
+      <h2><span class="n">2</span>Arkitektura dhe stack-u</h2>
+      <p>Front-end: HTML, CSS dhe JavaScript të pastër. Pa framework, pa bundler, pa hap ndërtimi. Skedarët që shkruhen janë pikërisht skedarët që shërbehen.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Skedari</th><th>Madhësia</th><th>Roli</th></tr></thead>
+        <tbody>
+          <tr><td><code>optima-app.js</code></td><td class="num">289 KB</td><td>I gjithë paneli si SPA me një skedar</td></tr>
+          <tr><td><code>style.css</code></td><td class="num">154 KB</td><td>Sistemi vizual për 6 faqe</td></tr>
+          <tr><td><code>core.js</code></td><td class="num">24 KB</td><td>Logjika e pastër, e testuar, e ndarë</td></tr>
+          <tr><td><code>index.html</code></td><td class="num">100 KB</td><td>Faqja tregtare (CSS-in e ka brenda)</td></tr>
+          <tr><td><code>sw.js</code></td><td class="num">5 KB</td><td>Service Worker</td></tr>
+        </tbody>
+      </table></div>
+      <p>Hostimi: GitHub Pages — kosto zero, HTTPS, CDN global. Back-end: Supabase (Postgres me RLS, Auth, Realtime, Edge Functions në Deno). Kosto operative aktuale: <strong>0 €/muaj</strong>.</p>
+
+      <div class="note">
+        <div class="lbl">Vendimi më i debatueshëm — pa build step</div>
+        <p><strong>Pse:</strong> pronari është jo-teknik. Nëse një ditë prishet <code>npm install</code>, një varësi bie, ose një konfigurim ndryshon, ai mbetet i bllokuar pa asnjë mundësi rregullimi. Pa build, çdo problem shihet direkt në skedarin që shërbehet.</p>
+        <p><strong>Çmimi që paguajmë:</strong> 289 KB JavaScript i pakompresuar në një skedar të vetëm (gzip-ohet nga GitHub Pages, por mbetet i pandarë). Lighthouse te paneli nën ngadalësim 4× rri rreth 57–64.</p>
+        <p><strong>Zbutja:</strong> paneli është privat, hapet një herë dhe pastaj vjen nga cache-i; klientët s'e shohin kurrë. Faqja publike dhe ajo tregtare janë të lehta dhe të pavarura.</p>
+      </div>
+
+      <h3>Versionimi dhe cache-i</h3>
+      <p>Një skedar <code>version.txt</code> mban numrin e versionit. Çdo aset ngarkohet me <code>?v=N</code> statik. Skripti <code>v.js</code> lexon versionin e faqes së ngarkuar nga linku i stylesheet-it dhe e krahason me serverin: nëse janë njësoj — <em>zero rifreskim</em>; nëse faqja është vërtet e vjetër — një rifreskim i vetëm.</p>
+      <div class="note">
+        <div class="lbl">Mësim i paguar</div>
+        <p>Logjika e mëparshme rifreskonte faqen sa herë mungonte <code>?v</code> në URL. Kjo do të thoshte se <strong>çdo nisje e aplikacionit të instaluar ngarkohej dy herë</strong> (start_url s'ka parametra). Ishte shkaku i vërtetë i ndjesisë "ngec kur hapet".</p>
+      </div>
+    </section>
+
+    <section id="s3">
+      <h2><span class="n">3</span>Të dhënat dhe siguria</h2>
+      <p>23 tabela. Kryesoret: <code>businesses</code>, <code>services</code> (produkte dhe shërbime bashkë), <code>appointments</code>, <code>orders</code> + <code>order_items</code>, <code>price_tiers</code>, <code>working_hours</code>, <code>staff</code>, <code>messages</code>, <code>leads</code>, <code>waitlist</code>, <code>ai_questions</code>, <code>conversation_state</code>.</p>
+
+      <h3>Izolimi i të dhënave</h3>
+      <p>Çdo tabelë ka Row Level Security me të njëjtin funksion:</p>
+      <pre><code>create policy "own_orders" on public.orders
+  for all using (public.is_my_business(business_id))
+       with check (public.is_my_business(business_id));</code></pre>
+      <p>Pronari nuk mund të lexojë as të shkruajë asnjë rresht që s'i takon biznesit të tij — pavarësisht se çfarë kërkon front-end-i. Rregulli zbatohet nga baza e të dhënave, jo nga aplikacioni.</p>
+
+      <h3>2FA e zbatuar në nivel baze</h3>
+      <p>Kur pronari aktivizon verifikimin me dy hapa, funksioni <code>is_my_business()</code> fillon të kërkojë <code>aal2</code> (sesion i verifikuar). Kjo do të thotë se edhe dikush me fjalëkalimin e vjedhur, duke thirrur API-n direkt pa kaluar nga aplikacioni, <strong>nuk merr asnjë rresht</strong>.</p>
+
+      <h3>Aksesi publik — vetëm katër dyer</h3>
+      <p>Klientët e biznesit nuk kanë llogari. Ata prekin bazën vetëm përmes katër funksioneve <code>security definer</code>, secili me kufij të vetët:</p>
+      <ul class="body-list">
+        <li><code>public_business</code> — kthen vetëm të dhënat publike të një biznesi</li>
+        <li><code>public_book</code> — krijon takim; refuzon nëse orari është zënë</li>
+        <li><code>public_order</code> — krijon porosi; <strong>çmimet i merr nga baza, kurrë nga klienti</strong></li>
+        <li><code>public_track</code> — kthen statusin e një porosie nga id-ja e saj</li>
+      </ul>
+      <p>Kjo është pika më e rëndësishme e sigurisë tregtare: një klient nuk mund të dërgojë çmimin që do. Ai dërgon vetëm <em>çfarë</em> dhe <em>sa</em>; serveri llogarit <em>sa kushton</em>.</p>
+
+      <h3>Kufij dhe mbrojtje</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Mbrojtja</th><th>Vendi</th><th>Kufiri</th></tr></thead>
+        <tbody>
+          <tr><td>Rate limit bisede</td><td>funksioni <code>chat</code></td><td>20/min për klient · 120/min për biznes</td></tr>
+          <tr><td>Rate limit Telegram</td><td>funksioni <code>telegram</code></td><td>12 mesazhe/min për bisedë</td></tr>
+          <tr><td>Rate limit porosish</td><td><code>public_order</code></td><td>30 porosi/min për biznes</td></tr>
+          <tr><td>Idempotencë</td><td>porositë web</td><td>çelës unik → dy-klikimi s'krijon dublikatë</td></tr>
+          <tr><td>Idempotencë</td><td><code>processed_updates</code></td><td>Telegram ridërgon → përpunohet një herë</td></tr>
+          <tr><td>Verifikim webhook-u</td><td><code>telegram</code></td><td><code>secret_token</code> në çdo kërkesë</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note gap">
+        <div class="lbl">Boshllëk</div>
+        <p>Webhook-u i WhatsApp-it <strong>nuk e verifikon ende nënshkrimin</strong> e Meta-s. Kjo pret llogarinë e Meta Business. Deri atëherë, kanali WhatsApp duhet konsideruar i pambrojtur ndaj kërkesave të falsifikuara.</p>
+      </div>
+    </section>
+
+    <section id="s4">
+      <h2><span class="n">4</span>Truri i AI-së</h2>
+      <p>Funksioni <code>chat</code> (1234 rreshta Deno/TypeScript) është zemra e produktit. Është ndërtuar me një parim: <strong>AI-ja kupton, por nuk vendos vetë për gjërat që kushtojnë para.</strong></p>
+
+      <h3>Dy shtresa</h3>
+      <div class="flow">Mesazhi i klientit
+     │
+     ├─ Shtresa 1: RREGULLA deterministike (falas, të pagabueshme)
+     │    përshëndetje · çmimet · orari · adresa
+     │    makina e gjendjes së rezervimit (ditë → orë → konfirmim)
+     │    anulim · listë pritjeje
+     │         └─ nëse mjafton → përgjigje, STOP
+     │
+     └─ Shtresa 2: MODELI GJUHËSOR (kur duhet kuptim i vërtetë)
+          Gemini flash-lite → fallback OpenAI
+          dalje JSON e strukturuar, jo tekst i lirë</div>
+      <p>Rregullat trajtojnë 60–70% të mesazheve pa asnjë kosto dhe pa asnjë mundësi gabimi. Modeli hyn vetëm kur duhet gjuhë e vërtetë.</p>
+
+      <h3>Rojet — çfarë e ndalon AI-në të bëjë dëm</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Roja</th><th>Problemi që zgjidh</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Lista e orareve</strong></td><td>AI-ja merr vetëm oraret <em>vërtet</em> të lira dhe udhëzimin që kjo është e vetmja e vërtetë. S'mund të shpikë një orar.</td></tr>
+          <tr><td><strong>Portat e besimit</strong></td><td>Modeli jep katër nota veç: qëllimi, shërbimi, koha, rreziku. Nën 0.7 (ose rrezik mbi 0.5) rezervimi/anulimi <em>nuk ekzekutohet</em> — bëhet një pyetje sqaruese e synuar.</td></tr>
+          <tr><td><strong>Hapi i konfirmimit</strong></td><td>Sistemi propozon ("të konfirmoj: e martë, ora 15:00 — shkruaj po") dhe rezervon vetëm pas "po"-së. Zero rezervime në orare të gabuara.</td></tr>
+          <tr><td><strong>Roja e çmimit</strong></td><td>Çdo shumë me monedhë në përgjigje kontrollohet kundrejt çmimeve reale. Nëse AI-ja shpik një numër, përgjigja zëvendësohet me një fallback të sigurt.</td></tr>
+          <tr><td><strong>Roja e fushës</strong></td><td>AI-ja flet vetëm për këtë biznes. S'krahason konkurrentë, s'shpik shërbime.</td></tr>
+          <tr><td><strong>Anti-injektim</strong></td><td>Zbulon përpjekje manipulimi ("injoro udhëzimet", "tani je…") në shqip dhe anglisht dhe e forcon prompt-in.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Rrethi i Mësimit</h3>
+      <p>Kur klienti pyet diçka faktike që s'është te të dhënat, AI-ja nuk shpik. Ajo përgjigjet ngrohtë se pronari do ta konfirmojë <em>dhe</em> e kopjon pyetjen te fusha <code>unanswered_question</code>. Pyetja shfaqet në panel; pronari e përgjigjet <strong>një herë</strong>; përgjigja injektohet në çdo bisedë të ardhshme.</p>
+      <div class="flow">Klienti: "A bëni mirëmbajtje mujore?"
+  → AI: s'e di → përgjigjet me kujdes + e regjistron pyetjen
+  → Pronari (në panel): "Po, 30€/muaj"
+  → Klienti tjetër, javë më vonë: "mirëmbajtje?"
+  → AI: "Po — 30€/muaj." (dhe e përkthen në gjuhën e klientit)</div>
+
+      <h3>Gjuha</h3>
+      <p>Rregulli i parë i prompt-it: zbulo gjuhën e mesazhit <em>të fundit</em> të klientit dhe përgjigju plotësisht në atë gjuhë — duke i <strong>përkthyer</strong> faktet nga katalogu, kurrë duke kopjuar gjuhën e tij. Modeli kupton gegërisht, toskërisht, shkurtime ("flm", "s'"), gabime shtypi, mungesë ë/ç, dhe shqip-anglisht të përzier në një fjali.</p>
+    </section>
+
+    <section id="s5">
+      <h2><span class="n">5</span>Katalogu dhe çmimet</h2>
+
+      <p class="lede">Para zbatimit teknik, modeli tregtar — sepse pyetja e vërtetë për shqyrtim është <em>a e mbulon bota reale</em>, jo a është i shkruar mirë kodi.</p>
+
+      <h3>5.1 · Gjashtë mënyrat e çmimit</h3>
+      <p>Asnjë biznes s'i përdor të gjitha. Secili zgjedh atë që i takon; pa prekur asgjë, produkti punon me çmimin e thjeshtë.</p>
+
+      <div class="tw"><table>
+        <thead><tr><th>Mënyra</th><th>Shembull</th><th>Për kë</th></tr></thead>
+        <tbody>
+          <tr><td><strong>1. Çmim i thjeshtë</strong></td><td>Qethje — 15 €</td><td>Sallon, klinikë, taksi</td></tr>
+          <tr><td><strong>2. Me shumicë</strong><br><span style="color:var(--slate)">njësia lirohet me sasinë</span></td><td>1–9 copë → 10 €/copa<br>nga 10 → 8 €/copa<br>nga 50 → 6 €/copa</td><td>Depo, shumicë, prodhues</td></tr>
+          <tr><td><strong>3. Paketa</strong><br><span style="color:var(--slate)">i njëjti shërbim, madhësi të ndryshme</span></td><td>Faqe interneti:<br>1–3 faqe = 120 €<br>4–6 faqe = 200 €</td><td>Shërbime me shkallë</td></tr>
+          <tr><td><strong>4. Shtesa</strong><br><span style="color:var(--slate)">transport, montim, garanci</span></td><td>Shih 5.2 — këtu është pjesa e re</td><td>Tregti dhe shërbime</td></tr>
+          <tr><td><strong>5. Çmime të gjalla</strong><br><span style="color:var(--slate)">freskia si kusht</span></td><td>Çmim mbi 7 ditë i vjetër → nuk thuhet</td><td>Telefona, parfume, mall importi</td></tr>
+          <tr><td><strong>6. Me kërkesë</strong><br><span style="color:var(--slate)">çmimi = 0</span></td><td>Ofertë personale për çdo klient</td><td>Prodhim vetjak, punë me porosi</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>5.2 · Shtesat — pyetja që i ndan</h3>
+      <p>Një artikull rrallë shitet vetëm. Pyetja e vetme që ka rëndësi: <strong>a mund ta refuzojë klienti shtesën?</strong></p>
+      <div class="tw"><table>
+        <thead><tr><th>Lloji</th><th>Rasti real</th><th>Klienti</th></tr></thead>
+        <tbody>
+          <tr><td>Opsionale</td><td>Posta — klienti mund të vijë vetë në dyqan</td><td>Mund ta heqë</td></tr>
+          <tr><td>E detyrueshme</td><td>Makinë nga jashtë, shitet <em>vetëm</em> me transportin e shitësit</td><td>S'e heq dot</td></tr>
+          <tr><td>Me kusht</td><td>"Nga 3 copë, transporti falas"</td><td>Ndryshon vetë</td></tr>
+        </tbody>
+      </table></div>
+      <p>Kushtet janë shtesa e fundit e modelit. Vendoset një prag dhe çfarë ndodh kur arrihet:</p>
+      <ul class="body-list">
+        <li><strong>Nga 3 copë, transporti falas</strong> — me 2 copë klienti paguan 60 €; sapo shton të tretën, çmimi kryqëzohet dhe bëhet falas. Faqja i shkruan <em>"edhe 1 copë dhe e ke falas!"</em> — pra rregulli funksionon edhe si nxitje shitjeje.</li>
+        <li><strong>Nga 10 copë, paketimi i detyrueshëm</strong> — nën pragun është zgjedhje e klientit; në prag hyn vetë dhe nuk hiqet.</li>
+        <li><strong>Mbi 500 €, montimi falas</strong> — i njëjti mekanizëm, por pragu mbi vlerën e rreshtit, jo mbi sasinë.</li>
+      </ul>
+      <p>Në një artikull të vetëm mund të bashkëjetojnë të treja: montimi i detyrueshëm, garancia opsionale, transporti falas nga 3 copë.</p>
+
+      <h3>5.3 · Çmimet e gjalla — pse ekzistojnë</h3>
+      <p>Një iPhone 15 sot nuk kushton sa kushtonte kur doli. Nëse AI-ja citon çmimin e vjetër, biznesi ose humb klientin ose humb marzhin. Prandaj freskia trajtohet si kusht, jo si detaj:</p>
+      <div class="flow">Çmim i freskuar brenda 7 ditësh  → AI-ja e citon normalisht
+Çmim më i vjetër                → AI-ja NUK e thotë kurrë. Në vend të tij:
+                                   "Po, e kemi ✅ — çmimin ta konfirmoj sot.
+                                    Si të quajnë dhe në ç'numër të kontaktoj?"
+                                   → pronarit i vjen njoftimi në çast</div>
+      <p>Rezultati tregtar: kurrë çmim i gabuar, dhe as edhe një klient i humbur — sepse mungesa e çmimit shndërrohet në kontakt të kapur.</p>
+
+      <h3>5.4 · Kush përdor çfarë</h3>
+      <div class="tw"><table>
+        <thead><tr><th>Biznesi</th><th>Mënyrat e përdorura</th></tr></thead>
+        <tbody>
+          <tr><td>Sallon, klinikë, taksi</td><td>vetëm 1</td></tr>
+          <tr><td>Parfumeri, dyqan i vogël</td><td>1 + 2 + shtesë opsionale (postë)</td></tr>
+          <tr><td>Dyqan telefonash</td><td>1 + 5 (çmime të gjalla) + shtesa me kushte</td></tr>
+          <tr><td>Importues makinash</td><td>1 + shtesë e detyrueshme (transporti)</td></tr>
+          <tr><td>Marangoz, prodhues</td><td>6 (me kërkesë)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>5.5 · Problemi i katalogëve të mëdhenj</h3>
+      <p>Një dyqan telefonash mund të ketë mijëra artikuj. Dy nën-probleme të ndara:</p>
+
+      <p><strong>(a) Nuk hyjnë dot në prompt.</strong> Funksioni <code>relevantServices</code> zgjedh vetëm ~60 artikujt që përputhen me fjalët e klientit (peshim sipas gjatësisë së fjalës — fjalët më të gjata janë më specifike). Bashkë me to shkon një shënim i qartë: <em>"ky është vetëm një ekstrakt — mos thuaj kurrë se diçka nuk ofrohet vetëm se s'e sheh këtu."</em></p>
+
+      <p><strong>(b) Nuk shkruhen dot me dorë.</strong> Importi i pranon: Excel, CSV, PDF, <strong>Word</strong>, foto, tekst. Bibliotekat ngarkohen në mënyrë dinamike vetëm kur zgjidhet ai format — zero kosto për rastet e tjera.</p>
+
+      <div class="note">
+        <div class="lbl">Pse AI dhe jo parser me rregulla</div>
+        <p>Një furnitor shkruan kolonën e çmimit <code>q</code>, një tjetër <code>E</code> për euro, një i tretë s'ka fare kokë tabele. Një parser me rregulla do të dështonte te secili. AI-ja lexon si njeri. Dhe kur <em>nuk</em> është e sigurt, nuk hamendëson në heshtje — e shënon rreshtin me <code>uncertain</code> dhe shkruan pse.</p>
+      </div>
+
+      <h3>5.6 · Gjetja e gabimeve — pjesa jo e dukshme</h3>
+      <p>AI-ja shënon atë për të cilën <em>ajo</em> dyshon. Por gabimi më i rrezikshëm është ai që <strong>duket i sigurt</strong>: një gabim shtypi 450 → 45000. AI-ja e lexon me besim të plotë. Me 5000 rreshta, pronari s'e gjen dot kurrë.</p>
+      <p>Funksioni <code>auditImport</code> i kap me statistikë:</p>
+      <ul class="body-list">
+        <li><strong>Çmim jashtë radhe</strong> — mbi 25× ose nën 1/25 e medianës. Aktivizohet vetëm me ≥8 çmime; përndryshe një artikull vërtet i shtrenjtë do flamurohej kot.</li>
+        <li><strong>Emër ose kod i dyfishuar</strong> brenda listës — flamurohen <em>të dyja</em> anët, që pronari t'i krahasojë.</li>
+        <li><strong>Çmim 0, stok negativ, pa emër</strong> — plus dyshimi i vetë AI-së.</li>
+      </ul>
+      <p>Pastaj filtri që e bën gjithçka të përdorshme: <strong>Të gjitha (5000) | ⚠️ Për kontroll (9)</strong>. Kapaku i shfaqjes zbatohet <em>pas</em> filtrit. Provë e matur: katalog 5000-rreshtash me 7 gabime të mbjella → të gjitha u kapën në 113 ms.</p>
+
+      <h3>5.7 · Çmimet e gjalla — zbatimi</h3>
+      <p><em>(Arsyeja tregtare është te 5.3; këtu është mekanika.)</em> Kolona <code>price_updated_at</code> me trigger në bazë përditësohet vetë sa herë ndryshon çmimi. Kur biznesi ka <code>config.volatilePrices</code>, një çmim më i vjetër se 7 ditë <strong>nuk i thuhet kurrë klientit</strong> — as në rregulla, as në prompt (artikulli shënohet <code>PRICE VOLATILE</code> pa numër). AI-ja konfirmon disponibilitetin, merr emrin dhe numrin, dhe njofton pronarin.</p>
+      <p>Çmimet freskohen në tri mënyra: ri-importi i listës, redaktimi në panel, ose një mesazh Telegram te bot-i:</p>
+      <pre><code>iPhone 15 128GB = 430      → një artikull, çmim i saktë
+iphone 17 = -10%           → E GJITHË familja (Pro, Pro Max, mini, 128/256GB)
+* = +5%                    → i gjithë katalogu</code></pre>
+      <p>Ndryshimi masiv kërkon shenjën <code>+</code>/<code>−</code> (mbrojtje nga gabimi), kufizohet në −90%…+500%, shkallëzon edhe paketat brenda artikullit, dhe kurrë nuk prek artikujt me çmim 0.</p>
+
+      <h3>5.8 · Rregullat e paketimit — zbatimi</h3>
+      <p><em>(Logjika tregtare është te 5.2.)</em> Modeli mbetet prapa-përputhshëm: një shtesë pa rregull sillet saktësisht si më parë.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Rasti real</th><th>Konfigurimi</th></tr></thead>
+        <tbody>
+          <tr><td>Posta — klienti mund të vijë vetë në dyqan</td><td>shtesë opsionale</td></tr>
+          <tr><td>Makinë nga jashtë, shitet <em>vetëm</em> me transportin e shitësit</td><td>shtesë e detyrueshme</td></tr>
+          <tr><td>Montimi i detyrueshëm, garancia jo — te i njëjti artikull</td><td>secila veç</td></tr>
+          <tr><td>"Nga 3 copë, transporti falas"</td><td><code>when:{qty:3}, then:"free"</code></td></tr>
+          <tr><td>"Nga 10 copë, paketimi i detyrueshëm"</td><td><code>when:{qty:10}, then:"required"</code></td></tr>
+          <tr><td>"Mbi 500 €, montimi falas"</td><td><code>when:{total:500}, then:"free"</code></td></tr>
+        </tbody>
+      </table></div>
+      <div class="note">
+        <div class="lbl">Vendim arkitekturor</div>
+        <p>Funksioni <code>resolveAddons</code> është <strong>e vërteta e vetme</strong> dhe përdoret nga faqja publike, paneli dhe prompt-i i AI-së. SQL-ja brenda <code>public_order</code> është pasqyrë rresht-për-rresht e tij. Nëse këto dy divergjojnë, klienti sheh një çmim dhe paguan një tjetër. Në SQL pragjet lexohen vetëm nëse përputhen me <code>^[0-9]+(\.[0-9]+)?$</code> — një varg si "abc" do të rrëzonte gjithë porosinë me gabim cast-i.</p>
+      </div>
+    </section>
+
+    <section id="s6">
+      <h2><span class="n">6</span>Paneli i pronarit</h2>
+
+      <h3>Shtresa e të dhënave</h3>
+      <p>Paneli përdor modelin <em>stale-while-revalidate</em>. Çdo pamje vizatohet <strong>menjëherë</strong> nga kujtesa dhe rifreskohet në heshtje nga serveri. Tre primitivë të testuar në <code>core.js</code>:</p>
+      <ul class="body-list">
+        <li><code>makeCache</code> — kujtesë me revizione, me <code>snapshot/hydrate</code> për të mbijetuar rifreskimin (ruhet në sessionStorage).</li>
+        <li><code>makeSeq</code> — bileta kundër garave: përgjigjet e vjetra në fluturim vdesin vetë.</li>
+        <li><code>listChanged</code> — krahasim i thellë: nëse të dhënat s'kanë ndryshuar, DOM-i nuk preket fare.</li>
+      </ul>
+
+      <h3>Veprime optimiste</h3>
+      <p>Çdo veprim ndryshon pamjen <strong>nën 100 ms</strong>, pa pritur rrjetin, dhe kthen një funksion rikthimi. Nëse serveri e refuzon, gjendja kthehet mbrapsht dhe shfaqet gabimi. Nëse e pranon, pajtimi është i heshtur.</p>
+
+      <h3>Realtime</h3>
+      <p>Një kanal i vetëm me nëntë lidhje <code>postgres_changes</code>, të filtruara nga serveri me <code>business_id</code>. RLS vlen edhe këtu — u testua që një abonent anonim me të njëjtat parametra merr <strong>zero</strong> ngjarje. Ngjarjet debounce-ohen 300 ms dhe rifreskojnë vetëm pamjen aktive.</p>
+
+      <h3>Radha offline</h3>
+      <p>Pronari punon në treg, bodrum, makinë. Pa sinjal, veprimi rreshtohet dhe dërgohet vetë kur kthehet lidhja.</p>
+      <div class="note">
+        <div class="lbl">Vendimet e sigurisë — pse është e besueshme</div>
+        <p><strong>Vetëm ndryshim/fshirje me id.</strong> Krijimet refuzohen nga vetë radha: riprovimi do krijonte dublikatë. Ndryshimet janë idempotente sado herë të përsëriten.</p>
+        <p><strong>Gabimi i serverit nuk fshihet pas "offline".</strong> Çdo përgjigje me <code>code</code> ose <code>status</code> është gabim i vërtetë (RLS, validim) dhe shfaqet menjëherë; vetëm gabimet e formës së rrjetit rreshtohen.</p>
+        <p><strong>Gjatë dërgimit:</strong> gabim rrjeti → ndal dhe ruaj radhën; gabim serveri → hiq atë hyrje (që radha të mos ngecë përjetë).</p>
+      </div>
+      <div class="note ask">
+        <div class="lbl">Dy bug-e të kapura para publikimit</div>
+        <p><strong>Humbje të dhënash:</strong> pa rojen që pret sesionin, kthimi i lidhjes <em>në ekranin e hyrjes</em> do i provonte shkrimet pa sesion → dështim me gabim RLS → hyrjet do fshiheshin si "gabime të vërteta".</p>
+        <p><strong>Vdekje moduli:</strong> banderola e rrjetit thirret në nivel moduli (hapje offline), por variabla e biznesit deklarohet më poshtë — do jepte ReferenceError që do vriste gjithë panelin.</p>
+      </div>
+    </section>
+
+    <section id="s7">
+      <h2><span class="n">7</span>PWA dhe offline</h2>
+      <div class="tw"><table>
+        <thead><tr><th>Aftësia</th><th>Gjendja</th></tr></thead>
+        <tbody>
+          <tr><td>Instalim (manifest, ikona maskable, standalone)</td><td>Po, me ftesë instalimi në Android</td></tr>
+          <tr><td>Shkurtore ikone (shtyp gjatë → Kalendari/Porositë/Ekonomia)</td><td>Po</td></tr>
+          <tr><td>Njoftime push me aplikacionin të mbyllur</td><td>Po — web push + kopje në Telegram</td></tr>
+          <tr><td>Hapje offline</td><td>Po — guaska nga cache-i</td></tr>
+          <tr><td>Veprime offline</td><td>Po — radha e mësipërme</td></tr>
+          <tr><td>Ndarje skedari në aplikacion</td><td>Po — foto e çmimores → importi</td></tr>
+          <tr><td>Vetë-përditësim pa dyqan aplikacionesh</td><td>Po</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Strategjia e cache-it</h3>
+      <div class="flow">navigime (HTML)      → rrjeti i pari; offline → cache (ignoreSearch)
+version.txt          → gjithmonë rrjeti
+asete me ?v=N        → cache i pari (URL ndryshon kur ndryshon versioni)
+fonts/*.woff2        → cache i pari (të pandryshueshme)
+cross-origin         → gjithmonë rrjeti (Supabase, esm.sh)</div>
+      <p><code>ignoreSearch</code> te fallback-u i navigimit është kritik: pa të, pas çdo ndryshimi versioni aplikacioni <strong>nuk hapej dot offline</strong>, sepse cache-i kishte <code>?v=163</code> ndërsa URL-ja kërkonte <code>?v=164</code>.</p>
+
+      <h3>Ndarja e skedarit</h3>
+      <p>Manifesti deklaron një <code>share_target</code> me POST te një URL virtuale që s'ekziston si skedar — e kap vetëm Service Worker-i. Ai nxjerr skedarin, e ruan përkohësisht në cache dhe rialokon te paneli me një parametër. Paneli e merr, hap importin me të, dhe fshin gjurmën si nga cache-i ashtu edhe nga URL-ja.</p>
+
+      <h3>Performanca në telefon — dy mësime</h3>
+      <div class="note">
+        <div class="lbl">Kosto e fshehur GPU</div>
+        <p><strong>Aurora e animuar nën xham.</strong> Sfondi lëvizte pafundësisht poshtë elementeve me <code>backdrop-filter</code>. Kjo detyron çdo element qelqi të <em>ri-kampionojë blur-in çdo frame, përgjithmonë</em>. Në telefon aurora tani është statike; pamja e njëjtë, kostoja zero.</p>
+        <p><strong>Rezerva e gabuar e lartësisë.</strong> <code>content-visibility: auto</code> me <code>contain-intrinsic-size</code> mbi karta me lartësi të ndryshueshme shkakton <em>mbivendosje teksti</em> gjatë scroll-it. U hoq kudo; u zëvendësua me <code>contain: layout paint</code>.</p>
+      </div>
+    </section>
+
+    <section id="s8">
+      <h2><span class="n">8</span>Kanalet dhe automatizimet</h2>
+      <div class="tw"><table>
+        <thead><tr><th>Funksioni</th><th>Rreshta</th><th>Roli</th></tr></thead>
+        <tbody>
+          <tr><td><code>chat</code></td><td class="num">1234</td><td>Truri — i përbashkët për të gjitha kanalet</td></tr>
+          <tr><td><code>telegram</code></td><td class="num">268</td><td>Webhook + komandat e çmimeve për pronarin</td></tr>
+          <tr><td><code>whatsapp</code></td><td class="num">97</td><td>Webhook Meta Graph</td></tr>
+          <tr><td><code>import</code></td><td class="num">181</td><td>Parser AI për çmimore (tekst + vision)</td></tr>
+          <tr><td><code>fill-slot</code></td><td class="num">178</td><td>Anulim → njofton listën e pritjes vetë</td></tr>
+          <tr><td><code>winback</code></td><td class="num">110</td><td>Klientët që s'janë kthyer</td></tr>
+          <tr><td><code>push</code></td><td class="num">99</td><td>Web push + Telegram te pronari</td></tr>
+          <tr><td><code>digest</code></td><td class="num">87</td><td>"Dita ime" në mëngjes</td></tr>
+          <tr><td><code>reminders</code></td><td class="num">80</td><td>Kujtesa 24h para takimit</td></tr>
+          <tr><td><code>reviews</code></td><td class="num">72</td><td>Kërkesë vlerësimi pas shërbimit</td></tr>
+        </tbody>
+      </table></div>
+      <p>Lidhja me Telegram bëhet me një klikim: klienti hap një link <code>t.me/…?start=&lt;id&gt;</code>, lidhja klient→biznes ruhet, dhe çdo mesazh i mëpasshëm shkon vetë te biznesi i duhur. Pronari nuk merret fare me BotFather.</p>
+    </section>
+
+    <section id="s9">
+      <h2><span class="n">9</span>Çfarë NUK ka — lista e ndershme</h2>
+      <p>Kjo është pjesa më e dobishme për një shqyrtim. Asgjë nuk fshihet.</p>
+      <div class="tw"><table>
+        <thead><tr><th>Boshllëku</th><th>Pesha</th><th>Pse s'është bërë</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Zero klientë paguas</strong></td><td>Kritike</td><td>Nuk është problem kodi. 164 versione, asnjë përdorues real.</td></tr>
+          <tr><td><strong>Asnjë mekanizëm arkëtimi</strong></td><td>Kritike</td><td>Pa Stripe/Paddle abonimi s'mblidhet dot.</td></tr>
+          <tr><td><strong>Fiskalizim</strong></td><td>E lartë (AL/XK)</td><td>Ligjërisht i detyrueshëm për dyqane. Plan: integrim me easyPos API, jo rindërtim.</td></tr>
+          <tr><td><strong>Kanal zanor (telefonata)</strong></td><td>E lartë</td><td>Kërkon operator telefonie — llogari dhe kosto mujore.</td></tr>
+          <tr><td>Instagram DM / Messenger</td><td>E mesme</td><td>Kërkon shqyrtim aplikacioni nga Meta. Faqja tregtare i shënon "së shpejti".</td></tr>
+          <tr><td>289 KB JS i pandarë</td><td>E mesme</td><td>Pasojë e vendimit "pa build". Shih seksionin 2.</td></tr>
+          <tr><td>Vetëm <code>core.js</code> ka teste (27)</td><td>E mesme</td><td>Logjika e UI-së s'ka teste; nuk ka fare teste end-to-end.</td></tr>
+          <tr><td>Varësi nga <code>esm.sh</code> në kohë ekzekutimi</td><td>E mesme</td><td>Nëse ai CDN bie, paneli s'hapet. Duhet kopje lokale e SDK-së para shkallëzimit.</td></tr>
+          <tr><td>Pa shërbim monitorimi gabimesh</td><td>E ulët</td><td>Vetëm një unazë 25-gabimshe në localStorage.</td></tr>
+          <tr><td><code>book.html</code> vizaton TË GJITHA artikujt</td><td>E ulët tani</td><td>Katalogët e mëdhenj do të kenë nevojë për kërkim/faqosje aty.</td></tr>
+          <tr><td>Ruajtja e porosisë s'hyn në radhën offline</td><td>E ulët</td><td>Fshin e rikrijon rreshtat → gjendje e pjesshme në riprovim. Me qëllim jashtë.</td></tr>
+          <tr><td>Nënshkrimi i webhook-ut WhatsApp</td><td>E ulët tani</td><td>Pret llogarinë e Meta Business.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="s10">
+      <h2><span class="n">10</span>Pyetje konkrete për konsulentin</h2>
+      <p>Që shqyrtimi të mos mbetet i përgjithshëm, ja pikat ku një mendim i dytë vlen më shumë:</p>
+      <ul class="body-list">
+        <li><strong>Vendimi "pa build step"</strong> — a e justifikon mbrojtja e pronarit jo-teknik çmimin prej 289 KB JS të pandarë? A ka rrugë të tretë (p.sh. ndarje manuale në module me <code>import()</code> dinamik) që e ruan thjeshtësinë?</li>
+        <li><strong>Modeli i çmimeve (seksioni 5.1–5.2)</strong> — gjashtë mënyrat dhe tri llojet e shtesave a e mbulojnë gjithçka që shihni në terren? Cili rast real nuk hyn dot? Ne dyshojmë te: "blej 2 merr 1 falas", zbritje mbi totalin e gjithë porosisë (jo mbi rreshtin), dhe kushte të kombinuara ("nga 3 copë DHE mbi 500 €").</li>
+        <li><strong>Dyfishimi i logjikës</strong> — e njëjta llogari çmimi jeton në JavaScript dhe në SQL. A ia vlen ta zhvendosim <em>tërësisht</em> në bazë (një RPC llogaritëse që e thërret edhe front-end-i), apo rreziku i vonesës rrjeti është më i keq se rreziku i divergjencës?</li>
+        <li><strong>Kufiri i ~60 artikujve në prompt</strong> — a është kërkimi me përputhje fjalësh i mjaftueshëm për katalogë me mijëra artikuj, apo duhet kërkim semantik (embeddings + pgvector)?</li>
+        <li><strong>Portat e besimit</strong> — pragjet 0.7 / 0.5 janë zgjedhur me gjykim, jo me të dhëna. Si do t'i kalibronit pa një grup vlerësimi?</li>
+        <li><strong>Radha offline</strong> — a mjafton mbulimi vetëm i ndryshimeve me id, apo ka veprime të përditshme që pronari <em>pret</em> të punojnë pa internet dhe s'i kemi mbuluar?</li>
+        <li><strong>Rendi i punës</strong> — me burime të kufizuara: pagesat, fiskalizimi, apo kanali zanor i pari? Dhe a duhet ndalur fare kodi derisa të vijë klienti i parë?</li>
+      </ul>
+      <div class="note ask">
+        <div class="lbl">Konteksti që duhet ditur</div>
+        <p>Pronari nuk është programues. Çdo sugjerim që kërkon mirëmbajtje teknike të vazhdueshme (pipeline ndërtimi, orkestrim kontejnerësh, infrastrukturë me shumë shërbime) duhet peshuar kundrejt faktit se <strong>askush s'do të jetë aty ta rregullojë kur të prishet</strong>. Thjeshtësia këtu nuk është preferencë estetike — është kërkesë operative.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    OptimaBook · versioni 164 · dokument teknik për shqyrtim të jashtëm.<br>
+    Numrat e seksioneve janë referenca — përdorini kur ktheni komentet (p.sh. "5.2 nuk e mbulon rastin X").
+    Te seksioni 5, nën-seksionet <strong>5.1–5.4</strong> janë modeli tregtar dhe <strong>5.5–5.8</strong> zbatimi teknik i tij.
+  </footer>
+
+</div>
+
+</body>
+</html>
