@@ -51,8 +51,36 @@ self.addEventListener("notificationclick", (e) => {
   }));
 });
 
+/* ---- NDARJA E SKEDARIT NË APLIKACION ("Share to OptimaBook") ----
+   Pronari fotografon çmimoren e furnitorit → Share → OptimaBook, dhe skedari
+   shkon DIREKT te importi i katalogut. Sistemi e dërgon si POST te ./share-target
+   (URL virtuale — s'ekziston si skedar; e kap vetëm ky Service Worker).
+   Skedari ruhet përkohësisht në cache dhe paneli e merr me ?share=1.
+   Nëse diçka dështon → thjesht hap panelin normal (asnjë rrezik për app-in). */
+const SHARE_SLOT = "/__shared-file";
 self.addEventListener("fetch", (e) => {
   const req = e.request;
+
+  // Kontroll i lirë mbi vargun — pa parsim URL-je për çdo POST te Supabase
+  if (req.method === "POST" && req.url.indexOf("/share-target") !== -1) {
+    e.respondWith((async () => {
+      const home = new URL("app.html", self.registration.scope);
+      try {
+        const form = await req.formData();
+        const file = form.get("file");
+        if (file && file.size) {
+          const c = await caches.open(CACHE);
+          await c.put(SHARE_SLOT, new Response(file, {
+            headers: { "content-type": file.type || "application/octet-stream", "x-name": encodeURIComponent(file.name || "file") },
+          }));
+          home.searchParams.set("share", "1");
+        }
+      } catch (_e) { /* ndarja dështoi → hap panelin normal */ }
+      return Response.redirect(home.href, 303);
+    })());
+    return;
+  }
+
   if (req.method !== "GET") return;
 
   let url;

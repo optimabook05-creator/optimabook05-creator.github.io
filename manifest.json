@@ -8,6 +8,18 @@
   "orientation": "portrait",
   "background_color": "#f5f3ef",
   "theme_color": "#0ca678",
+  "share_target": {
+    "action": "./share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "files": [
+        { "name": "file", "accept": ["image/*", "text/csv", "application/pdf", "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] }
+      ]
+    }
+  },
   "shortcuts": [
     {
       "name": "Kalendari",

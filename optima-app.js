@@ -1429,6 +1429,29 @@ async function loadAll() {
   const startRt = () => { if (biz) { startRealtime(); flushQueue(); } }; // sesioni gati → dërgo çka ka mbetur nga offline
   if ("requestIdleCallback" in window) requestIdleCallback(startRt, { timeout: 2500 });
   else setTimeout(startRt, 1200);
+  consumeSharedFile(); // erdhi një skedar me "Share to OptimaBook" → çoje te importi
+}
+
+/* Skedari i ndarë nga sistemi (foto e çmimores, Excel…) e ka lënë Service Worker-i
+   në cache; këtu merret, hapet importi me të dhe gjurma fshihet (që rifreskimi
+   të mos e rihapë). Çdo dështim → heshtje: paneli hapet normalisht. */
+async function consumeSharedFile() {
+  try {
+    const p = new URLSearchParams(location.search);
+    if (p.get("share") !== "1") return;
+    p.delete("share");
+    history.replaceState(null, "", location.pathname + (p.toString() ? "?" + p : "") + location.hash);
+    if (!("caches" in window)) return;
+    const c = await caches.open("optimabook-cache-v1");
+    const res = await c.match("/__shared-file");
+    if (!res) return;
+    await c.delete("/__shared-file");
+    const blob = await res.blob();
+    if (!blob || !blob.size) return;
+    const name = decodeURIComponent(res.headers.get("x-name") || "file");
+    openImport();
+    impProcess(new File([blob], name, { type: blob.type || "application/octet-stream" }));
+  } catch (_e) { /* pa ndarje → asgjë */ }
 }
 
 /* ---------------- Qendra e konfigurimit (hub i udhëhequr "rregullo një herë") ---------------- */
