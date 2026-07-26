@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=164">
+<link rel="stylesheet" href="style.css?v=165">
 <style>
   .pub-wrap { max-width: 560px; margin: 30px auto 80px; padding: 0 16px; }
   .pub-card { background: var(--glass); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6);
@@ -41,6 +41,9 @@
   .qty button { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--glass-edge); background: var(--glass-strong);
     color: var(--ink); font-size: 17px; font-weight: 800; cursor: pointer; line-height: 1; }
   .qty span { min-width: 22px; text-align: center; font-weight: 800; }
+  /* Kërkimi i katalogut (shfaqet vetëm kur ka mjaft artikuj) */
+  .o-search { margin: 10px 0 4px; }
+  .o-more { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); padding: 12px 2px 2px; text-align: center; }
   .pi-addons { margin-top: 7px; display: flex; flex-direction: column; gap: 5px; }
   .pi-addon { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-soft); font-weight: 600; cursor: pointer; }
   .pi-addon input { width: auto; }
@@ -111,7 +114,7 @@
 
 <!-- Etiketë STATIKE e versionuar (jo document.write: ai bllokon skanerin e parangarkimit
      — mësim i v80/v81). Skripti klasik ekzekutohet gjithmonë PARA modulit poshtë. -->
-<script src="core.js?v=164"></script>
+<script src="core.js?v=165"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
@@ -130,13 +133,15 @@ const T = {
     name:"Emri yt", phone:"Telefoni", contact:"Telefon / email", notes:"Shënime (opsionale)", total:"Totali", send:"Dërgo",
     okBook:"U rezervua! 🎉", okBookP:"Pronari do ta konfirmojë së shpejti.", okOrder:"Porosia u dërgua! 🎉", okOrderP:"Pronari do të kontaktojë së shpejti.",
     needName:"Shkruaj emrin.", needSlot:"Zgjedh një orar.", needItems:"Zgjedh të paktën një artikull.", slotTaken:"Ky orar sapo u zu — zgjedh një tjetër.", failed:"Diçka shkoi keq. Provo sërish.", rate:"Shumë kërkesa njëherësh — prit pak dhe provo sërish.", another:"Bëj një tjetër", track:"📦 Gjurmo statusin", addonInc:"përfshihet", priceAsk:"çmimi me kërkesë",
-    addonFree:"FALAS", addonNeedQty:"— edhe {n} copë dhe e ke falas!" },
+    addonFree:"FALAS", addonNeedQty:"— edhe {n} copë dhe e ke falas!",
+    searchPh:"🔎 Kërko artikull…", noMatch:"S'u gjet asnjë artikull me këtë kërkim.", moreItems:"…dhe {n} artikuj të tjerë — shkruaj te kërkimi për t'i gjetur" },
   en: { loading:"Loading…", notfound:"Business not found.", powered:"Powered by", book:"Book an appointment", order:"Place your order",
     service:"Service", date:"Date", pickSlot:"Pick a time", noSlots:"No free times this day.", closed:"Closed this day.",
     name:"Your name", phone:"Phone", contact:"Phone / email", notes:"Notes (optional)", total:"Total", send:"Send",
     okBook:"Booked! 🎉", okBookP:"The owner will confirm shortly.", okOrder:"Order sent! 🎉", okOrderP:"The owner will contact you shortly.",
     needName:"Enter your name.", needSlot:"Pick a time.", needItems:"Pick at least one item.", slotTaken:"That slot was just taken — pick another.", failed:"Something went wrong. Try again.", rate:"Too many requests at once — wait a moment and try again.", another:"Make another", track:"📦 Track status", addonInc:"included", priceAsk:"price on request",
-    addonFree:"FREE", addonNeedQty:"— {n} more and it's free!" },
+    addonFree:"FREE", addonNeedQty:"— {n} more and it's free!",
+    searchPh:"🔎 Search items…", noMatch:"No items match that search.", moreItems:"…and {n} more — type in the search to find them" },
 };
 const tr = (k) => (SQ ? T.sq : T.en)[k];
 
@@ -274,12 +279,68 @@ function wireBook() {
 }
 
 /* ---------- Orders / commerce ---------- */
+/* KATALOGËT E MËDHENJ: një dyqan me mijëra artikuj s'mund t'i vizatojë të gjithë —
+   faqja do të rëndohej dhe klienti s'do gjente dot asgjë. Ndaj: kërkim i çastit
+   (nga kujtesa, pa rrjet) + kapak shfaqjeje. Artikujt e zgjedhur tashmë shfaqen
+   GJITHMONË, edhe kur s'përputhen me kërkimin — klienti s'e humb kurrë shportën. */
+const ITEMS_CAP = 40;
+const ITEMS_SEARCH_MIN = 12;   // nën këtë numër, kërkimi vetëm do zinte vend
+let itemQuery = "";
+
+function itemsMatching() {
+  const all = DATA.services || [];
+  const q = OB.normKey(itemQuery);
+  if (!q) return all;
+  const words = q.split(" ").filter(Boolean);
+  return all.filter((s) => {
+    const hay = OB.normKey([s.name, s.description, s.sku].filter(Boolean).join(" "));
+    return words.every((w) => hay.includes(w));
+  });
+}
+
+function renderItems() {
+  const box = $("#oItems"); if (!box) return;
+  const all = DATA.services || [];
+  const matched = itemsMatching();
+  const matchedIds = new Set(matched.map((s) => s.id));
+  const inCart = all.filter((s) => cart[s.id] && !matchedIds.has(s.id)); // zgjedhjet mbeten të dukshme
+  const shown = inCart.concat(matched.slice(0, ITEMS_CAP));
+  box.innerHTML = shown.map(itemRow).join("");
+  const note = $("#oMore");
+  if (note) {
+    const hidden = Math.max(0, matched.length - ITEMS_CAP);
+    if (!matched.length) { note.textContent = tr("noMatch"); note.hidden = false; }
+    else if (hidden) { note.textContent = tr("moreItems").replace("{n}", hidden); note.hidden = false; }
+    else note.hidden = true;
+  }
+  wireItems();
+}
+
+/* Lidh butonat e sasisë + shtesat për rreshtat AKTUALË (thirret pas çdo rivizatimi).
+   Ndryshimi i sasisë rivizaton shtesat: pragu mund të ketë hyrë ose dalë nga fuqia. */
+function wireItems() {
+  const box = $("#oItems"); if (!box) return;
+  box.querySelectorAll("button[data-p]").forEach((b) => b.onclick = () => {
+    const id = b.dataset.p; cart[id] = (cart[id] || 0) + 1;
+    $("#q-" + id).textContent = cart[id]; redrawAddons(id); recompute();
+  });
+  box.querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => {
+    const id = b.dataset.m; cart[id] = Math.max(0, (cart[id] || 0) - 1);
+    $("#q-" + id).textContent = cart[id]; if (!cart[id]) delete cart[id];
+    redrawAddons(id); recompute();
+  });
+  wireAddons(box);
+}
+
 function orderUI() {
   orderIdem = uuid(); // çelës i ri idempotence sa herë hapet forma e porosisë
-  const items = DATA.services;
+  itemQuery = "";
+  const many = (DATA.services || []).length >= ITEMS_SEARCH_MIN;
   return `
     <div class="pub-sec">${tr("order")}</div>
-    <div id="oItems">${items.map(itemRow).join("")}</div>
+    ${many ? `<input type="search" id="oSearch" class="o-search" placeholder="${esc(tr("searchPh"))}" autocomplete="off">` : ""}
+    <div id="oItems"></div>
+    <div class="o-more" id="oMore" hidden></div>
     <div class="cart-total"><span>${tr("total")}</span><b id="oTotal">${money(0)}</b></div>
     <label class="f">${tr("name")}</label>
     <input type="text" id="oName" maxlength="60">
@@ -305,7 +366,7 @@ function itemRow(s) {
     </div>
     <div class="qty">
       <button type="button" data-m="${s.id}">−</button>
-      <span id="q-${s.id}">0</span>
+      <span id="q-${s.id}">${cart[s.id] || 0}</span>
       <button type="button" data-p="${s.id}">+</button>
     </div>
   </div>`;
@@ -357,10 +418,9 @@ function recompute() {
   $("#oTotal").textContent = money(total);
 }
 function wireOrder() {
-  // Ndryshimi i sasisë RIVIZATON shtesat: pragu mund të ketë hyrë/dalë në fuqi
-  $("#oItems").querySelectorAll("button[data-p]").forEach((b) => b.onclick = () => { const id = b.dataset.p; cart[id] = (cart[id] || 0) + 1; $("#q-" + id).textContent = cart[id]; redrawAddons(id); recompute(); });
-  $("#oItems").querySelectorAll("button[data-m]").forEach((b) => b.onclick = () => { const id = b.dataset.m; cart[id] = Math.max(0, (cart[id] || 0) - 1); $("#q-" + id).textContent = cart[id]; if (!cart[id]) delete cart[id]; redrawAddons(id); recompute(); });
-  wireAddons($("#oItems"));
+  renderItems();                       // vizaton listën (me filtër + kapak) dhe e lidh vetë
+  const s = $("#oSearch");
+  if (s) { let t; s.oninput = () => { clearTimeout(t); t = setTimeout(() => { itemQuery = s.value; renderItems(); }, 140); }; }
   $("#oGo").onclick = async () => {
     const items = Object.keys(cart).map((id) => {
       const it = svcById(id); const adds = (it && Array.isArray(it.addons)) ? it.addons : [];
