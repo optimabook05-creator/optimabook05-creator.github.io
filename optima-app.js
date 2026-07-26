@@ -164,6 +164,9 @@ const T = {
     fixBtn: "✏️ Korrigjo", fixNoQ: "S'ka pyetje klienti para kësaj përgjigjeje — shtoje te 'Shto pyetje-përgjigje'.",
     fixTitle: "✏️ Mëso AI-në përgjigjen e saktë", fixSub: "Kjo do të vlejë për çdo klient që pyet të njëjtën gjë, përgjithmonë.",
     fixQLbl: "Klienti pyeti", fixWrongLbl: "AI-ja u përgjigj", fixALbl: "Përgjigjja e saktë", fixSaveBtn: "Mësoje AI-në",
+    fixCheckBtn: "Kontrollo & mëso", fixBackBtn: "← Kthehu", fixRevLead: "Ja si do t'ua them klientëve. Ndryshoje lirisht nëse s'është saktë.",
+    fixPolishedLbl: "Përgjigjja që do të ruhet", fixOrigLbl: "Shiko fjalët e mia origjinale",
+    fixAsksH: "Që përgjigjja të jetë e plotë, sqaro edhe këtë:",
     impBtn: "📥 Ngarko listën", catSearchPh: "Kërko në katalog…", catNoMatch: "Asnjë artikull nuk përputhet me kërkimin.",
     catMore: "…dhe {n} artikuj të tjerë — përdor kërkimin lart për t'i gjetur.",
     impTitle: "📥 Ngarko listën e artikujve",
@@ -437,6 +440,9 @@ const T = {
     fixBtn: "✏️ Correct", fixNoQ: "There's no customer question before this reply — add it via 'Add Q&A' instead.",
     fixTitle: "✏️ Teach the AI the right answer", fixSub: "This will apply to every customer who asks the same thing, forever.",
     fixQLbl: "The customer asked", fixWrongLbl: "The AI replied", fixALbl: "The correct answer", fixSaveBtn: "Teach the AI",
+    fixCheckBtn: "Check & teach", fixBackBtn: "← Back", fixRevLead: "This is how I'll say it to customers. Edit it freely if it's not right.",
+    fixPolishedLbl: "The answer that will be saved", fixOrigLbl: "See my original words",
+    fixAsksH: "To make the answer complete, clarify this too:",
     impBtn: "📥 Upload list", catSearchPh: "Search catalog…", catNoMatch: "No items match your search.",
     catMore: "…and {n} more items — use the search above to find them.",
     impTitle: "📥 Upload your item list",
@@ -1828,7 +1834,8 @@ function drawAiq(rows) {
       </div>`;
     const inp = item.querySelector("input");
     const [saveB, dropB] = item.querySelectorAll("button");
-    const save = () => { const a = inp.value.trim(); if (!a) { inp.focus(); return; } answerAiq(q.id, a); };
+    // Kalon nga redaktori përpara ruajtjes (dije e paqartë = dije e keqe përgjithmonë)
+    const save = () => { const a = inp.value.trim(); if (!a) { inp.focus(); return; } reviewAiqAnswer(q.id, q.question, a); };
     saveB.onclick = save;
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") save(); });
     dropB.onclick = () => dismissAiq(q.id);
@@ -1946,33 +1953,109 @@ function drawInbox() {
   box.querySelectorAll(".cv-fix").forEach((b) => b.onclick = () => openFix(b.dataset.q, b.dataset.a));
 }
 
-/* Fleta e korrigjimit: pyetja e klientit është e dhënë, pronari shkruan përgjigjen e saktë.
-   Ruhet si dije e mësuar (i njëjti kanal si Rrethi i Mësimit) → hyn në ÇDO bisedë të ardhshme. */
+/* =====================================================================
+   REDAKTORI I DIJES — pse ekziston ky hap
+   Pronari është i zënë dhe shkruan si njeri: shkurt ("po bojme"),
+   dykuptimësisht ("varet"), ose i paplotë (pa çmim, pa kusht). Ajo përgjigje
+   pastaj futet në ÇDO bisedë të ardhshme. Prandaj para se të ruhet, funksioni
+   `refine` e lexon si redaktor: e rishkruan qartë, thotë çfarë mungon, dhe
+   bën deri në 2 pyetje kur pa to s'del dot e saktë.
+   VENDIMI MBETET I PRONARIT — mund ta ndryshojë tekstin ose të kthehet te
+   fjalët e veta. Nëse redaktori dështon (rrjeti/kuota), ruajtja vazhdon
+   normalisht me origjinalin: mësimi s'bllokohet KURRË nga një ndihmës.
+   ===================================================================== */
+let fixCtx = null;   // { question, original, onSave(finalAnswer) }
+
+function fixShow(step) {   // "write" | "review"
+  $("#fixWrite").hidden = step !== "write";
+  $("#fixReview").hidden = step !== "review";
+}
+
+// Nga Bisedat AI: përgjigje e gabuar → shkruaj të saktën
 function openFix(question, wrongAnswer) {
   const q = String(question || "").trim();
   if (!q) { toast(tr("fixNoQ"), "err"); return; }
+  fixCtx = { question: q, original: "", onSave: (final) => saveLearned(q, final) };
   $("#fixQ").textContent = q;
+  $("#fixWrongBox").hidden = !String(wrongAnswer || "").trim();
   $("#fixWrong").textContent = String(wrongAnswer || "").slice(0, 220);
   $("#fixA").value = "";
+  fixShow("write");
   $("#fixModal").hidden = false;
   setTimeout(() => $("#fixA").focus(), 60);
 }
-async function saveFix() {
-  const question = $("#fixQ").textContent.trim();
+
+// Nga Rrethi i Mësimit: pyetje e papërgjigjur → e njëjta kontrollë para ruajtjes
+function reviewAiqAnswer(id, question, answer) {
+  fixCtx = { question, original: answer, onSave: (final) => answerAiq(id, final) };
+  runReview();
+  $("#fixModal").hidden = false;
+}
+
+// Hapi 1 → Hapi 2
+function fixCheck() {
   const answer = $("#fixA").value.trim();
   if (!answer) { $("#fixA").focus(); return; }
-  const btn = $("#fixSave"); btn.classList.add("busy");
-  const now = new Date().toISOString();
+  fixCtx.original = answer;
+  runReview();
+}
+
+async function runReview() {
+  const btn = $("#fixSave"); if (btn) btn.classList.add("busy");
+  const { question, original } = fixCtx;
+  let out = null;
   try {
-    await sb.from("ai_questions").insert({
-      business_id: biz.id, question, answer, status: "answered",
-      asked_by: "owner", times_asked: 1, created_at: now, answered_at: now,
+    const { data, error } = await sb.functions.invoke("refine", {
+      body: {
+        question, answer: original, biz_name: biz.name, lang: biz.lang || "sq",
+        // katalogu i shkurtuar → redaktori kap kontradiktat me çmimet reale
+        services: (services || []).slice(0, 40).map((s) => `${s.name} — ${s.price}`).join("\n"),
+      },
     });
+    if (!error && data && data.ok) out = data;
+  } catch (_e) { /* redaktori është ndihmës, jo portë */ }
+  if (btn) btn.classList.remove("busy");
+
+  $("#fixPolished").value = (out && out.polished) || original;
+  $("#fixOrig").textContent = original;
+
+  const ib = $("#fixIssues");
+  const issues = (out && out.issues) || [];
+  ib.hidden = !issues.length;
+  ib.innerHTML = issues.map((i) => `<div class="fix-issue">⚠️ ${esc(i.msg)}</div>`).join("");
+
+  const ab = $("#fixAsks");
+  const asks = (out && out.asks) || [];
+  ab.hidden = !asks.length;
+  ab.innerHTML = asks.length
+    ? `<div class="fix-asks-h">${esc(tr("fixAsksH"))}</div>` + asks.map((a) => `<div class="fix-ask">• ${esc(a)}</div>`).join("")
+    : "";
+
+  fixShow("review");
+  setTimeout(() => $("#fixPolished").focus(), 60);
+}
+
+async function fixConfirm() {
+  const final = $("#fixPolished").value.trim();
+  if (!final) { $("#fixPolished").focus(); return; }
+  const btn = $("#fixConfirm"); btn.classList.add("busy");
+  try {
+    await fixCtx.onSave(final);
     $("#fixModal").hidden = true;
-    toast(tr("aiqSaved")); haptic(20);
-    renderAiq(); // lista e dijes rifreskohet
   } catch (e) { errToast(e); }
   btn.classList.remove("busy");
+}
+
+// Shkruan dijen e re (i njëjti kanal si Rrethi i Mësimit)
+async function saveLearned(question, answer) {
+  const now = new Date().toISOString();
+  const { error } = await sb.from("ai_questions").insert({
+    business_id: biz.id, question, answer, status: "answered",
+    asked_by: "owner", times_asked: 1, created_at: now, answered_at: now,
+  });
+  if (error) throw error;
+  toast(tr("aiqSaved")); haptic(20);
+  renderAiq();
 }
 
 /* ---------------- Recepsionisti AI (demo · truri lokal me të dhënat reale) ---------------- */
@@ -4670,7 +4753,9 @@ function wire() {
   // AI Manager: modali i mesazhit të gatshëm
   // Korrigjimi i një përgjigjeje të AI-së (nga Bisedat AI)
   if ($("#fixClose")) $("#fixClose").onclick = () => { $("#fixModal").hidden = true; };
-  if ($("#fixSave")) $("#fixSave").onclick = saveFix;
+  if ($("#fixSave")) $("#fixSave").onclick = fixCheck;
+  if ($("#fixBack")) $("#fixBack").onclick = () => { $("#fixA").value = fixCtx ? fixCtx.original : ""; fixShow("write"); };
+  if ($("#fixConfirm")) $("#fixConfirm").onclick = fixConfirm;
   if ($("#fixModal")) $("#fixModal").addEventListener("click", (e) => { if (e.target === $("#fixModal")) $("#fixModal").hidden = true; });
   if ($("#draftClose")) $("#draftClose").onclick = () => { $("#draftModal").hidden = true; };
   if ($("#draftModal")) $("#draftModal").addEventListener("click", (e) => { if (e.target === $("#draftModal")) $("#draftModal").hidden = true; });
