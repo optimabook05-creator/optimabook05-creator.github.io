@@ -2254,6 +2254,19 @@ body::before { filter: blur(56px) saturate(1.3); opacity: .92; }
   border-radius: var(--r-md); padding: 14px var(--sp-16); box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
 .cv-head { font-weight: 800; font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); margin-bottom: 10px; }
+/* "Korrigjo" mbi një përgjigje të AI-së — i qetë derisa të duhet, i qartë kur e kërkon syri */
+.cv-fix { display: inline-block; margin-left: 8px; vertical-align: baseline; border: 1px solid var(--glass-edge);
+  background: var(--glass-soft); color: var(--ink-soft); font-family: var(--font-body); font-weight: 700;
+  font-size: 11.5px; padding: 3px 9px; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  opacity: .55; transition: opacity .16s, color .16s, border-color .16s; }
+.cv-row:hover .cv-fix, .cv-fix:focus-visible { opacity: 1; color: var(--accent-deep); border-color: var(--accent); }
+@media (pointer: coarse) { .cv-fix { opacity: 1; } }   /* në telefon s'ka hover → gjithmonë i dukshëm */
+/* Konteksti te fleta e korrigjimit */
+.fix-q, .fix-wrong { border-radius: var(--r-sm); padding: 10px 13px; margin-bottom: 10px; font-size: 13.5px; line-height: 1.45; }
+.fix-q { background: var(--glass-soft); border: 1px solid var(--glass-line); }
+.fix-wrong { background: var(--red-soft); border: 1px solid rgba(224,86,86,.22); }
+.fix-lbl { display: block; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--ink-faint); margin-bottom: 4px; }
 .cv-body { display: flex; flex-direction: column; gap: 7px; }
 .cv-row { display: flex; gap: var(--sp-8); align-items: flex-start; font-size: 13.5px; line-height: 1.45; }
 .cv-row .cv-ic { flex: none; }

@@ -161,6 +161,9 @@ const T = {
     aiqAnswerPh: "Përgjigja që duhet të japë AI…", aiqQPh: "Pyetja (si do ta bënte klienti)…",
     aiqSave: "Mësoje AI-në", aiqDismiss: "Hiqe", aiqLearned: "Të mësuara",
     aiqAddBtn: "+ Shto pyetje-përgjigje", aiqSaved: "✅ AI-ja e mësoi — do ta dijë përgjithmonë",
+    fixBtn: "✏️ Korrigjo", fixNoQ: "S'ka pyetje klienti para kësaj përgjigjeje — shtoje te 'Shto pyetje-përgjigje'.",
+    fixTitle: "✏️ Mëso AI-në përgjigjen e saktë", fixSub: "Kjo do të vlejë për çdo klient që pyet të njëjtën gjë, përgjithmonë.",
+    fixQLbl: "Klienti pyeti", fixWrongLbl: "AI-ja u përgjigj", fixALbl: "Përgjigjja e saktë", fixSaveBtn: "Mësoje AI-në",
     impBtn: "📥 Ngarko listën", catSearchPh: "Kërko në katalog…", catNoMatch: "Asnjë artikull nuk përputhet me kërkimin.",
     catMore: "…dhe {n} artikuj të tjerë — përdor kërkimin lart për t'i gjetur.",
     impTitle: "📥 Ngarko listën e artikujve",
@@ -431,6 +434,9 @@ const T = {
     aiqAnswerPh: "The answer the AI should give…", aiqQPh: "The question (as a customer would ask it)…",
     aiqSave: "Teach the AI", aiqDismiss: "Remove", aiqLearned: "Learned",
     aiqAddBtn: "+ Add Q&A", aiqSaved: "✅ The AI learned it — it will know it forever",
+    fixBtn: "✏️ Correct", fixNoQ: "There's no customer question before this reply — add it via 'Add Q&A' instead.",
+    fixTitle: "✏️ Teach the AI the right answer", fixSub: "This will apply to every customer who asks the same thing, forever.",
+    fixQLbl: "The customer asked", fixWrongLbl: "The AI replied", fixALbl: "The correct answer", fixSaveBtn: "Teach the AI",
     impBtn: "📥 Upload list", catSearchPh: "Search catalog…", catNoMatch: "No items match your search.",
     catMore: "…and {n} more items — use the search above to find them.",
     impTitle: "📥 Upload your item list",
@@ -1924,12 +1930,49 @@ function drawInbox() {
   box.innerHTML = keys.slice(0, 60).map((k) => {
     const msgs = groups[k].slice().reverse(); // kronologjike
     const head = `${esc(msgs[0].channel || "chat")} · ${humanDate((groups[k][0].created_at || "").slice(0, 10))} · ${msgs.length} ${tr("inboxMsgs")}`;
-    const body = msgs.map((m) => {
+    /* KORRIGJIMI I NJË PËRGJIGJEJE — mekanizmi që i kthen gabimet e provës në mësim.
+       "Rrethi i Mësimit" mbulon rastin "AI-ja s'e dinte"; këtu mbulohet rasti më i
+       rrezikshëm: AI-ja u përgjigj, por GABIM. Pronari e sheh bisedën, shtyp
+       "Korrigjo", shkruan përgjigjen e saktë — dhe AI-ja s'e përsërit më kurrë. */
+    const body = msgs.map((m, i) => {
       const isUser = m.role === "user";
-      return `<div class="cv-row ${isUser ? "u" : "b"}"><span class="cv-ic">${isUser ? "👤" : "🤖"}</span><span class="cv-tx">${esc(m.content || "")}</span></div>`;
+      if (isUser) return `<div class="cv-row u"><span class="cv-ic">👤</span><span class="cv-tx">${esc(m.content || "")}</span></div>`;
+      const asked = (() => { for (let j = i - 1; j >= 0; j--) if (msgs[j].role === "user") return msgs[j].content || ""; return ""; })();
+      return `<div class="cv-row b"><span class="cv-ic">🤖</span><span class="cv-tx">${esc(m.content || "")}
+        <button type="button" class="cv-fix" data-q="${esc(asked)}" data-a="${esc(m.content || "")}">${esc(tr("fixBtn"))}</button></span></div>`;
     }).join("");
     return `<div class="cv-card"><div class="cv-head">${head}</div><div class="cv-body">${body}</div></div>`;
   }).join("");
+  box.querySelectorAll(".cv-fix").forEach((b) => b.onclick = () => openFix(b.dataset.q, b.dataset.a));
+}
+
+/* Fleta e korrigjimit: pyetja e klientit është e dhënë, pronari shkruan përgjigjen e saktë.
+   Ruhet si dije e mësuar (i njëjti kanal si Rrethi i Mësimit) → hyn në ÇDO bisedë të ardhshme. */
+function openFix(question, wrongAnswer) {
+  const q = String(question || "").trim();
+  if (!q) { toast(tr("fixNoQ"), "err"); return; }
+  $("#fixQ").textContent = q;
+  $("#fixWrong").textContent = String(wrongAnswer || "").slice(0, 220);
+  $("#fixA").value = "";
+  $("#fixModal").hidden = false;
+  setTimeout(() => $("#fixA").focus(), 60);
+}
+async function saveFix() {
+  const question = $("#fixQ").textContent.trim();
+  const answer = $("#fixA").value.trim();
+  if (!answer) { $("#fixA").focus(); return; }
+  const btn = $("#fixSave"); btn.classList.add("busy");
+  const now = new Date().toISOString();
+  try {
+    await sb.from("ai_questions").insert({
+      business_id: biz.id, question, answer, status: "answered",
+      asked_by: "owner", times_asked: 1, created_at: now, answered_at: now,
+    });
+    $("#fixModal").hidden = true;
+    toast(tr("aiqSaved")); haptic(20);
+    renderAiq(); // lista e dijes rifreskohet
+  } catch (e) { errToast(e); }
+  btn.classList.remove("busy");
 }
 
 /* ---------------- Recepsionisti AI (demo · truri lokal me të dhënat reale) ---------------- */
@@ -4625,6 +4668,10 @@ function wire() {
   };
   if ($("#goCatalog")) $("#goCatalog").onclick = () => { const t = document.querySelector('.tab[data-tab="catalog"]'); if (t) t.click(); };
   // AI Manager: modali i mesazhit të gatshëm
+  // Korrigjimi i një përgjigjeje të AI-së (nga Bisedat AI)
+  if ($("#fixClose")) $("#fixClose").onclick = () => { $("#fixModal").hidden = true; };
+  if ($("#fixSave")) $("#fixSave").onclick = saveFix;
+  if ($("#fixModal")) $("#fixModal").addEventListener("click", (e) => { if (e.target === $("#fixModal")) $("#fixModal").hidden = true; });
   if ($("#draftClose")) $("#draftClose").onclick = () => { $("#draftModal").hidden = true; };
   if ($("#draftModal")) $("#draftModal").addEventListener("click", (e) => { if (e.target === $("#draftModal")) $("#draftModal").hidden = true; });
   if ($("#draftCopy")) $("#draftCopy").onclick = async () => {

@@ -21,9 +21,9 @@
 <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=165">
-<link rel="modulepreload" href="config.js?v=165">
-<link rel="modulepreload" href="optima-app.js?v=165">
+<link rel="stylesheet" href="style.css?v=166">
+<link rel="modulepreload" href="config.js?v=166">
+<link rel="modulepreload" href="optima-app.js?v=166">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -915,6 +915,24 @@
   </div>
 </div>
 
+<!-- Korrigjimi i një përgjigjeje të AI-së nga vetë biseda (Rrethi i Mësimit, ana tjetër:
+     jo "s'e dinte" por "e tha gabim"). Ruhet si dije e mësuar → s'përsëritet më. -->
+<div class="modal-backdrop" id="fixModal" role="dialog" aria-modal="true" hidden>
+  <div class="modal small-modal">
+    <div class="modal-head">
+      <h2 data-t="fixTitle">✏️ Mëso AI-në përgjigjen e saktë</h2>
+      <p data-t="fixSub">Kjo do të vlejë për çdo klient që pyet të njëjtën gjë, përgjithmonë.</p>
+    </div>
+    <div class="fix-q"><span class="fix-lbl" data-t="fixQLbl">Klienti pyeti</span><div id="fixQ"></div></div>
+    <div class="fix-wrong"><span class="fix-lbl" data-t="fixWrongLbl">AI-ja u përgjigj</span><div id="fixWrong"></div></div>
+    <label class="field"><span data-t="fixALbl">Përgjigjja e saktë</span><textarea id="fixA" rows="3" maxlength="600"></textarea></label>
+    <div class="modal-actions">
+      <button class="btn ghost" id="fixClose" data-t="cancel">Mbyll</button>
+      <button class="btn primary" id="fixSave" data-t="fixSaveBtn">Mësoje AI-në</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" id="draftModal" role="dialog" aria-modal="true" hidden>
   <div class="modal small-modal">
     <div class="modal-head"><h2 id="draftTitle" data-t="draftTitle">Mesazh i gatshëm</h2></div>
@@ -933,7 +951,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=165"></script>
-<script type="module" src="optima-app.js?v=165"></script>
+<script src="core.js?v=166"></script>
+<script type="module" src="optima-app.js?v=166"></script>
 </body>
 </html>
