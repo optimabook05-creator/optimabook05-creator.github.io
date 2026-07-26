@@ -138,9 +138,29 @@ async function askOpenAI(kind: string, content: string, mime: string) {
   return JSON.parse(txt);
 }
 
+/* ---- MBUROJA E KUOTËS ----
+   Çelësi publik i Supabase-it ndodhet te config.js — pra e sheh kushdo dhe me të
+   mund të thirret ky funksion. Pa kufi, mijëra thirrje të skriptuara do të digjnin
+   kuotën e AI-së dhe importi (bashkë me recepsionistin) do të ndalonte për klientët
+   realë. Kufiri mbahet në kujtesën e instancës (pa bazë, pa varësi).
+   Kufiri është dorështrënguar sepse një import i vërtetë dërgon disa copa me radhë. */
+const rlHits = new Map<string, number[]>();
+function rateLimited(key: string, max: number): boolean {
+  const now = Date.now();
+  const arr = (rlHits.get(key) || []).filter((t) => now - t < 60000);
+  if (arr.length >= max) { rlHits.set(key, arr); return true; }
+  arr.push(now); rlHits.set(key, arr);
+  if (rlHits.size > 5000) rlHits.clear();
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
+    const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "?";
+    if (rateLimited(ip, 60) || rateLimited("_all", 400)) {
+      return new Response(JSON.stringify({ error: "rate" }), { status: 429, headers: { ...cors, "Content-Type": "application/json" } });
+    }
     const { kind, content, mime } = await req.json();
     if (!content || (kind !== "text" && kind !== "image")) {
       return new Response(JSON.stringify({ error: "bad input" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });

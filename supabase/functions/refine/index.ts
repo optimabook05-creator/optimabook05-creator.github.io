@@ -131,9 +131,29 @@ async function askOpenAI(system: string, user: string) {
 
 const ISSUE_TYPES = new Set(["vague", "incomplete", "missing_price", "missing_condition", "conflict"]);
 
+/* ---- MBUROJA E KUOTËS ----
+   Çelësi publik i Supabase-it ndodhet te config.js — pra e sheh kushdo, dhe me të
+   mund të thirret ky funksion. Pa kufi, dikush mund të skriptonte mijëra thirrje
+   dhe të digjte kuotën e AI-së; atëherë recepsionisti do të ndalonte për klientët
+   realë. Kufiri mbahet në kujtesën e instancës (pa bazë, pa varësi). */
+const rlHits = new Map<string, number[]>();
+function rateLimited(key: string, max: number): boolean {
+  const now = Date.now();
+  const arr = (rlHits.get(key) || []).filter((t) => now - t < 60000);
+  if (arr.length >= max) { rlHits.set(key, arr); return true; }
+  arr.push(now); rlHits.set(key, arr);
+  if (rlHits.size > 5000) rlHits.clear(); // sigurim kujtese (sulm me çelësa unikë)
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
+    const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "?";
+    if (rateLimited(ip, 30) || rateLimited("_all", 300)) {
+      // 200 me ok:false → paneli thjesht ruan fjalët e pronarit, pa mesazh gabimi
+      return new Response(JSON.stringify({ ok: false, error: "rate" }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
     const body = await req.json();
     const question = String(body?.question || "").trim().slice(0, 500);
     const answer = String(body?.answer || "").trim().slice(0, 1500);
