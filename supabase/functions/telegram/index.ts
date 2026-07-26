@@ -79,6 +79,40 @@ Deno.serve(async (req) => {
       return new Response("ok");
     }
 
+    /* =====================================================================
+       PORTA PRONAR / KLIENT — vendoset NJË herë, PARA çdo trajtimi tjetër.
+       Nëse ky chat është kanali i njoftimeve të pronarit, ai NUK është kurrë
+       bisedë klienti: mesazhet e tij s'ruhen te `messages`, s'shkojnë te truri
+       AI, s'krijojnë rezervime e s'i sjellin njoftime për "klient të re" vetes.
+       Përndryshe biseda e tij do ndotte Bisedat AI me biseda të rreme dhe një
+       provë e pakujdesshme mund të krijonte takim ose kërkesë të vërtetë.
+       (Për të provuar AI-në si klient, pronari ka "Provo AI-në" te paneli —
+       modaliteti preview, që nuk shkruan asgjë në bazë.)
+       Kjo NUK është çështje sigurie: një klient s'mund të ekzekutojë komanda
+       pronari, sepse kontrolli bëhet mbi chat_id-në, jo mbi tekstin.
+       ===================================================================== */
+    const { data: ownerBiz } = await supabase.from("businesses")
+      .select("id, name, lang, config").eq("owner_tg_chat", chatId).limit(5);
+    const isOwnerChat = !!(ownerBiz && ownerBiz.length);
+
+    if (isOwnerChat) {
+      const sqO = (ownerBiz[0].lang || "sq").toLowerCase().startsWith("sq");
+      const txt = msg.text.trim();
+      const isSwitch = /^\/(off|on|status)\b/i.test(txt);
+      const isPriceCmd = /^[^=\n]{1,80}?\s*=\s*[+-]?[\d.,]+\s*%?\s*(?:€|eur|euro|lek|lekë)?$/i.test(txt) && !/https?:\/\//i.test(txt);
+      if (!isSwitch && !isPriceCmd) {
+        // Çdo gjë tjetër nga pronari → udhëzues i shkurtër, dhe STOP (kurrë si klient)
+        const names = ownerBiz.map((b: any) => {
+          const off = !!(b.config && b.config.aiOff);
+          return `${off ? "🔕" : "✅"} ${b.name}${off ? (sqO ? " — AI E NDALUR" : " — AI OFF") : ""}`;
+        }).join("\n");
+        await sendTelegram(chatId, sqO
+          ? `👋 Kjo bisedë është paneli yt, jo bisedë klienti — ndaj mesazhet e tua nuk shkojnë te AI-ja.\n\n${names}\n\nKomandat:\n/off — ndal AI-në në çast\n/on — kthee në punë\n/status — gjendja\niPhone 15 = 430 — vendos çmimin\niphone 17 = -10% — gjithë familja\n* = +5% — gjithë katalogun\n\nDo t'i provosh përgjigjet e AI-së? Hap panelin → "Provo AI-në" (atje nuk ruhet asgjë).`
+          : `👋 This chat is your control panel, not a customer chat — so your messages don't go to the AI.\n\n${names}\n\nCommands:\n/off — pause the AI instantly\n/on — bring it back\n/status — current state\niPhone 15 = 430 — set a price\niphone 17 = -10% — a whole family\n* = +5% — the whole catalog\n\nWant to try the AI's replies? Open the panel → "Try the AI" (nothing is saved there).`, BOT);
+        return new Response("ok");
+      }
+    }
+
     /* ---- ÇELËSI I NDALIMIT NGA TELEFONI (vetëm pronari i lidhur) ----
        Kur AI-ja thotë diçka që pronarit nuk i pëlqen, ai është në rrugë — jo
        para panelit. "/off" e ndal në çast, "/on" e kthen, "/status" e thotë
@@ -86,8 +120,7 @@ Deno.serve(async (req) => {
        pronari njoftohet për çdo mesazh (shih rojen aiOff te funksioni chat). */
     const mSw = msg.text.trim().toLowerCase().match(/^\/(off|on|status)\b/);
     if (mSw) {
-      const { data: owned } = await supabase.from("businesses")
-        .select("id, name, lang, config").eq("owner_tg_chat", chatId).limit(5);
+      const owned = ownerBiz;
       if (owned && owned.length) {
         const cmd = mSw[1];
         for (const b of owned) {
@@ -121,7 +154,7 @@ Deno.serve(async (req) => {
        ndërhyn VETËM kur chat_id-ja është kanal pronari DHE trajta "emër = numër". */
     const mPrice = msg.text.match(/^([^=\n]{1,80}?)\s*=\s*([+-]?[\d.,]+)\s*(%)?\s*(?:€|eur|euro|lek|lekë)?\s*$/i);
     if (mPrice && !/https?:\/\//i.test(msg.text)) {
-      const { data: owned } = await supabase.from("businesses").select("id, name, lang").eq("owner_tg_chat", chatId).limit(5);
+      const owned = ownerBiz;   // porta e mësipërme e ka gjetur tashmë (një pyetje, jo dy)
       if (owned && owned.length) {
         const sq = (owned[0].lang || "sq").toLowerCase().startsWith("sq");
         const isPct = !!mPrice[3];
