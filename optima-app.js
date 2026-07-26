@@ -210,6 +210,9 @@ const T = {
     tgAlertH: "💬 Ose merr njoftimet në Telegram (më e sigurta — s'vonon kurrë)",
     tgAlertD: "Hap këtë link një herë nga telefoni yt → çdo rezervim/porosi të vjen në Telegram në çast, edhe kur telefoni fle. Ideale për Android.",
     tgAlertBtn: "💬 Lidh Telegram-in tim ↗", tgAlertOn: "✅ I lidhur",
+    tgUnlinkBtn: "Shkëput Telegram-in", tgUnlinked: "🔒 U shkëput — linku i vjetër nuk vlen më",
+    tgUnlinkAsk: "Do të shkëputet Telegram-i dhe linku i vjetër do vdesë përgjithmonë. Pastaj lidhu sërish me linkun e ri. Vazhdojmë?",
+    tgAlertSec: "🔒 Linku vlen vetëm një herë — pasi lidhesh, ai vdes vetë. Mos e përcill kujt: kush e hap, merr njoftimet dhe mund të ndalojë AI-në ose të ndryshojë çmimet.",
     itemMoreShow: "⚙️ Më shumë opsione (përshkrim, stok, kod, shumicë…)", itemMoreHide: "⚙️ Më pak opsione",
     installApp: "Instaloje si aplikacion", installBtn: "Instalo",
     pushH: "🔔 Njoftimet në telefon", pushBtn: "🔔 Aktivizo në këtë pajisje",
@@ -489,6 +492,9 @@ const T = {
     tgAlertH: "💬 Or get alerts on Telegram (most reliable — never delayed)",
     tgAlertD: "Open this link once from your phone → every booking/order reaches you on Telegram instantly, even when your phone sleeps. Ideal for Android.",
     tgAlertBtn: "💬 Connect my Telegram ↗", tgAlertOn: "✅ Connected",
+    tgUnlinkBtn: "Disconnect Telegram", tgUnlinked: "🔒 Disconnected — the old link no longer works",
+    tgUnlinkAsk: "Telegram will be disconnected and the old link will die permanently. You'll then re-link with the new link. Continue?",
+    tgAlertSec: "🔒 The link works only once — once you connect, it dies by itself. Never forward it: whoever opens it gets your alerts and can pause the AI or change prices.",
     itemMoreShow: "⚙️ More options (description, stock, code, wholesale…)", itemMoreHide: "⚙️ Fewer options",
     installApp: "Install as an app", installBtn: "Install",
     pushH: "🔔 Phone notifications", pushBtn: "🔔 Enable on this device",
@@ -3152,6 +3158,8 @@ function renderSettings() {
     const link = $("#tgAlertLink"), stat = $("#tgAlertStatus");
     if (link && biz.owner_alert_token) link.href = `https://t.me/${MASTER_BOT}?start=oa_${biz.owner_alert_token}`;
     if (stat) { stat.textContent = biz.owner_tg_chat ? tr("tgAlertOn") : ""; stat.classList.toggle("ok", !!biz.owner_tg_chat); }
+    // Shkëputja shfaqet vetëm kur ka çfarë të shkëputet
+    const un = $("#tgAlertUnlink"); if (un) un.hidden = !biz.owner_tg_chat;
   }
   const op = $("#openPubLink"); if (op) op.href = pubBase;
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
@@ -4761,6 +4769,20 @@ function wire() {
     catch (e) { $("#tgEasyLink").select(); document.execCommand && document.execCommand("copy"); toast(tr("copied")); }
   };
   if ($("#pushEnable")) $("#pushEnable").onclick = enablePush;
+  /* Shkëputja e Telegramit: heq kanalin DHE ndryshon token-in, që edhe një link
+     i rrjedhur më parë të vdesë. Kjo është rruga e rimarrjes së kontrollit nëse
+     pronari dyshon se linku i ka rënë në dorë tjetërkujt. */
+  if ($("#tgAlertUnlink")) $("#tgAlertUnlink").onclick = async () => {
+    if (!confirm(tr("tgUnlinkAsk"))) return;
+    const btn = $("#tgAlertUnlink"); btn.classList.add("busy");
+    const fresh = (crypto && crypto.randomUUID) ? crypto.randomUUID() : null;
+    const patch = fresh ? { owner_tg_chat: null, owner_alert_token: fresh } : { owner_tg_chat: null };
+    const { error } = await sb.from("businesses").update(patch).eq("id", biz.id);
+    btn.classList.remove("busy");
+    if (error) { errToast(error); return; }
+    biz.owner_tg_chat = null; if (fresh) biz.owner_alert_token = fresh;
+    renderConfigHub(); toast(tr("tgUnlinked")); haptic(20);
+  };
   // Përshtatja: fik/ndiz fushat e katalogut
   if ($("#saveFields")) $("#saveFields").onclick = async () => {
     const cfg = Object.assign({}, biz.config || {});

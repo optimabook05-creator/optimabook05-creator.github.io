@@ -68,9 +68,31 @@ Deno.serve(async (req) => {
     const mOwner = msg.text.match(/^\/start\s+oa_([0-9a-f-]{36})\s*$/i);
     if (mOwner) {
       const token = mOwner[1].toLowerCase();
-      const { data: b } = await supabase.from("businesses").select("id, name, lang").eq("owner_alert_token", token).maybeSingle();
+      const { data: b } = await supabase.from("businesses")
+        .select("id, name, lang, owner_tg_chat, telegram_token").eq("owner_alert_token", token).maybeSingle();
       if (b) {
-        try { await supabase.from("businesses").update({ owner_tg_chat: chatId }).eq("id", b.id); } catch (_e) {}
+        /* SIGURIA E LIDHJES — token-i është UUID (122 bit): i pahamendësueshëm, dhe
+           duket VETËM në panelin e pronarit (pas hyrjes + RLS). Prandaj askush s'bëhet
+           pronar "nga rruga". POR linku mund të RRJEDHË (screenshot, përcjellë, grup),
+           dhe kanali i pronarit tani ka pushtet real: /off dhe ndryshim çmimesh.
+           Ndaj: (1) token-i NDRYSHON menjëherë pas lidhjes → linku i përdorur vdes;
+                 (2) nëse zëvendësohet një lidhje e vjetër, ATA njoftohen — zaptimi
+                     i heshtur bëhet i pamundur. */
+        const prev = b.owner_tg_chat;
+        try {
+          await supabase.from("businesses")
+            .update({ owner_tg_chat: chatId, owner_alert_token: crypto.randomUUID() })
+            .eq("id", b.id);
+        } catch (_e) {}
+        if (prev && String(prev) !== String(chatId)) {
+          const sqP = (b.lang || "sq").toLowerCase().startsWith("sq");
+          try {
+            await sendTelegram(String(prev), sqP
+              ? `⚠️ Njoftimet e "${b.name}" u kaluan te një pajisje tjetër tani. Nëse NUK e bëre ti, hap panelin → Cilësimet → "Shkëput Telegram-in" dhe lidhu sërish me link të re.`
+              : `⚠️ Alerts for "${b.name}" were just moved to another device. If this was NOT you, open the panel → Settings → "Disconnect Telegram" and re-link with a fresh link.`,
+              (b as any).telegram_token || BOT);
+          } catch (_e) { /* njoftimi është shtesë */ }
+        }
         const sq = (b.lang || "sq").toLowerCase().startsWith("sq");
         await sendTelegram(chatId, sq
           ? `✅ U lidh! Do të marrësh këtu çdo rezervim, porosi e kërkesë të re për "${b.name}" — në çast, edhe kur je jashtë.\n\n💡 Truk: ndrysho çmimet që këtu:\n• Një artikull: iPhone 15 = 430\n• Gjithë familja: iphone 17 = -10%\n• Gjithë katalogu: * = +5%`
