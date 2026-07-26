@@ -1172,6 +1172,30 @@ Deno.serve(async (req) => {
 
     const { biz, services, hours, staff } = await loadContext(business_id);
     if (!biz) return json({ error: "business not found" }, 404);
+
+    /* ---- ÇELËSI I NDALIMIT (config.aiOff) ----
+       Kontrolli që i mungonte pronarit: nëse AI-ja thotë diçka që nuk i pëlqen,
+       ose thjesht do t'i përgjigjet vetë një kohë, e ndal me një prekje (panel
+       ose "/off" te Telegram-i i vet). KLIENTI NUK MBETET PA PËRGJIGJE — merr
+       një mesazh të ngrohtë njerëzor, mesazhi ruhet, dhe pronari NJOFTOHET
+       menjëherë. Domethënë biznesi vazhdon të kapë klientin; humbet vetëm
+       automatizimi, jo klienti. */
+    if (biz.config && biz.config.aiOff) {
+      const sq = isSqLang(biz);
+      const reply = sq
+        ? `Faleminderit që shkruajtë! 🙏 ${biz.name} do t'ju kthehet personalisht shumë shpejt.`
+        : `Thanks for your message! 🙏 ${biz.name} will get back to you personally very soon.`;
+      if (!(preview === true || channel === "demo")) {
+        try {
+          await supabase.from("notifications").insert({
+            business_id,
+            text: `🔕 AI e ndalur — mesazh i pa-përgjigjur (${client_name || "Klient"}): ${safeText.slice(0, 120)}`,
+          });
+        } catch (_e) { /* njoftimi është shtesë, s'e bllokon përgjigjen */ }
+      }
+      return json({ reply, via: "off", needs_human: true });
+    }
+
     if (!services.length) return json({ reply: "Booking is not set up yet." });
 
     // Modi PREVIEW (panel → "Provo AI-në"): llogarit përgjigjen REALE me të dhënat e biznesit,

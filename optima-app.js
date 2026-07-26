@@ -164,6 +164,9 @@ const T = {
     fixBtn: "✏️ Korrigjo", fixNoQ: "S'ka pyetje klienti para kësaj përgjigjeje — shtoje te 'Shto pyetje-përgjigje'.",
     fixTitle: "✏️ Mëso AI-në përgjigjen e saktë", fixSub: "Kjo do të vlejë për çdo klient që pyet të njëjtën gjë, përgjithmonë.",
     fixQLbl: "Klienti pyeti", fixWrongLbl: "AI-ja u përgjigj", fixALbl: "Përgjigjja e saktë", fixSaveBtn: "Mësoje AI-në",
+    aiOffLbl: "🔕 Ndalo AI-në përkohësisht",
+    aiOffHint: "Klientët marrin: „Do t'ju kthehemi personalisht shumë shpejt\" — dhe ti njoftohesh për çdo mesazh. Asnjë klient nuk humbet. Nga telefoni: shkruaj /off ose /on te bot-i i njoftimeve.",
+    aiOffOn: "🔕 AI-ja u ndal — klientët i merr ti", aiOffOff: "✅ AI-ja u kthye në punë",
     fixCheckBtn: "Kontrollo & mëso", fixBackBtn: "← Kthehu", fixRevLead: "Ja si do t'ua them klientëve. Ndryshoje lirisht nëse s'është saktë.",
     fixPolishedLbl: "Përgjigjja që do të ruhet", fixOrigLbl: "Shiko fjalët e mia origjinale",
     fixAsksH: "Që përgjigjja të jetë e plotë, sqaro edhe këtë:",
@@ -440,6 +443,9 @@ const T = {
     fixBtn: "✏️ Correct", fixNoQ: "There's no customer question before this reply — add it via 'Add Q&A' instead.",
     fixTitle: "✏️ Teach the AI the right answer", fixSub: "This will apply to every customer who asks the same thing, forever.",
     fixQLbl: "The customer asked", fixWrongLbl: "The AI replied", fixALbl: "The correct answer", fixSaveBtn: "Teach the AI",
+    aiOffLbl: "🔕 Pause the AI",
+    aiOffHint: "Customers get: “We'll get back to you personally very soon” — and you're notified for every message. No customer is lost. From your phone: send /off or /on to your alerts bot.",
+    aiOffOn: "🔕 AI paused — customers come to you", aiOffOff: "✅ AI is back at work",
     fixCheckBtn: "Check & teach", fixBackBtn: "← Back", fixRevLead: "This is how I'll say it to customers. Edit it freely if it's not right.",
     fixPolishedLbl: "The answer that will be saved", fixOrigLbl: "See my original words",
     fixAsksH: "To make the answer complete, clarify this too:",
@@ -3156,6 +3162,8 @@ function renderSettings() {
   setCfg("#bizInstagram", "instagram"); setCfg("#bizCity", "city"); setCfg("#bizAbout", "about");
   const pc = $("#profitOnChk"); if (pc) pc.checked = !!cfg.profitOn;
   const ac = $("#approveChk"); if (ac) ac.checked = !!cfg.requireApproval;
+  const ak = $("#aiOffChk");
+  if (ak) { ak.checked = !!cfg.aiOff; const bx = $("#aiKillBox"); if (bx) bx.classList.toggle("on", !!cfg.aiOff); }
   const fxf = $("#fixedCostField"); if (fxf) fxf.hidden = !cfg.profitOn;
   renderFixedCosts();
   // Ekipi: vetëm pronari menaxhon qasjen
@@ -4681,6 +4689,20 @@ function wire() {
     toast(tr("aiTemplateDone"));
   };
   if ($("#profitOnChk")) $("#profitOnChk").onchange = (e) => { const f = $("#fixedCostField"); if (f) f.hidden = !e.target.checked; };
+  /* Çelësi i ndalimit vepron NË ÇAST — një kontroll urgjence që kërkon të gjesh
+     butonin "Ruaj" nuk është kontroll urgjence. Shkruhet vetë, me rikthim nëse dështon. */
+  if ($("#aiOffChk")) $("#aiOffChk").onchange = async (e) => {
+    const on = e.target.checked;
+    const bx = $("#aiKillBox"); if (bx) bx.classList.toggle("on", on);
+    haptic(on ? 24 : 12);
+    const cfg = Object.assign({}, biz.config || {}); cfg.aiOff = on;
+    const { error } = await sb.from("businesses").update({ config: cfg }).eq("id", biz.id);
+    if (error) {                                  // rikthim: gjendja e vërtetë është ajo e serverit
+      e.target.checked = !on; if (bx) bx.classList.toggle("on", !on); errToast(error); return;
+    }
+    biz.config = cfg;
+    toast(on ? tr("aiOffOn") : tr("aiOffOff"));
+  };
   if ($("#addFixedCost")) $("#addFixedCost").onclick = () => { addFixedCostRow("", ""); const rows = document.querySelectorAll("#fixedCostList .exp-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".exp-name").focus(); };
   // General: ruaj GJITHÇKA me një buton
   if ($("#saveGeneral")) $("#saveGeneral").onclick = async () => {
@@ -4690,6 +4712,7 @@ function wire() {
     cfg.instagram = g("#bizInstagram"); cfg.city = g("#bizCity"); cfg.about = g("#bizAbout");
     cfg.profitOn = $("#profitOnChk") ? $("#profitOnChk").checked : false;
     cfg.requireApproval = $("#approveChk") ? $("#approveChk").checked : false;
+    if ($("#aiOffChk")) cfg.aiOff = $("#aiOffChk").checked;   // ruaje gjendjen aktuale (u shkrua tashmë vetë)
     cfg.fixedCosts = collectFixedCosts();
     cfg.fixedMonthly = cfg.fixedCosts.reduce((a, x) => a + (Number(x.amount) || 0), 0) || null; // përputhshmëri
     const payload = {

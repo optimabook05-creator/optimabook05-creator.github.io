@@ -79,6 +79,38 @@ Deno.serve(async (req) => {
       return new Response("ok");
     }
 
+    /* ---- ÇELËSI I NDALIMIT NGA TELEFONI (vetëm pronari i lidhur) ----
+       Kur AI-ja thotë diçka që pronarit nuk i pëlqen, ai është në rrugë — jo
+       para panelit. "/off" e ndal në çast, "/on" e kthen, "/status" e thotë
+       gjendjen. Klientët vazhdojnë të marrin një përgjigje njerëzore dhe
+       pronari njoftohet për çdo mesazh (shih rojen aiOff te funksioni chat). */
+    const mSw = msg.text.trim().toLowerCase().match(/^\/(off|on|status)\b/);
+    if (mSw) {
+      const { data: owned } = await supabase.from("businesses")
+        .select("id, name, lang, config").eq("owner_tg_chat", chatId).limit(5);
+      if (owned && owned.length) {
+        const cmd = mSw[1];
+        for (const b of owned) {
+          if (cmd === "status") continue;
+          const cfg = Object.assign({}, b.config || {});
+          cfg.aiOff = cmd === "off";
+          try { await supabase.from("businesses").update({ config: cfg }).eq("id", b.id); b.config = cfg; } catch (_e) {}
+        }
+        const sq = (owned[0].lang || "sq").toLowerCase().startsWith("sq");
+        const lines = owned.map((b: any) => {
+          const off = !!(b.config && b.config.aiOff);
+          return `${off ? "🔕" : "✅"} ${b.name}: ${off ? (sq ? "AI E NDALUR" : "AI OFF") : (sq ? "AI aktive" : "AI on")}`;
+        }).join("\n");
+        const tip = cmd === "off"
+          ? (sq ? "\n\nKlientët do marrin: \"Do t'ju kthehemi personalisht shumë shpejt\" — dhe ti njoftohesh për çdo mesazh. Shkruaj /on për ta kthyer."
+                : "\n\nCustomers will get: \"We'll get back to you personally very soon\" — and you get notified for every message. Send /on to switch it back.")
+          : (sq ? "\n\nShkruaj /off për ta ndalur në çast kurdo." : "\n\nSend /off to stop it instantly at any time.");
+        await sendTelegram(chatId, lines + tip, BOT);
+        return new Response("ok");
+      }
+      // s'është kanal pronari → vazhdo si mesazh klienti normal
+    }
+
     /* ---- ÇMIMET ME NJË MESAZH (vetëm pronari i lidhur për njoftime) ----
        NJË artikull:   "iphone 15 128gb = 430"      → vendos çmimin saktë
        FAMILJE me %:   "iphone 17 = -10%"           → TË GJITHË variantet (Pro,
