@@ -23,6 +23,11 @@ const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash-lite";
 // Model-agnostik: nëse vendos OPENAI_API_KEY + AI_PROVIDER=openai → përdor ChatGPT (GPT-4o-mini si parazgjedhje).
 const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
 const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+/* Cdo ofrues me API te perputhshme me OpenAI punon ketu: Groq, DeepSeek,
+   Together, OpenRouter (Qwen/Llama)… Ndrysho vetem OPENAI_BASE_URL + KEY + MODEL.
+   Keshtu ofruesi i dyte behet rrjet sigurie pa asnje rresht kodi te ri. */
+let OPENAI_BASE = Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1";
+while (OPENAI_BASE.endsWith("/")) OPENAI_BASE = OPENAI_BASE.slice(0, -1);
 const AI_PROVIDER = (Deno.env.get("AI_PROVIDER") || "").toLowerCase();
 const SLOT_STEP = 30;
 const DAYS_AHEAD = 10;
@@ -716,7 +721,7 @@ async function askGemini(system: string, contents: any[]) {
 async function askOpenAI(system: string, contents: any[]) {
   const messages: any[] = [{ role: "system", content: system }];
   for (const c of contents) messages.push({ role: c.role === "model" ? "assistant" : "user", content: c.parts?.[0]?.text || "" });
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_KEY}` },
     body: JSON.stringify({

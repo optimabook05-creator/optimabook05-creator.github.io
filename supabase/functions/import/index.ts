@@ -22,6 +22,11 @@ const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash-lite";
 const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
 const OPENAI_MODEL = Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini";
+/* Cdo ofrues me API te perputhshme me OpenAI punon ketu: Groq, DeepSeek,
+   Together, OpenRouter (Qwen/Llama)… Ndrysho vetem OPENAI_BASE_URL + KEY + MODEL.
+   Keshtu ofruesi i dyte behet rrjet sigurie pa asnje rresht kodi te ri. */
+let OPENAI_BASE = Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1";
+while (OPENAI_BASE.endsWith("/")) OPENAI_BASE = OPENAI_BASE.slice(0, -1);
 const AI_PROVIDER = (Deno.env.get("AI_PROVIDER") || "").toLowerCase();
 
 const cors = {
@@ -97,7 +102,7 @@ async function askOpenAI(kind: string, content: string, mime: string) {
     ? [{ type: "image_url", image_url: { url: `data:${mime || "image/jpeg"};base64,${content}` } },
        { type: "text", text: "Extract all products from this price list image." }]
     : "Extract all products from this list:\n\n" + content;
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_KEY}` },
     body: JSON.stringify({
