@@ -21,9 +21,9 @@
 <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=176">
-<link rel="modulepreload" href="config.js?v=176">
-<link rel="modulepreload" href="optima-app.js?v=176">
+<link rel="stylesheet" href="style.css?v=177">
+<link rel="modulepreload" href="config.js?v=177">
+<link rel="modulepreload" href="optima-app.js?v=177">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -509,29 +509,38 @@
       <div class="settings-block" id="channelBlock">
         <h3 class="set-h" data-t="setChannelH">🔗 Lidh kanalin (Telegram)</h3>
 
-        <!-- MËNYRA 1-KLIK: bot-i master i përbashkët — pa BotFather fare -->
-        <div class="tg-easy" id="tgEasy">
-          <div class="tg-easy-h" data-t="tgEasyH">⚡ Mënyra e lehtë (rekomandohet): ndaje këtë link</div>
-          <p class="pane-desc" data-t="tgEasyD">Klienti e hap linkun → i shkruan recepsionistit tënd AI menjëherë. Vëre në bio, WhatsApp status, poster — gati për 30 sekonda, pa asnjë konfigurim.</p>
+        <!-- BOT-I I BIZNESIT: rruga e duhur — emri i tij, rreziku i tij i ndarë -->
+        <div class="tg-own" id="tgAdv">
+          <div class="tg-own-h" data-t="tgOwnH">🤖 Bot me emrin TËND (rekomandohet)</div>
+          <p class="pane-desc" data-t="tgOwnD">Klientët do të shohin emrin e biznesit tënd, jo tonin. Dhe bot-i është vetëm i yti — asnjë biznes tjetër s'e prek. 3 minuta, një herë.</p>
+          <ol class="tg-steps">
+            <li data-t="tgStep1">Hap <b>Telegram</b> → kërko <b>BotFather</b> → hape</li>
+            <li data-t="tgStep2">Shkruaj <b>/newbot</b> → dërgo</li>
+            <li data-t="tgStep3">Shkruaj emrin e biznesit tënd (p.sh. <i>Auto Blerimi</i>)</li>
+            <li data-t="tgStep4">Shkruaj një username që mbaron me <b>bot</b> (p.sh. <i>AutoBlerimiBot</i>)</li>
+            <li data-t="tgStep5">Kopjo kodin e gjatë që të jep dhe ngjite poshtë</li>
+          </ol>
+          <div class="settings-row">
+            <label for="tgToken" data-t="tgTokenLbl">Token-i i bot-it Telegram</label>
+            <div class="settings-input">
+              <input type="text" id="tgToken" placeholder="123456789:ABCdef...">
+              <button class="btn small primary" id="saveTgToken" data-t="save">Ruaj</button>
+            </div>
+          </div>
+          <a id="tgWebhook" class="btn small primary" target="_blank" rel="noopener" hidden style="text-decoration:none;margin-top:4px" data-t="tgActivate">⚡ Aktivizo webhook-un ↗</a>
+          <p class="pane-desc" data-t="tgOwnLast" style="margin-top:8px">Pas "Aktivizo", ndaje me klientët linkun <b>t.me/emri-i-botit-tënd</b>.</p>
+        </div>
+
+        <!-- PROVA E SHPEJTE: bot i perbashket — per ta pare si punon, jo per prodhim -->
+        <details class="tg-easy" id="tgEasy">
+          <summary data-t="tgEasyH">⚡ Ose provoje shpejt me bot-in tonë (30 sekonda)</summary>
+          <p class="pane-desc" data-t="tgEasyD">Për ta parë si punon menjëherë, pa krijuar asgjë. Klientët do të shohin emrin tonë, jo tëndin — ndaj për punë të vërtetë kalo te bot-i yt lart.</p>
           <div class="settings-input">
             <input type="text" id="tgEasyLink" readonly>
             <button class="btn small primary" id="copyTgEasy" type="button" data-t="copyLink">Kopjo</button>
           </div>
-        </div>
-
-        <details class="tg-adv" id="tgAdv">
-          <summary data-t="tgAdvH">🤖 E avancuar: bot me emrin TËND (opsionale)</summary>
-          <p class="pane-desc" data-t="channelDesc">2 minuta: krijo një bot te @BotFather → kopjo token-in → ngjite këtu → Ruaj → kliko "Aktivizo".</p>
-        <div class="settings-row">
-          <label for="tgToken" data-t="tgTokenLbl">Token-i i bot-it Telegram</label>
-          <div class="settings-input">
-            <input type="text" id="tgToken" placeholder="123456789:ABCdef...">
-            <button class="btn small primary" id="saveTgToken" data-t="save">Ruaj</button>
-          </div>
-        </div>
-        <a id="tgWebhook" class="btn small primary" target="_blank" rel="noopener" hidden style="text-decoration:none;margin-top:4px" data-t="tgActivate">⚡ Aktivizo webhook-un ↗</a>
-        <p style="font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-top:14px"><span data-t="bizIdLbl">ID e biznesit (për WhatsApp/Meta):</span> <code id="bizIdVal" class="biz-id"></code></p>
         </details>
+        <p style="font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-top:14px"><span data-t="bizIdLbl">ID e biznesit (për WhatsApp/Meta):</span> <code id="bizIdVal" class="biz-id"></code></p>
       </div>
 
       <div class="settings-block">
@@ -974,7 +983,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=176"></script>
-<script type="module" src="optima-app.js?v=176"></script>
+<script src="core.js?v=177"></script>
+<script type="module" src="optima-app.js?v=177"></script>
 </body>
 </html>
