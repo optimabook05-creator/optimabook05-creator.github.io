@@ -1,5 +1,5 @@
 /* =====================================================================
-   OptimaBook — Aplikacioni real (Faza A)
+   Apexify — Aplikacioni real (Faza A)
    Hyrje/regjistrim pronari (Supabase Auth) + të dhëna në databazë.
    Tre pamje: (1) Auth, (2) Regjistrimi i biznesit, (3) Paneli.
    Multi-tenant: RLS siguron që çdo pronar sheh vetëm të dhënat e veta.
@@ -43,7 +43,7 @@ const T = {
     grpDaily: "Përdor çdo ditë", grpSetup: "Rregullo një herë", tabConfig: "🚀 Konfigurimi", optional: "opsionale",
     bnHome: "Kreu", bnCal: "Kalendari", bnAppt: "Takimet", bnEcon: "Ekonomia", bnMore: "Më shumë", menuTitle: "Menu",
     bnOrders: "Porositë", bnLeads: "Kërkesa", undo: "Kthe",
-    configDesc: "Vendi i vetëm për ta rregulluar biznesin — hapat kryesorë në një vend. Plotësoji një herë; pastaj OptimaBook merret me klientët.",
+    configDesc: "Vendi i vetëm për ta rregulluar biznesin — hapat kryesorë në një vend. Plotësoji një herë; pastaj Apexify merret me klientët.",
     cfgStepProfile: "Profili i biznesit", cfgStepProfileD: "Emri, adresa, kontakti, monedha, përshkrimi.",
     cfgStepOffer: "Çfarë ofron", cfgStepOfferD: "Shërbimet & produktet — çmim, kohëzgjatje, stok.",
     cfgStepHours: "Orari & pushimet", cfgStepHoursD: "Kur je hapur dhe pushimet gjatë ditës.",
@@ -283,7 +283,7 @@ const T = {
     manTimes: "Sa herë", recurDone: "✅ U krijuan {n} takime",
     setPubH: "🌐 Faqe vetë-shërbimi (OPSIONALE)", pubDesc: "S'të duhet detyrimisht. Klientët thjesht të shkruajnë normalisht në WhatsApp/Instagram/Telegram dhe AI u përgjigjet aty. Ky link është vetëm një shtesë — nëse do, vendose në bio që klientët të rezervojnë edhe vetë (si Calendly).",
     copyLink: "Kopjo", openLink: "Hap ↗", copied: "✅ U kopjua",
-    teamH: "👥 Ekipi (qasja për punonjësit)", teamDesc: "Shto punonjës me email. Kur regjistrohen me atë email te OptimaBook, hyjnë në KËTË biznes. Pa email-e — thjesht thuaju email-in.",
+    teamH: "👥 Ekipi (qasja për punonjësit)", teamDesc: "Shto punonjës me email. Kur regjistrohen me atë email te Apexify, hyjnë në KËTË biznes. Pa email-e — thjesht thuaju email-in.",
     mfaH: "🔐 Siguria — Verifikimi me 2 hapa (2FA)", mfaDesc: "Edhe nëse dikush ta vjedh fjalëkalimin, s'hyn dot pa kodin nga telefoni yt. E rekomanduar fort.",
     mfaOn: "✅ 2FA është AKTIV — llogaria jote është e mbrojtur.", mfaOff: "2FA nuk është aktiv.", mfaEnable: "🔐 Aktivizo 2FA", mfaDisableBtn: "Çaktivizo 2FA",
     mfaScan: "1) Skano këtë QR me Google Authenticator / Authy · 2) Shkruaj kodin 6-shifror më poshtë:", mfaSecretLbl: "Ose fut me dorë:", mfaCodePh: "Kodi 6-shifror", mfaConfirm: "Aktivizo ✓",
@@ -325,7 +325,7 @@ const T = {
     grpDaily: "Use daily", grpSetup: "Set up once", tabConfig: "🚀 Setup", optional: "optional",
     bnHome: "Home", bnCal: "Calendar", bnAppt: "Bookings", bnEcon: "Economy", bnMore: "More", menuTitle: "Menu",
     bnOrders: "Orders", bnLeads: "Requests", undo: "Undo",
-    configDesc: "The single place to set up your business — the key steps in one spot. Fill it once; then OptimaBook handles customers.",
+    configDesc: "The single place to set up your business — the key steps in one spot. Fill it once; then Apexify handles customers.",
     cfgStepProfile: "Business profile", cfgStepProfileD: "Name, address, contact, currency, description.",
     cfgStepOffer: "What you offer", cfgStepOfferD: "Services & products — price, duration, stock.",
     cfgStepHours: "Hours & breaks", cfgStepHoursD: "When you're open and breaks during the day.",
@@ -565,7 +565,7 @@ const T = {
     manTimes: "How many", recurDone: "✅ Created {n} appointments",
     setPubH: "🌐 Self-service page (OPTIONAL)", pubDesc: "Not required. Customers just message you normally on WhatsApp/Instagram/Telegram and the AI replies there. This link is only an extra — if you want, put it in your bio so customers can also book themselves (like Calendly).",
     copyLink: "Copy", openLink: "Open ↗", copied: "✅ Copied",
-    teamH: "👥 Team (employee access)", teamDesc: "Add employees by email. When they sign up with that email on OptimaBook, they get into THIS business. No emails sent — just tell them the address.",
+    teamH: "👥 Team (employee access)", teamDesc: "Add employees by email. When they sign up with that email on Apexify, they get into THIS business. No emails sent — just tell them the address.",
     mfaH: "🔐 Security — Two-factor authentication (2FA)", mfaDesc: "Even if someone steals your password, they can't get in without the code from your phone. Strongly recommended.",
     mfaOn: "✅ 2FA is ON — your account is protected.", mfaOff: "2FA is not enabled.", mfaEnable: "🔐 Enable 2FA", mfaDisableBtn: "Disable 2FA",
     mfaScan: "1) Scan this QR with Google Authenticator / Authy · 2) Enter the 6-digit code below:", mfaSecretLbl: "Or enter manually:", mfaCodePh: "6-digit code", mfaConfirm: "Enable ✓",
@@ -745,7 +745,7 @@ function errToast(e) {
 // Observability-lite: log gabimesh në console + unazë në localStorage (pa llogari/varësi)
 function logClientError(type, msg, err) {
   try {
-    console.error("[OptimaBook]", type, msg, err || "");
+    console.error("[Apexify]", type, msg, err || "");
     const ring = JSON.parse(localStorage.getItem("ob-errlog") || "[]");
     ring.push({ t: new Date().toISOString(), type, msg: String(msg).slice(0, 300), v: (typeof OB_VERSION !== "undefined" ? OB_VERSION : ""), biz: (biz && biz.id) || null });
     while (ring.length > 25) ring.shift();
@@ -1317,7 +1317,7 @@ async function mfaEnroll() {
     // pastro faktorë të lënë përgjysmë nga tentativa të vjetra
     const { data: lf } = await sb.auth.mfa.listFactors();
     for (const f of (lf && lf.totp || [])) if (f.status !== "verified") { try { await sb.auth.mfa.unenroll({ factorId: f.id }); } catch (e) {} }
-    const { data, error } = await sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "OptimaBook " + Date.now() });
+    const { data, error } = await sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "Apexify " + Date.now() });
     if (error) throw error;
     mfaFactorId = data.id;
     $("#mfaQr").innerHTML = data.totp.qr_code;           // SVG i gatshëm nga Supabase
@@ -1461,7 +1461,7 @@ async function loadAll() {
   const startRt = () => { if (biz) { startRealtime(); flushQueue(); } }; // sesioni gati → dërgo çka ka mbetur nga offline
   if ("requestIdleCallback" in window) requestIdleCallback(startRt, { timeout: 2500 });
   else setTimeout(startRt, 1200);
-  consumeSharedFile(); // erdhi një skedar me "Share to OptimaBook" → çoje te importi
+  consumeSharedFile(); // erdhi një skedar me "Share to Apexify" → çoje te importi
 }
 
 /* Skedari i ndarë nga sistemi (foto e çmimores, Excel…) e ka lënë Service Worker-i
@@ -2686,7 +2686,7 @@ async function printQrPoster() {
   </div>
   <div class="qr"><img src="${qrData}" alt="QR"></div>
   <div class="how">${esc(tr("qrHow"))}</div>
-  <div class="foot">${esc(tr("qrOpen"))} · <b>OptimaBook</b></div>
+  <div class="foot">${esc(tr("qrOpen"))} · <b>Apexify</b></div>
 <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 150); };<\/script>
 </body></html>`);
   w.document.close();

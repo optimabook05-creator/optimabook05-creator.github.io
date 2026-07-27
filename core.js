@@ -1,5 +1,5 @@
 /* =====================================================================
-   OptimaBook — CORE (logjika e pastër, e testueshme)
+   Apexify — CORE (logjika e pastër, e testueshme)
    Pa DOM, pa rrjet, pa gjendje globale → e njëjta logjikë përdoret nga
    paneli (app.html), faqja publike (book.html) DHE testet (node:test).
    Një burim i vetëm i së vërtetës për: kohën, çmimet me shumicë, slotet.

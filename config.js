@@ -1,5 +1,5 @@
 /* =====================================================================
-   OptimaBook — Konfigurimi i Supabase
+   Apexify — Konfigurimi i Supabase
    Çelësi "publishable" është i SIGURT për frontend: të dhënat i mbron
    Row Level Security (RLS), jo fshehtësia e këtij çelësi.
    ===================================================================== */

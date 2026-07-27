@@ -1,4 +1,4 @@
-/* OptimaBook — Service Worker
+/* Apexify — Service Worker
    Qëllimi: ngarkim i MENJËHERSHËM në vizita të përsëritura + punon offline.
    I projektuar që të MOS shkaktojë kurrë "nuk shoh ndryshimet":
      • HTML (navigime)            → network-first (gjithmonë i freskët; cache vetëm fallback offline)
@@ -36,7 +36,7 @@ function putInCache(req, res) {
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_e) {}
-  e.waitUntil(self.registration.showNotification(d.title || "OptimaBook", {
+  e.waitUntil(self.registration.showNotification(d.title || "Apexify", {
     body: d.body || "Diçka e re në panelin tënd",
     icon: "icon-192.png", badge: "icon-192.png",
     tag: d.tag || "ob-" + Date.now(),  // tag unik → njoftimet s'e mbishkruajnë njëra-tjetrën
@@ -51,8 +51,8 @@ self.addEventListener("notificationclick", (e) => {
   }));
 });
 
-/* ---- NDARJA E SKEDARIT NË APLIKACION ("Share to OptimaBook") ----
-   Pronari fotografon çmimoren e furnitorit → Share → OptimaBook, dhe skedari
+/* ---- NDARJA E SKEDARIT NË APLIKACION ("Share to Apexify") ----
+   Pronari fotografon çmimoren e furnitorit → Share → Apexify, dhe skedari
    shkon DIREKT te importi i katalogut. Sistemi e dërgon si POST te ./share-target
    (URL virtuale — s'ekziston si skedar; e kap vetëm ky Service Worker).
    Skedari ruhet përkohësisht në cache dhe paneli e merr me ?share=1.

@@ -1,4 +1,4 @@
-/* OptimaBook — auto-version: çdo vizitor merr GJITHMONË versionin e fundit,
+/* Apexify — auto-version: çdo vizitor merr GJITHMONË versionin e fundit,
    PA ngarkim të dyfishtë (glitch-i i vjetër: çdo hapje pa ?v → reload i plotë).
    Si punon tani:
      1. Lexon versionin e FAQES SË NGARKUAR nga linku i stylesheet-it (?v=N).
