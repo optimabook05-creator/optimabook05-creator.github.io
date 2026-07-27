@@ -703,7 +703,12 @@ async function askGemini(system: string, contents: any[]) {
   });
   const data = await res.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("Gemini: " + JSON.stringify(data).slice(0, 200));
+  if (!text) {
+    // Statusi mbahet te gabimi → thirrësi di nëse ia vlen të riprovojë
+    const err: any = new Error("Gemini: " + JSON.stringify(data).slice(0, 200));
+    err.status = res.status;
+    throw err;
+  }
   return safeParse(text);
 }
 
@@ -745,9 +750,37 @@ async function askOpenAI(system: string, contents: any[]) {
 }
 
 // Përzgjedhësi: GPT nëse është konfiguruar, përndryshe Gemini.
+/* Thirrja e AI-së me RIMËKËMBJE — pse ekziston:
+   Në planin falas kufiri s'është sa thirrje në ditë, por sa NË MINUTË. Kur dy
+   klientë shkruajnë njëkohësisht, njëri merr 429 dhe deri tani përgjigjej me
+   "pata një vështirësi teknike" — humbje e vërtetë e një klienti, për një
+   pengesë që zgjat një sekondë. Tani: (1) riprovë pas një pauze të shkurtër;
+   (2) nëse prapë s'ecën dhe ka çelës OpenAI, kalon te ai. Klienti s'e merr vesh. */
+const transient = (e: any) => {
+  const s = Number(e && e.status) || 0;
+  if (s === 429 || s === 503 || s === 500 || s === 502 || s === 504) return true;
+  return /429|rate|quota|overload|unavailable|timeout|fetch failed/i.test(String((e && e.message) || e));
+};
+const nap = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function askAI(system: string, contents: any[]) {
   const useOpenAI = OPENAI_KEY && (AI_PROVIDER === "openai" || !GEMINI_KEY);
-  return useOpenAI ? askOpenAI(system, contents) : askGemini(system, contents);
+  const primary = () => (useOpenAI ? askOpenAI(system, contents) : askGemini(system, contents));
+  try {
+    return await primary();
+  } catch (e1) {
+    if (!transient(e1)) throw e1;          // gabim i vërtetë → mos e fsheh
+    await nap(700);
+    try {
+      return await primary();              // riprova: kufijtë për-minutë shpesh lirohen menjëherë
+    } catch (e2) {
+      if (!transient(e2)) throw e2;
+      // Ofruesi tjetër si rrjet sigurie (vetëm nëse është konfiguruar)
+      if (!useOpenAI && OPENAI_KEY) return await askOpenAI(system, contents);
+      if (useOpenAI && GEMINI_KEY) return await askGemini(system, contents);
+      throw e2;
+    }
+  }
 }
 
 async function buildAvailability(businessId: string, services: any[], hMap: any, svcDur: Record<string, number>, staff: any[], now?: any) {
