@@ -3250,8 +3250,11 @@ function updateTgWebhookLink() {
   const link = $("#tgWebhook"); if (!link || !biz) return;
   const token = ($("#tgToken") && $("#tgToken").value.trim()) || "";
   if (!token) { link.hidden = true; return; }
+  // Sekreti i vetë biznesit shkon bashkë me regjistrimin — ndryshe funksioni
+  // do t'i hidhte mesazhet e këtij bot-i në heshtje (verifikimi i webhook-ut).
   const webhook = `${SUPABASE_URL}/functions/v1/telegram?business_id=${biz.id}`;
-  link.href = `https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(webhook)}`;
+  const sec = biz.tg_webhook_secret ? `&secret_token=${encodeURIComponent(biz.tg_webhook_secret)}` : "";
+  link.href = `https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(webhook)}${sec}`;
   link.hidden = false;
 }
 

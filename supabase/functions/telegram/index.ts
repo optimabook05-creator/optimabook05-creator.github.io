@@ -48,10 +48,27 @@ Deno.serve(async (req) => {
     // Vendoset kur regjistrohet webhook-u (setWebhook?secret_token=<X>). Kështu
     // askush s'mund të POST-ojë mesazhe të rreme edhe nëse di business_id-në.
     // Backward-compatible: pa sekretin e vendosur, s'bllokon (webhook-et e vjetra punojnë).
+    const got = req.headers.get("x-telegram-bot-api-secret-token");
     const WH_SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
-    if (WH_SECRET) {
-      const got = req.headers.get("x-telegram-bot-api-secret-token");
+    /* Dy lloje bot-esh, dy sekrete:
+       • BOT-I I PËRBASHKËT (pa business_id në URL) → sekreti global i platformës.
+       • BOT-I I VETË BIZNESIT (me business_id) → biznesi e regjistron vetë
+         webhook-un nga paneli dhe NUK e di sekretin global; ndaj secili biznes
+         ka sekretin e vet (businesses.tg_webhook_secret) dhe verifikohet me të.
+       Pa këtë ndarje, çdo biznes me bot të vetin do të hidhej në heshtje. */
+    const bidParam = url.searchParams.get("business_id");
+    let whTrusted = false;
+    if (bidParam) {
+      const { data: bsec } = await supabase.from("businesses")
+        .select("tg_webhook_secret").eq("id", bidParam).maybeSingle();
+      const own = bsec && (bsec as any).tg_webhook_secret;
+      if (own) {
+        if (got !== String(own)) return new Response("ok");   // hesht
+        whTrusted = true;
+      }
+    } else if (WH_SECRET) {
       if (got !== WH_SECRET) return new Response("ok"); // hesht (200) — mos i jep info sulmuesit
+      whTrusted = true;
     }
     /* A e KEMI PROVUAR se kjo kërkesë vjen vërtet nga Telegram?
        Vetëm sekreti i webhook-ut e provon. Pa të, kushdo që di URL-në e funksionit
@@ -59,8 +76,8 @@ Deno.serve(async (req) => {
        ekzekutojë /off ose të ndryshojë çmimet. Mesazhet e klientëve nuk kanë
        këtë rrezik (një klient i rremë thjesht marrë një përgjigje), ndaj rruga e
        klientit vazhdon normalisht — POR KOMANDAT E PRONARIT bllokohen derisa
-       sekreti të vendosen. Sigurinë nuk e lëmë të varet nga një cilësim i harruar. */
-    const whTrusted = !!WH_SECRET;
+       sekreti të vendosen. Sigurinë nuk e lëmë të varet nga një cilësim i harruar.
+       (whTrusted u vendos më lart — nga sekreti global ose ai i vetë biznesit.) */
 
     const update = await req.json().catch(() => ({}));
     const msg = update.message || update.edited_message;

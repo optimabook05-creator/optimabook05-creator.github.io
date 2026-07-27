@@ -574,3 +574,11 @@ end $$;
 drop trigger if exists services_price_touch on public.services;
 create trigger services_price_touch before update on public.services
 for each row execute function public.touch_price_updated_at();
+
+-- =====================================================================
+-- SEKRET WEBHOOK-U PËR BOT-IN E ÇDO BIZNESI (tg-secret.sql)
+-- =====================================================================
+alter table public.businesses
+  add column if not exists tg_webhook_secret uuid default gen_random_uuid();
+update public.businesses set tg_webhook_secret = gen_random_uuid()
+  where tg_webhook_secret is null;
