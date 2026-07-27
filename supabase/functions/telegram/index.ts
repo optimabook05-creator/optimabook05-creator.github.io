@@ -53,6 +53,14 @@ Deno.serve(async (req) => {
       const got = req.headers.get("x-telegram-bot-api-secret-token");
       if (got !== WH_SECRET) return new Response("ok"); // hesht (200) — mos i jep info sulmuesit
     }
+    /* A e KEMI PROVUAR se kjo kërkesë vjen vërtet nga Telegram?
+       Vetëm sekreti i webhook-ut e provon. Pa të, kushdo që di URL-në e funksionit
+       mund të POST-ojë një "mesazh" të rremë me chat_id-në e pronarit dhe të
+       ekzekutojë /off ose të ndryshojë çmimet. Mesazhet e klientëve nuk kanë
+       këtë rrezik (një klient i rremë thjesht marrë një përgjigje), ndaj rruga e
+       klientit vazhdon normalisht — POR KOMANDAT E PRONARIT bllokohen derisa
+       sekreti të vendosen. Sigurinë nuk e lëmë të varet nga një cilësim i harruar. */
+    const whTrusted = !!WH_SECRET;
 
     const update = await req.json().catch(() => ({}));
     const msg = update.message || update.edited_message;
@@ -122,6 +130,16 @@ Deno.serve(async (req) => {
       const txt = msg.text.trim();
       const isSwitch = /^\/(off|on|status)\b/i.test(txt);
       const isPriceCmd = /^[^=\n]{1,80}?\s*=\s*[+-]?[\d.,]+\s*%?\s*(?:€|eur|euro|lek|lekë)?$/i.test(txt) && !/https?:\/\//i.test(txt);
+
+      /* PORTA E FUNDIT: komandat që kushtojnë para (çmimet) ose që ndalin
+         shërbimin (/off) NUK ekzekutohen nëse s'kemi provuar që kërkesa vjen
+         nga Telegram. Pronarit i shpjegohet saktësisht si e rregullon. */
+      if ((isSwitch || isPriceCmd) && !whTrusted) {
+        await sendTelegram(chatId, sqO
+          ? `🔒 Komandat e pronarit janë të bllokuara për sigurinë tënde.\n\nMungon sekreti i webhook-ut, ndaj nuk provohet se kërkesa vjen vërtet nga Telegram — dhe pa këtë, dikush që di adresën mund të ndalonte AI-në ose të ndryshonte çmimet.\n\nRregullimi (një herë): Supabase → Edge Functions → Secrets → shto TELEGRAM_WEBHOOK_SECRET, pastaj ri-regjistro webhook-un me të njëjtin sekret. Njoftimet vazhdojnë normalisht ndërkohë.`
+          : `🔒 Owner commands are blocked for your own safety.\n\nThe webhook secret is missing, so we can't prove this request really came from Telegram — and without that, anyone who knows the address could pause the AI or change your prices.\n\nFix (once): Supabase → Edge Functions → Secrets → add TELEGRAM_WEBHOOK_SECRET, then re-register the webhook with the same secret. Alerts keep working meanwhile.`, BOT);
+        return new Response("ok");
+      }
       if (!isSwitch && !isPriceCmd) {
         // Çdo gjë tjetër nga pronari → udhëzues i shkurtër, dhe STOP (kurrë si klient)
         const names = ownerBiz.map((b: any) => {
