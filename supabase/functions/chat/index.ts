@@ -712,18 +712,35 @@ async function tryRules(ctx: any): Promise<any | null> {
    Kthen "" në çdo dështim — atëherë sillet saktësisht si më parë. */
 async function describeImage(b64: string, mime: string): Promise<string> {
   if (!b64 || !GEMINI_KEY) return "";
-  try {
+  const SYS = "You identify a product in a photo so it can be looked up in a shop's catalog. Reply with ONLY search keywords separated by spaces: brand, model, product type, colour, size, and any text readable on the label or packaging. No sentences, no punctuation, max 12 words. If you cannot tell what the product is, reply with a plain description of what you see.";
+  const parts = [{ inline_data: { mime_type: mime || "image/jpeg", data: b64 } }, { text: "Identify this product." }];
+
+  /* KURTHI: modelet gemini-2.5 "mendojnë" para se të shkruajnë, dhe ato tokena
+     mendimi HYJNË te maxOutputTokens. Me një kufi të vogël dhe pa e fikur
+     mendimin, modeli e harxhon gjithë buxhetin duke menduar dhe kthen TEKST
+     BOSH — pa asnjë gabim. Identifikimi do të dështonte NË HESHTJE dhe kërkimi
+     do të kthehej te sjellja e vjetër, pa e marrë vesh askush. Ndaj mendimi
+     fiket shprehimisht. Por `thinkingConfig` s'e njohin modelet e vjetra
+     (1.5), ndaj nëse thirrja refuzohet, riprovohet një herë pa të. */
+  const call = async (withThinking: boolean) => {
+    const gen: any = { temperature: 0, maxOutputTokens: 64 };
+    if (withThinking) gen.thinkingConfig = { thinkingBudget: 0 };
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_KEY}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: "You identify a product in a photo so it can be looked up in a shop's catalog. Reply with ONLY search keywords separated by spaces: brand, model, product type, colour, size, and any text readable on the label or packaging. No sentences, no punctuation, max 12 words. If you cannot tell what the product is, reply with a plain description of what you see." }] },
-        contents: [{ role: "user", parts: [{ inline_data: { mime_type: mime || "image/jpeg", data: b64 } }, { text: "Identify this product." }] }],
-        generationConfig: { temperature: 0, maxOutputTokens: 40 },
-      }),
+      body: JSON.stringify({ system_instruction: { parts: [{ text: SYS }] }, contents: [{ role: "user", parts }], generationConfig: gen }),
     });
-    if (!res.ok) return "";
+    if (!res.ok) return null;
     const d = await res.json();
-    return String(d?.candidates?.[0]?.content?.parts?.[0]?.text || "").replace(/\s+/g, " ").trim().slice(0, 120);
+    // Mblidh TË GJITHA pjesët me tekst — jo vetëm të parën, që mund të jetë "mendim".
+    const ps = d?.candidates?.[0]?.content?.parts || [];
+    return String(ps.map((p: any) => p && p.text).filter(Boolean).join(" ")).replace(/\s+/g, " ").trim().slice(0, 120);
+  };
+
+  try {
+    const a = await call(true);
+    if (a) return a;
+    const b = await call(false);     // model i vjetër ose refuzim → riprovë pa thinkingConfig
+    return b || "";
   } catch (_e) { return ""; }
 }
 

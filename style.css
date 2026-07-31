@@ -878,14 +878,19 @@ body::after {
    URL-ja, fusha më e rëndësishme, mbetej e ngushtë sa s'lexohej. Ndaj kalojnë
    në rrjet: lloji + fshirja sipër, URL-ja dhe etiketa me gjerësi të plotë.
    Në ekran të gjerë kthehen në një rresht të vetëm. */
-.media-row { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "type url del" "label label label"; gap: var(--sp-8) var(--sp-8); align-items: center; }
+.media-row { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "type url del" "label label label" "note note note"; gap: var(--sp-8) var(--sp-8); align-items: center; }
+/* Prova e linkut: miniaturë + verdikt. Lartësia fikse → zero kërcim layout-i. */
+.media-row .m-note { grid-area: note; display: flex; align-items: center; gap: var(--sp-8); font-size: 12.5px; font-weight: 700; color: var(--ink-soft); min-height: 22px; }
+.media-row .m-note img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; display: block; }
+.media-row .m-note.ok { color: var(--green, #1d9a6c); }
+.media-row .m-note.bad { color: var(--red); }
 .media-row .m-type  { grid-area: type; flex: 0 0 auto; width: auto; font-family: var(--font-body); border: 1px solid var(--glass-edge);
   background: var(--glass-soft); border-radius: var(--r-sm); padding: 9px 8px; font-size: 13.5px; font-weight: 700; color: var(--ink); }
 .media-row .m-url   { grid-area: url; }
 .media-row .m-label { grid-area: label; }
 .media-row .t-del   { grid-area: del; }
 @media (min-width: 620px) {
-  .media-row { grid-template-columns: auto minmax(0,1.4fr) minmax(0,1fr) auto; grid-template-areas: "type url label del"; }
+  .media-row { grid-template-columns: auto minmax(0,1.4fr) minmax(0,1fr) auto; grid-template-areas: "type url label del" "note note note note"; }
 }
 
 .cat-item { display: flex; align-items: center; gap: var(--sp-12); padding: 13px 15px; cursor: pointer;

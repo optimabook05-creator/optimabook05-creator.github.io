@@ -145,7 +145,8 @@ const T = {
     itemMedia: "🖼 Foto, video & linqe", addMedia: "+ Shto foto / video / link",
     mediaHint: "Ngjit linkun e fotos, videos ose të punës që ke bërë. Shkruaj te \"çfarë është\" me fjalë të thjeshta — pikërisht ato fjalë e ndihmojnë AI-në të kuptojë kur klienti thotë \"dua një si ky\".",
     mediaImage: "Foto", mediaVideo: "Video", mediaLink: "Link",
-    mediaUrlPh: "https://… (ngjit linkun)", mediaLabelPh: "çfarë është (p.sh. Restorant Bella — faqe moderne)",
+    mediaUrlPh: "https://… (ngjit linkun)",
+    mediaChecking: "po provoj linkun…", mediaOk: "linku hapet ✔", mediaBad: "⚠ ky link nuk hapet — klienti s'do ta shohë foton", mediaLabelPh: "çfarë është (p.sh. Restorant Bella — faqe moderne)",
     infoMedia: "Ngjit linqe fotosh, videosh ose punësh që ke bërë. Shkruaj me fjalë të thjeshta çfarë është secila — ato fjalë i lexon AI-ja dhe kupton kur klienti thotë 'dua një si ky'. AI-ja ia dërgon vetë linkun klientit kur e kërkon.",
     itemAddons: "➕ Shtesa (montim, postë, garanci…)", addAddon: "+ Shto shtesë", addonNamePh: "p.sh. Montim, Postë, Garanci…", addonRequired: "E detyrueshme",
     ruleNone: "Pa kusht", ruleFree: "Bëhet FALAS kur…", ruleReq: "Bëhet e DETYRUESHME kur…", ruleQty: "sasia arrin", ruleTotal: "vlera arrin", ruleFrom: "nga…",
@@ -440,7 +441,8 @@ const T = {
     itemMedia: "🖼 Photos, videos & links", addMedia: "+ Add photo / video / link",
     mediaHint: "Paste the link to a photo, a video, or work you have done. In \"what it is\", describe it in plain words — those exact words are what let the AI understand when a customer says \"I want one like this\".",
     mediaImage: "Photo", mediaVideo: "Video", mediaLink: "Link",
-    mediaUrlPh: "https://… (paste the link)", mediaLabelPh: "what it is (e.g. Bella Restaurant — modern dark site)",
+    mediaUrlPh: "https://… (paste the link)",
+    mediaChecking: "checking the link…", mediaOk: "link works ✔", mediaBad: "⚠ this link does not load — the customer will not see the photo", mediaLabelPh: "what it is (e.g. Bella Restaurant — modern dark site)",
     infoMedia: "Paste links to photos, videos or work you've done. Describe each in plain words — the AI reads those words and understands when a customer says 'I want one like this'. The AI sends the link to the customer itself when asked.",
     itemAddons: "➕ Add-ons (installation, shipping, warranty…)", addAddon: "+ Add add-on", addonNamePh: "e.g. Installation, Shipping, Warranty…", addonRequired: "Required",
     ruleNone: "No condition", ruleFree: "Becomes FREE when…", ruleReq: "Becomes REQUIRED when…", ruleQty: "quantity reaches", ruleTotal: "value reaches", ruleFrom: "from…",
@@ -2400,8 +2402,34 @@ function addMediaRow(type, url, label) {
   k.onchange = () => { k.dataset.touched = "1"; };
   const del = document.createElement("button");
   del.type = "button"; del.className = "t-del"; del.textContent = "✕"; del.onclick = () => row.remove();
-  row.append(k, u, l, del);
+
+  /* PROVA E LINKUT — pa këtë, një link i gabuar zbulohej nga KLIENTI, jo nga
+     pronari: ai e ruante, e harronte, dhe AI-ja i dërgonte një foto të thyer.
+     Këtu fotoja provohet menjëherë: shfaqet miniatura ose thuhet qartë se nuk
+     hapet. Vetëm për foto — video/linqe s'ngarkohen dot si imazh. */
+  const note = document.createElement("div"); note.className = "m-note"; note.hidden = true;
+  /* PA `loading="lazy"` me qëllim: kjo foto s'është për t'u parë, është një PROVË.
+     E ngadaltë do të thoshte që verdikti niset vetëm kur pronari rrëshqet deri
+     poshtë — pikërisht momenti kur ai ka nevojë ta ketë gati. 40px, pa kosto. */
+  const thumb = document.createElement("img"); thumb.alt = ""; thumb.hidden = true;
+  const msg = document.createElement("span");
+  note.append(thumb, msg);
+  const testUrl = () => {
+    const v = u.value.trim();
+    if (k.value !== "image" || !/^https?:\/\//i.test(v)) { note.hidden = true; thumb.hidden = true; return; }
+    note.hidden = false; note.className = "m-note"; msg.textContent = tr("mediaChecking");
+    thumb.hidden = true;
+    thumb.onload = () => { thumb.hidden = false; note.className = "m-note ok"; msg.textContent = tr("mediaOk"); };
+    thumb.onerror = () => { thumb.hidden = true; note.className = "m-note bad"; msg.textContent = tr("mediaBad"); };
+    thumb.src = v;
+  };
+  let tmr = 0;
+  u.addEventListener("input", () => { clearTimeout(tmr); tmr = setTimeout(testUrl, 600); });  // prit sa të mbarojë shkrimin
+  k.addEventListener("change", testUrl);
+
+  row.append(k, u, l, del, note);
   $("#itemMedia").appendChild(row);
+  if (url) testUrl();   // artikull i ruajtur më parë → provoje sapo hapet
 }
 
 function addTierRow(minQty, unitPrice) {
