@@ -3,7 +3,7 @@
    PSE EKZISTON, ME FJALE TE THJESHTA:
    `node --check file.js` jep KALIM TE RREME. E provuar dy here me kete projekt:
      • nje skedar TS i prishur qellimisht doli "OK";
-     • optima-app.js me nje regex te prishur (/^https?:///) doli "OK" me `node -c`,
+     • optima-app.js me nje regex ku backslash-et e URL-se i hengri shell-i doli "OK" me `node -c`,
        ndersa shfletuesi refuzoi TE GJITHE modulin -> paneli s'lidhte asnje buton.
    Arsyeja: `--check` e lexon skedarin si skript, jo si MODUL. Regullat ndryshojne.
    Ndaj ketu e detyrojme te parsohet si modul, dhe per TS e importojme vertet:
