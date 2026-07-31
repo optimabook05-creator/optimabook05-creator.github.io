@@ -449,7 +449,10 @@ function relevantServices(services: any[], text: string, history: any[], cap = 6
   const words = norm(text + " " + recent).split(/\s+/).filter((w: string) => w.length >= 3);
   if (!words.length) return services.slice(0, cap);
   const scored = services.map((s: any) => {
-    const hay = norm([s.name, s.description, s.sku].filter(Boolean).join(" "));
+    /* Edhe MEDIA hyn te kërkimi: klienti ngjit një link ("https://bella-al.com")
+       ose thotë "si ai i restorantit Bella" — pa këtë, artikulli s'gjendet kurrë. */
+    const med = Array.isArray(s.media) ? s.media.map((m: any) => (m && (m.label || "") + " " + (m.url || ""))).join(" ") : "";
+    const hay = norm([s.name, s.description, s.sku, med].filter(Boolean).join(" "));
     let score = 0;
     for (const w of words) if (hay.includes(w)) score += w.length;
     return { s, score };
@@ -457,6 +460,14 @@ function relevantServices(services: any[], text: string, history: any[], cap = 6
   scored.sort((a: any, b: any) => b.score - a.score);
   const hits = scored.filter((x: any) => x.score > 0).slice(0, cap).map((x: any) => x.s);
   return hits.length ? hits : services.slice(0, cap);
+}
+/* Media e artikullit në formë që e lexon AI-ja. Etiketa është çelësi: pa të,
+   një link i thatë s'i thotë asgjë AI-së kur klienti shkruan "dua një si ky". */
+function mediaText(s: any): string {
+  const m = Array.isArray(s.media) ? s.media.filter((x: any) => x && x.url) : [];
+  if (!m.length) return "";
+  return " | MEDIA (send the URL to the customer when they ask to see it): " +
+    m.map((x: any) => `${x.type === "video" ? "video" : x.type === "link" ? "example/portfolio" : "photo"}${x.label ? " '" + x.label + "'" : ""}: ${x.url}`).join("; ");
 }
 // Shënimi që i jepet AI-së kur katalogu është i prerë (të mos mohojë kurrë gabimisht)
 function cappedNote(shown: number, total: number) {
@@ -720,7 +731,20 @@ async function askGemini(system: string, contents: any[]) {
 // ChatGPT (OpenAI) — i njëjti rezultat JSON, me dalje të strukturuar (strict).
 async function askOpenAI(system: string, contents: any[]) {
   const messages: any[] = [{ role: "system", content: system }];
-  for (const c of contents) messages.push({ role: c.role === "model" ? "assistant" : "user", content: c.parts?.[0]?.text || "" });
+  /* KUJDES: pjesa e parë NUK është më gjithmonë tekst — kur klienti dërgon foto
+     ose zë, parts[0] është inline_data. Me `parts[0].text` teksti i klientit
+     zhdukej fare sapo hynte ofruesi rezervë. Prandaj mblidhen TË GJITHA pjesët
+     me tekst. Dhe meqë ofruesit e përputhshëm me OpenAI (Groq/DeepSeek/Qwen)
+     shpesh s'e shohin dot foton/zërin, ia themi hapur AI-së në vend që ta lëmë
+     të hamendësojë — më mirë një pyetje e shkurtër se një përgjigje e gabuar. */
+  for (const c of contents) {
+    let body = (c.parts || []).map((p: any) => p && p.text).filter(Boolean).join("\n");
+    const kinds = (c.parts || []).filter((p: any) => p && p.inline_data)
+      .map((p: any) => String(p.inline_data.mime_type || "").startsWith("audio") ? "audio" : "image");
+    if (kinds.includes("image")) body = "[Klienti dërgoi një FOTO. Ti nuk e sheh dot këtë herë — mos hamendëso çfarë është. Kërko shkurt ta përshkruajë ose merr emrin + numrin që ta shohë pronari.]\n" + body;
+    if (kinds.includes("audio")) body = "[Klienti dërgoi një MESAZH ZANOR. Ti nuk e dëgjon dot këtë herë — kërko me mirësjellje ta shkruajë shkurt me tekst.]\n" + body;
+    messages.push({ role: c.role === "model" ? "assistant" : "user", content: body });
+  }
   const res = await fetch(`${OPENAI_BASE}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENAI_KEY}` },
@@ -924,6 +948,7 @@ async function runAI(ctx: any) {
           ? (a.then === "free" ? `, FREE from ${thr}${unit}` : `, becomes MANDATORY from ${thr}${unit}`) : "";
         return `${a.name}=${a.price}${a.required ? " (always mandatory)" : " (optional)"}${cond}`;
       }).join("; ");
+      line += mediaText(s);
       return line;
     }).join("\n"),
     cappedNote(Math.min(services.length, 60), services.length),
@@ -960,12 +985,25 @@ Also set "confidence" = the overall (the minimum of the three). Use LOW scores (
     `HUMAN: if you truly cannot help, or they want a real person / have a complaint / a special request beyond the listed services, set needs_human=true and warmly say the owner will personally get back to them.`,
     `SENTIMENT: detect the customer's emotion → set "sentiment" to one of: happy, neutral, frustrated. If they seem frustrated/angry/upset, reply with EXTRA empathy and calm, apologize, and set needs_human=true so the owner is alerted.`,
     `EXAMPLES (messy/dialect → understanding): "a ke nai or neser na 3" → book tomorrow 15:00. "qysh je, a ki kohe me ardh nesr na drek" (Gheg) → book tomorrow ~12:00. "wanna book tmrw 4pm pls" → book tomorrow 16:00. "SA KUSHTON SHËRBIMI/PRODUKTI" → answer price, no booking. "s'mum me ardh nesr" → wants_to_cancel=true. "rrofsh/flm/tnx" → short thanks.`,
+    `PHOTO (the customer sent an image): look at it carefully and say what you actually see, then answer about THIS business. If it matches something in the catalog above, name that item and give its price. If it is similar but not identical, say honestly what is close and what differs. If you cannot tell, or it is not something this business offers, do NOT guess — describe briefly what you see, ask ONE clarifying question, and take their name + phone so the owner can confirm. NEVER ignore the image. NEVER invent a product that is not in the catalog.`,
+    `VOICE (the customer sent a voice message): listen to it and answer what they ACTUALLY said, exactly as if they had typed it — do not ask them to repeat it in writing, and never say you cannot hear it. People send voice notes because typing is slow for them; treat it as completely normal. If a key word is unclear (a name, a number, an address), repeat back what you understood and ask ONE short confirming question.`,
+    `MEDIA & "ONE LIKE THIS": some catalog items carry MEDIA — photos, videos, or example/portfolio links, each with a label describing it. (a) When the customer asks to SEE something ("a ke foto?", "ma trego", "send me examples"), paste the actual URL(s) — send the link itself, never say "check our page". (b) When the customer refers to one of those examples — pastes the link back, names it, or says "I want one like this / si ky / si ai" — figure out WHICH media entry they mean from its label and the conversation, then answer about THAT specific item: its name, what it includes, and its price. Say back in words what you understood ("a modern one-page site like Bella") so they can correct you. (c) If several could match, ask ONE short question naming the options. (d) NEVER pretend you cannot see the links: they are listed in the catalog above.`,
     `REMINDER (final check before answering): your reply MUST be in the language of the customer's latest message — see #1 RULE.`,
   ].filter(Boolean).join("\n");
 
   const contents: any[] = [];
   for (const m of (history || []).slice(-10)) contents.push({ role: m.role === "bot" ? "model" : "user", parts: [{ text: String(m.text || "") }] });
-  contents.push({ role: "user", parts: [{ text: String(text) }] });
+  /* FOTOJA E KLIENTIT — pa kete, nje screenshot nga rrjetet sociale merrte HESHTJE.
+     Klienti shpesh nuk shkruan asgje: dergon foton e nje makine/rrobe/faqeje dhe
+     pyet "a e ke?". Foto hyn si pjese vizuale bashke me tekstin (ose me nje
+     udhezim kur teksti mungon), qe AI-ja ta shohe vertet. */
+  {
+    const userParts: any[] = [];
+    if (ctx.image_b64) userParts.push({ inline_data: { mime_type: ctx.image_mime || "image/jpeg", data: ctx.image_b64 } });
+    if (ctx.audio_b64) userParts.push({ inline_data: { mime_type: ctx.audio_mime || "audio/ogg", data: ctx.audio_b64 } });
+    userParts.push({ text: String(text) });
+    contents.push({ role: "user", parts: userParts });
+  }
 
   const out = await askAI(harden(system, biz.name, text), contents);
   let reply = out.reply || "";
@@ -1118,6 +1156,7 @@ async function runInquiry(ctx: any) {
     const d = durHuman(s, sq);
     let line = `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}${d ? " — gati ~" + d : ""}`;
     if (Array.isArray(s.variants) && s.variants.length) line += " | paketa: " + s.variants.map((v: any) => v.label + "=" + v.price).join(", ");
+    line += mediaText(s);
     return line;
   }).join("\n");
   const memory = await customerMemory(ctx.businessId, ctx.chat_id, services);
@@ -1145,12 +1184,25 @@ async function runInquiry(ctx: any) {
     `STYLE: Warm, human, short (1–3 sentences). Set "reply" to your message; leave the other fields empty/false.`,
     `UNDERSTANDING: Understand the customer no matter HOW they write — any language or dialect (Gheg & Tosk Albanian, slang), abbreviations (flm, pls), typos, missing diacritics, ALL CAPS, voice-to-text errors, mixed Albanian-English. Always extract the real intent; never reject a message for being informal/misspelled. If truly unclear, ask ONE short question.`,
     `SHORTHAND (Albanian internet/SMS — customers type like this constantly; treat it as normal speech): cpb/çpb="çfarë po bën" (a casual hello — greet back warmly, do NOT ask what they want), ckemi/ç’kemi/tung/tungi="hello", spo="s’po/nuk po", sdi="s’di", smun/smum="s’mund", ska="s’ka", ktu="këtu", ktej="këtej", nsr/nesr="nesër", mrm="mirëmëngjes or mirëmbrëma", nt="natën e mirë", flm/fmnd/rrofsh="faleminderit", qka/çka="çfarë", qysh="si/how", vlla/moj/bre/ore=informal address (just tone — ignore it), pls/plz="please", oki/dakord="ok". Also: letters doubled for emphasis (saaa kushtonnn), q typed for ç or k, digits for words, no punctuation and no capitals at all, or rAnDoM capitals. NEVER reply that you do not understand any of these — read the intent and answer naturally.`,
+    `PHOTO (the customer sent an image): look at it carefully and say what you actually see, then answer about THIS business. If it matches something in the catalog above, name that item and give its price. If it is similar but not identical, say honestly what is close and what differs. If you cannot tell, or it is not something this business offers, do NOT guess — describe briefly what you see, ask ONE clarifying question, and take their name + phone so the owner can confirm. NEVER ignore the image. NEVER invent a product that is not in the catalog.`,
+    `VOICE (the customer sent a voice message): listen to it and answer what they ACTUALLY said, exactly as if they had typed it — do not ask them to repeat it in writing, and never say you cannot hear it. People send voice notes because typing is slow for them; treat it as completely normal. If a key word is unclear (a name, a number, an address), repeat back what you understood and ask ONE short confirming question.`,
+    `MEDIA & "ONE LIKE THIS": some catalog items carry MEDIA — photos, videos, or example/portfolio links, each with a label describing it. (a) When the customer asks to SEE something ("a ke foto?", "ma trego", "send me examples"), paste the actual URL(s) — send the link itself, never say "check our page". (b) When the customer refers to one of those examples — pastes the link back, names it, or says "I want one like this / si ky / si ai" — figure out WHICH media entry they mean from its label and the conversation, then answer about THAT specific item: its name, what it includes, and its price. Say back in words what you understood ("a modern one-page site like Bella") so they can correct you. (c) If several could match, ask ONE short question naming the options. (d) NEVER pretend you cannot see the links: they are listed in the catalog above.`,
     `REMINDER (final check before answering): your reply MUST be in the language of the customer's latest message — see #1 RULE.`,
   ].filter(Boolean).join("\n");
 
   const contents: any[] = [];
   for (const m of (history || []).slice(-10)) contents.push({ role: m.role === "bot" ? "model" : "user", parts: [{ text: String(m.text || "") }] });
-  contents.push({ role: "user", parts: [{ text: String(text) }] });
+  /* FOTOJA E KLIENTIT — pa kete, nje screenshot nga rrjetet sociale merrte HESHTJE.
+     Klienti shpesh nuk shkruan asgje: dergon foton e nje makine/rrobe/faqeje dhe
+     pyet "a e ke?". Foto hyn si pjese vizuale bashke me tekstin (ose me nje
+     udhezim kur teksti mungon), qe AI-ja ta shohe vertet. */
+  {
+    const userParts: any[] = [];
+    if (ctx.image_b64) userParts.push({ inline_data: { mime_type: ctx.image_mime || "image/jpeg", data: ctx.image_b64 } });
+    if (ctx.audio_b64) userParts.push({ inline_data: { mime_type: ctx.audio_mime || "audio/ogg", data: ctx.audio_b64 } });
+    userParts.push({ text: String(text) });
+    contents.push({ role: "user", parts: userParts });
+  }
 
   let reply = ""; let out: any = null;
   try { out = await askAI(harden(system, biz.name, text), contents); reply = out.reply || ""; }
@@ -1196,8 +1248,10 @@ function rateLimited(key: string, max: number): boolean {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const { business_id, text, client_name, client_phone, history, channel, chat_id, preview } = await req.json();
-    if (!business_id || !text) return json({ error: "business_id and text are required" }, 400);
+    const { business_id, text, client_name, client_phone, history, channel, chat_id, preview, image_b64, image_mime, audio_b64, audio_mime } = await req.json();
+    // Foto PA tekst është rasti më i zakonshëm: klienti dërgon screenshot-in
+    // e një reklame dhe s'shkruan asgjë. Pa këtë, kërkesa refuzohej me 400.
+    if (!business_id || (!text && !image_b64 && !audio_b64)) return json({ error: "business_id and text (or image/audio) are required" }, 400);
 
     // Mburoja e kuotës: përgjigje e sjellshme (200 → webhook-et s'bëjnë retry-stuhi)
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "?";
@@ -1206,7 +1260,9 @@ Deno.serve(async (req) => {
       return json({ reply: "Shumë mesazhe njëherësh — prit disa sekonda dhe provo sërish. 🙏 / Too many messages at once — please wait a few seconds. 🙏", via: "rate" });
     }
     // Mesazhe qëllimisht gjigante djegin kuotë → pritet me edukatë (klientët realë s'shkruajnë romane)
-    const safeText = String(text).slice(0, 800);
+    const safeText = String(text || "").slice(0, 800)
+      || (image_b64 ? "[Klienti dërgoi një foto pa tekst — shiko foton dhe përgjigju për të.]" : "")
+      || (audio_b64 ? "[Klienti dërgoi një mesazh zanor — dëgjoje dhe përgjigju për atë që thotë.]" : "");
 
     const { biz, services, hours, staff } = await loadContext(business_id);
     if (!biz) return json({ error: "business not found" }, 404);
@@ -1244,7 +1300,7 @@ Deno.serve(async (req) => {
     const svcDur: Record<string, number> = {};
     for (const s of services) svcDur[s.id] = s.duration_min;
     const now = nowInTz(biz.timezone || "Europe/Tirane");   // P0-2: data/ora në timezone-in e biznesit
-    const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text: safeText, client_name, client_phone, channel, chat_id, history, now, todayStr: now.todayStr, preview: isPreview };
+    const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text: safeText, client_name, client_phone, channel, chat_id, history, now, todayStr: now.todayStr, preview: isPreview, image_b64, image_mime, audio_b64, audio_mime };
 
     let result: any;
     // Mënyra INQUIRY (biznese pa takime): AI informon + merr kërkesën, pa kalendar

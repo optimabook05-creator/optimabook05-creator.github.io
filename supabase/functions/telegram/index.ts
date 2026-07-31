@@ -32,6 +32,34 @@ function parsePriceNum(s: string): number {
   return Number(s.replace(",", "."));
 }
 
+/* Linqet e fotove brenda përgjigjes së AI-së.
+   AI-ja tani ngjit URL-në e fotos së artikullit ("ja ku është"). Një URL e thatë
+   e detyron klientin të dalë nga biseda; një foto e vërtetë e mban aty dhe shet.
+   Prandaj i nxjerrim, i dërgojmë si foto, dhe i heqim nga teksti. */
+function pullImages(text: string): { clean: string; urls: string[] } {
+  const re = new RegExp("https?://[^\\s<>\"')]+\\.(?:jpg|jpeg|png|webp|gif)(?:\\?[^\\s<>\"')]*)?", "gi");
+  const found = String(text || "").match(re) || [];
+  const all = [...new Set(found)];
+  const urls = all.slice(0, 3);                          // dërgojmë max 3 foto — pa spam
+  let clean = String(text || "");
+  // HIQ TË GJITHA nga teksti, edhe ato mbi kufirin: përndryshe e katërta i
+  // mbetej klientit si URL e thatë në mes të fjalisë.
+  for (const u of all) clean = clean.split(u).join("");
+  // Pastro mbeturinat që mbeten pas heqjes (dy hapësira, ": " pa asgjë pas, rreshta bosh)
+  clean = clean.replace(/[^\S\n]{2,}/g, " ")
+               .replace(/[^\S\n]*[:—-][^\S\n]*(?=\n|$)/g, "")
+               .replace(/\n{3,}/g, "\n\n").trim();
+  return { clean, urls };
+}
+async function sendPhotoTG(chatId: string, url: string, caption: string, token: string) {
+  const r = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, photo: url, caption: caption ? caption.slice(0, 1024) : undefined }),
+  }).then((x) => x.json()).catch(() => null);
+  return !!(r && r.ok);
+}
+
 async function sendTelegram(chatId: string, text: string, token: string) {
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
@@ -81,7 +109,32 @@ Deno.serve(async (req) => {
 
     const update = await req.json().catch(() => ({}));
     const msg = update.message || update.edited_message;
-    if (!msg?.text || !msg.chat) return new Response("ok");
+    if (!msg?.chat) return new Response("ok");
+
+    /* ---- FOTO DHE ZË (zbulimi) ----
+       Deri tani `if (!msg.text)` e hidhte mesazhin → dy klientë krejt normalë
+       merrnin HESHTJE TË PLOTË dhe mendonin se u injoruan:
+         • ai që dërgon një screenshot nga rrjetet sociale ("a e ke këtë?");
+         • ai që dërgon ZË — dhe në Shqipëri zëri përdoret më shumë se shkrimi.
+       Këtu vetëm i ZBULOJMË; shkarkimi bëhet më poshtë, kur dihet token-i i
+       saktë i bot-it (i përbashkët ose ai i vetë biznesit). */
+    const photo = Array.isArray(msg.photo) && msg.photo.length ? msg.photo : null;
+    const voice = msg.voice || msg.audio || null;   // zë i regjistruar ose skedar audio
+    if (!msg.text) msg.text = String(msg.caption || "").trim();
+
+    /* ÇDO GJË TJETËR (skedar, video, vendndodhje, kontakt, sticker) nuk shihet
+       dot nga AI-ja — POR heshtja është përgjigjja më e keqe e mundshme. Ndaj i
+       përshkruajmë me fjalë dhe ia japim AI-së: ajo përgjigjet natyrshëm, në
+       gjuhën e klientit, dhe mund të marrë prapë emrin e numrin. */
+    if (!msg.text && !photo && !voice) {
+      const d = msg.document, v = msg.video || msg.video_note, c = msg.contact;
+      if (d)                 msg.text = `[Klienti dërgoi një skedar: ${String(d.file_name || "pa emër").slice(0, 80)}]`;
+      else if (v)            msg.text = "[Klienti dërgoi një video]";
+      else if (msg.location) msg.text = "[Klienti ndau vendndodhjen e tij]";
+      else if (c)            msg.text = `[Klienti ndau një kontakt: ${String(c.first_name || "")} ${String(c.phone_number || "")}`.trim() + "]";
+      else if (msg.sticker)  msg.text = String(msg.sticker.emoji || "👋");   // sticker → trajtohet si emoji/përshëndetje
+      else return new Response("ok");   // vërtet s'ka asgjë për të përpunuar
+    }
 
     const chatId = String(msg.chat.id);
     const name = msg.from?.first_name || "Telegram";
@@ -347,6 +400,14 @@ Deno.serve(async (req) => {
       // gabime të tjera (p.sh. tabela s'ekziston ende) → vazhdo normalisht (prapa-përputhshëm)
     }
 
+    /* ALBUM (disa foto njëherësh) — Telegram e dërgon SECILËN foto si update të
+       veçantë. Pa këtë, klienti që dërgon 4 foto merr 4 përgjigje njëra pas
+       tjetrës dhe duket si bot i prishur. Përgjigjemi vetëm për të parën. */
+    if (msg.media_group_id) {
+      const { error: gErr } = await supabase.from("processed_updates").insert({ id: "tgg_" + msg.media_group_id });
+      if (gErr && gErr.code === "23505") return new Response("ok");
+    }
+
     // P0-3: Rate limit i thjeshtë — mbrojtje nga spam/kosto (maks ~12 mesazhe/min)
     const since60 = new Date(Date.now() - 60000).toISOString();
     const { count: recentCount } = await supabase.from("messages").select("id", { count: "exact", head: true })
@@ -357,6 +418,47 @@ Deno.serve(async (req) => {
     const { data: bizRow } = await supabase.from("businesses").select("telegram_token").eq("id", businessId).maybeSingle();
     const botToken = (bizRow && bizRow.telegram_token) || BOT;
 
+    /* Shkarkimi i fotos/zërit me token-in E SAKTË (bot i biznesit ose i përbashkët).
+       Kufi 4MB dhe dështim i heshtur: një skedar i madh ose një gabim rrjeti
+       s'duhet ta bllokojë kurrë bisedën — klienti merr gjithsesi përgjigje. */
+    const tgGrab = async (fileId: string): Promise<{ b64: string; path: string }> => {
+      const fi = await fetch(`https://api.telegram.org/bot${botToken}/getFile?file_id=${encodeURIComponent(fileId)}`).then((r) => r.json());
+      const fpath = fi?.result?.file_path;
+      if (!fpath) return { b64: "", path: "" };
+      const bin = await fetch(`https://api.telegram.org/file/bot${botToken}/${fpath}`).then((r) => r.arrayBuffer());
+      if (bin.byteLength > 4_000_000) return { b64: "", path: "" };
+      const bytes = new Uint8Array(bin);
+      let raw = "";
+      // Në copa: `String.fromCharCode(...bytes)` mbi disa MB e mbush stivën dhe rrëzohet.
+      for (let i = 0; i < bytes.length; i += 8192) raw += String.fromCharCode(...bytes.subarray(i, i + 8192));
+      return { b64: btoa(raw), path: fpath };
+    };
+
+    let photoB64 = "", photoMime = "";
+    if (photo) {
+      try {
+        // Madhësia e parafundit: mjaft për njohje, pa harxhuar kuotë kot.
+        const sizes = photo.slice().sort((a: any, b: any) => (a.width || 0) - (b.width || 0));
+        const pick = sizes[Math.max(0, sizes.length - 2)] || sizes[sizes.length - 1];
+        const g = await tgGrab(pick.file_id);
+        photoB64 = g.b64;
+        photoMime = /\.png$/i.test(g.path) ? "image/png" : "image/jpeg";
+      } catch (_e) { /* foto e palexueshme → vazhdo si mesazh teksti */ }
+    }
+
+    /* ZËRI — në Shqipëri klientët dërgojnë zë më shpesh se tekst. Deri tani
+       merrnin heshtje. Kufi 3 minuta: mbi këtë s'është pyetje klienti. */
+    let voiceB64 = "", voiceMime = "";
+    if (voice && !photoB64) {
+      try {
+        if (!voice.duration || voice.duration <= 180) {
+          const g = await tgGrab(voice.file_id);
+          voiceB64 = g.b64;
+          voiceMime = String(voice.mime_type || "audio/ogg").split(";")[0];
+        }
+      } catch (_e) { /* zë i palexueshëm → vazhdo */ }
+    }
+
     // Kujtesa e bisedës (10 mesazhet e fundit)
     const { data: hist } = await supabase.from("messages").select("role,content")
       .eq("business_id", businessId).eq("channel", "telegram").eq("chat_id", chatId)
@@ -365,14 +467,14 @@ Deno.serve(async (req) => {
 
     // Ruaj mesazhin e klientit
     await supabase.from("messages").insert({
-      business_id: businessId, channel: "telegram", chat_id: chatId, role: "user", content: msg.text,
+      business_id: businessId, channel: "telegram", chat_id: chatId, role: "user", content: (photo ? "📷 [foto] " : voice ? "🎤 [zë] " : "") + msg.text,
     });
 
     // Thirr trurin AI
     const r = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${PUBLISHABLE}` },
-      body: JSON.stringify({ business_id: businessId, text: msg.text, client_name: name, history, channel: "telegram", chat_id: chatId }),
+      body: JSON.stringify({ business_id: businessId, text: msg.text, client_name: name, history, channel: "telegram", chat_id: chatId, image_b64: photoB64 || undefined, image_mime: photoMime || undefined, audio_b64: voiceB64 || undefined, audio_mime: voiceMime || undefined }),
     });
     const out = await r.json().catch(() => ({}));
     const reply = out.reply || "…";
@@ -381,7 +483,20 @@ Deno.serve(async (req) => {
     await supabase.from("messages").insert({
       business_id: businessId, channel: "telegram", chat_id: chatId, role: "bot", content: reply,
     });
-    await sendTelegram(chatId, reply, botToken);
+    /* Nëse përgjigja përmban foto: dërgo FOTOT (e para me tekstin si titull),
+       jo URL të thata. Nëse dërgimi i fotos dështon (link i vdekur, host që
+       s'e pranon Telegram-i), biem prapa te teksti i plotë — klienti merr
+       gjithmonë një përgjigje, kurrë heshtje. */
+    const { clean, urls } = pullImages(reply);
+    let sent = false;
+    if (urls.length) {
+      const okFirst = await sendPhotoTG(chatId, urls[0], clean, botToken);
+      if (okFirst) {
+        sent = true;
+        for (let i = 1; i < urls.length; i++) await sendPhotoTG(chatId, urls[i], "", botToken);
+      }
+    }
+    if (!sent) await sendTelegram(chatId, reply, botToken);
 
     return new Response("ok");
   } catch (_e) {

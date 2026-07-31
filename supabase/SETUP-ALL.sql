@@ -582,3 +582,10 @@ alter table public.businesses
   add column if not exists tg_webhook_secret uuid default gen_random_uuid();
 update public.businesses set tg_webhook_secret = gen_random_uuid()
   where tg_webhook_secret is null;
+
+-- =====================================================================
+-- MEDIA E ARTIKUJVE — foto, video, linqe (media.sql)
+-- Pa këtë, AI-ja s'kupton "dua një si ky" kur klienti flet për një link
+-- ose një foto që i ka dërguar vetë biznesi.
+-- =====================================================================
+alter table public.services add column if not exists media jsonb;

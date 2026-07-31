@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=177">
+<link rel="stylesheet" href="style.css?v=178">
 <style>
   .pub-wrap { max-width: 560px; margin: 30px auto 80px; padding: 0 16px; }
   .pub-card { background: var(--glass); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6);
@@ -45,6 +45,16 @@
   .o-search { margin: 10px 0 4px; }
   .o-more { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); padding: 12px 2px 2px; text-align: center; }
   .pi-addons { margin-top: 7px; display: flex; flex-direction: column; gap: 5px; }
+  /* FOTO/VIDEO/LINQE — përmasa FIKSE. Lartësia e rezervuar që në fillim do të
+     thotë zero rrëshqitje layout-i kur ngarkohet fotoja (mësimi i "tekst mbi
+     tekst" ishte pikërisht lartësi të parezervuara). */
+  .pi-shots { margin-top: 8px; display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
+  .pi-shots::-webkit-scrollbar { display: none; }
+  .pi-shots a { flex: 0 0 auto; display: block; width: 84px; height: 84px; border-radius: 10px; overflow: hidden; background: var(--glass-line); }
+  .pi-shots img { width: 84px; height: 84px; object-fit: cover; display: block; }
+  .pi-links { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .pi-links a { font-size: 12.5px; line-height: 1.2; padding: 5px 9px; border-radius: 999px; border: 1px solid var(--glass-line); color: var(--brand, #6c8cff); text-decoration: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pi-links a:active { opacity: .6; }
   .pi-addon { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-soft); font-weight: 600; cursor: pointer; }
   .pi-addon input { width: auto; }
   .pi-addon.req { color: var(--accent-deep); cursor: default; }
@@ -114,7 +124,7 @@
 
 <!-- Etiketë STATIKE e versionuar (jo document.write: ai bllokon skanerin e parangarkimit
      — mësim i v80/v81). Skripti klasik ekzekutohet gjithmonë PARA modulit poshtë. -->
-<script src="core.js?v=177"></script>
+<script src="core.js?v=178"></script>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
@@ -363,6 +373,7 @@ function itemRow(s) {
       ${showDesc && s.description ? `<div class="pi-desc">${esc(s.description)}</div>` : ""}
       <div class="pi-price">${Number(s.price) ? money(s.price) + (showUnit && s.unit_label ? " / " + esc(s.unit_label) : "") : "💬 " + tr("priceAsk")}</div>
       ${adds.length ? `<div class="pi-addons" id="ad-${s.id}">${addonsHtml(s)}</div>` : ""}
+      ${mediaHtml(s)}
     </div>
     <div class="qty">
       <button type="button" data-m="${s.id}">−</button>
@@ -370,6 +381,24 @@ function itemRow(s) {
       <button type="button" data-p="${s.id}">+</button>
     </div>
   </div>`;
+}
+/* FOTO / VIDEO / LINQE të artikullit.
+   Fotot ngarkohen me `loading="lazy"` (katalogu me qindra artikuj s'duhet të
+   tërheqë qindra foto sa hapet faqja). Vetëm http(s) kalon — një URL e
+   dëmshme nga importi s'del kurrë si link i klikueshëm. Nëse fotoja s'hapet,
+   e heqim vetë kutinë: një ikonë e thyer duket më keq se asgjë. */
+function mediaHtml(s) {
+  if (!OB.fieldVisible("media", s.hidden_fields, true)) return "";
+  const m = (Array.isArray(s.media) ? s.media : []).filter((x) => x && /^https?:\/\//i.test(String(x.url || "")));
+  if (!m.length) return "";
+  const imgs = m.filter((x) => x.type === "image");
+  const rest = m.filter((x) => x.type !== "image");
+  let h = "";
+  if (imgs.length) h += `<div class="pi-shots">` + imgs.slice(0, 6).map((x) =>
+    `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer"><img src="${esc(x.url)}" alt="${esc(x.label || s.name)}" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></a>`).join("") + `</div>`;
+  if (rest.length) h += `<div class="pi-links">` + rest.slice(0, 8).map((x) =>
+    `<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">${x.type === "video" ? "▶" : "🔗"} ${esc(x.label || x.url.replace(/^https?:\/\/(www\.)?/, "").slice(0, 40))}</a>`).join("") + `</div>`;
+  return h;
 }
 /* Shtesat me RREGULLA (OB.resolveAddons = e vërteta e vetme, e njëjtë me serverin):
    të detyrueshme s'çkiqen dot; ato që bëhen falas/të detyrueshme me sasi

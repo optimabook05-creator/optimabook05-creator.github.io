@@ -142,6 +142,11 @@ const T = {
     itemTiers: "Çmime sipas sasisë (shumicë) — opsionale", tiersHint: "Shkruaj nga sa copë dhe çmimin. P.sh. nga 2 → 40, nga 100 → 12. Aplikohet vetë sipas sasisë.",
     addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
     secBasics: "📝 Bazat", secTime: "⏱ Koha & prenotimi", secPricing: "💶 Çmimi", secStock: "📦 Stoku & kodi",
+    itemMedia: "🖼 Foto, video & linqe", addMedia: "+ Shto foto / video / link",
+    mediaHint: "Ngjit linkun e fotos, videos ose të punës që ke bërë. Shkruaj te \"çfarë është\" me fjalë të thjeshta — pikërisht ato fjalë e ndihmojnë AI-në të kuptojë kur klienti thotë \"dua një si ky\".",
+    mediaImage: "Foto", mediaVideo: "Video", mediaLink: "Link",
+    mediaUrlPh: "https://… (ngjit linkun)", mediaLabelPh: "çfarë është (p.sh. Restorant Bella — faqe moderne)",
+    infoMedia: "Ngjit linqe fotosh, videosh ose punësh që ke bërë. Shkruaj me fjalë të thjeshta çfarë është secila — ato fjalë i lexon AI-ja dhe kupton kur klienti thotë 'dua një si ky'. AI-ja ia dërgon vetë linkun klientit kur e kërkon.",
     itemAddons: "➕ Shtesa (montim, postë, garanci…)", addAddon: "+ Shto shtesë", addonNamePh: "p.sh. Montim, Postë, Garanci…", addonRequired: "E detyrueshme",
     ruleNone: "Pa kusht", ruleFree: "Bëhet FALAS kur…", ruleReq: "Bëhet e DETYRUESHME kur…", ruleQty: "sasia arrin", ruleTotal: "vlera arrin", ruleFrom: "nga…",
     itemVariants: "🧩 Paketa / çmime të shumta", addVariant: "+ Shto paketë", variantNamePh: "p.sh. 1-3 faqe, 4-6 faqe…",
@@ -432,6 +437,11 @@ const T = {
     itemTiers: "Quantity pricing (wholesale) — optional", tiersHint: "Enter from how many and the price. E.g. from 2 → 40, from 100 → 12. Applied automatically by quantity.",
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
     secBasics: "📝 Basics", secTime: "⏱ Time & booking", secPricing: "💶 Price", secStock: "📦 Stock & code",
+    itemMedia: "🖼 Photos, videos & links", addMedia: "+ Add photo / video / link",
+    mediaHint: "Paste the link to a photo, a video, or work you have done. In \"what it is\", describe it in plain words — those exact words are what let the AI understand when a customer says \"I want one like this\".",
+    mediaImage: "Photo", mediaVideo: "Video", mediaLink: "Link",
+    mediaUrlPh: "https://… (paste the link)", mediaLabelPh: "what it is (e.g. Bella Restaurant — modern dark site)",
+    infoMedia: "Paste links to photos, videos or work you've done. Describe each in plain words — the AI reads those words and understands when a customer says 'I want one like this'. The AI sends the link to the customer itself when asked.",
     itemAddons: "➕ Add-ons (installation, shipping, warranty…)", addAddon: "+ Add add-on", addonNamePh: "e.g. Installation, Shipping, Warranty…", addonRequired: "Required",
     ruleNone: "No condition", ruleFree: "Becomes FREE when…", ruleReq: "Becomes REQUIRED when…", ruleQty: "quantity reaches", ruleTotal: "value reaches", ruleFrom: "from…",
     itemVariants: "🧩 Packages / multiple prices", addVariant: "+ Add package", variantNamePh: "e.g. 1-3 pages, 4-6 pages…",
@@ -2263,6 +2273,8 @@ function openItem(s) {
   if ($("#itemAddons")) { $("#itemAddons").innerHTML = ""; ((s && Array.isArray(s.addons)) ? s.addons : []).forEach((a) => addAddonRow(a.name, a.price, a.cost, a.required, a.when, a.then)); }
   // Paketat / çmimet e shumta
   if ($("#itemVariants")) { $("#itemVariants").innerHTML = ""; ((s && Array.isArray(s.variants)) ? s.variants : []).forEach((v) => addVariantRow(v.label, v.price)); }
+  // Foto / video / linqe
+  if ($("#itemMedia")) { $("#itemMedia").innerHTML = ""; ((s && Array.isArray(s.media)) ? s.media : []).forEach((m) => addMediaRow(m.type, m.url, m.label)); }
   // Çelësat per-seksion: vendosi nga override-i i artikullit (ose default-i global)
   document.querySelectorAll("#itemModal .fit").forEach((c) => { c.checked = itemShowsField(s, c.dataset.f); c.onchange = applyItemFields; });
   $("#itemKind").onchange = applyItemFields;
@@ -2359,6 +2371,39 @@ function addVariantRow(label, price) {
   $("#itemVariants").appendChild(row);
 }
 
+/* MEDIA E ARTIKULLIT — foto, video, link.
+   Lloji e zbulon vetë nga URL-ja (pronari s'duhet të mendojë për të), por mund
+   ta ndryshojë. Etiketa është pjesa që E LEXON AI-ja: pa të, një link i thatë
+   s'i thotë asgjë kur klienti shkruan "dua një si ky". */
+function mediaKindOf(url) {
+  const u = String(url || "").toLowerCase().split("?")[0];
+  if (/\.(jpg|jpeg|png|webp|gif|avif|bmp|heic)$/.test(u)) return "image";
+  if (/\.(mp4|mov|webm|m4v|avi|mkv)$/.test(u)) return "video";
+  if (/(youtube\.com|youtu\.be|vimeo\.com|tiktok\.com)/.test(u)) return "video";
+  return "link";
+}
+function addMediaRow(type, url, label) {
+  const row = document.createElement("div");
+  row.className = "tier-row media-row";
+  const k = document.createElement("select");
+  k.className = "m-type";
+  [["image", tr("mediaImage")], ["video", tr("mediaVideo")], ["link", tr("mediaLink")]].forEach(([v, t]) => {
+    const o = document.createElement("option"); o.value = v; o.textContent = t; k.appendChild(o);
+  });
+  const u = document.createElement("input");
+  u.type = "url"; u.className = "m-url"; u.maxLength = 500; u.placeholder = tr("mediaUrlPh"); u.value = url || "";
+  const l = document.createElement("input");
+  l.type = "text"; l.className = "m-label"; l.maxLength = 120; l.placeholder = tr("mediaLabelPh"); l.value = label || "";
+  k.value = type || mediaKindOf(url);
+  // Kur ngjitet një link, lloji vendoset vetë — por vetëm nëse pronari s'e ka prekur
+  u.oninput = () => { if (!k.dataset.touched) k.value = mediaKindOf(u.value); };
+  k.onchange = () => { k.dataset.touched = "1"; };
+  const del = document.createElement("button");
+  del.type = "button"; del.className = "t-del"; del.textContent = "✕"; del.onclick = () => row.remove();
+  row.append(k, u, l, del);
+  $("#itemMedia").appendChild(row);
+}
+
 function addTierRow(minQty, unitPrice) {
   const row = document.createElement("div");
   row.className = "tier-row";
@@ -2419,6 +2464,15 @@ async function saveItem() {
     variants.push({ label: vl, price: vp });
   });
   payload.variants = variants.length ? variants : null;
+  // Foto / video / linqe (URL + çfarë është — etiketa e lexon AI-ja)
+  const media = [];
+  document.querySelectorAll("#itemMedia .media-row").forEach((r) => {
+    const mu = r.querySelector(".m-url").value.trim();
+    // Vetëm http(s): një "javascript:" i ngjitur pa dashje s'duhet të përfundojë kurrë në faqen publike
+    if (!/^https?:\/\//i.test(mu)) return;
+    media.push({ type: r.querySelector(".m-type").value, url: mu, label: r.querySelector(".m-label").value.trim() || null });
+  });
+  payload.media = media.length ? media : null;
   // Fushat e fshehura për këtë artikull (override per-artikull)
   const hidden = [];
   document.querySelectorAll("#itemModal .fit").forEach((c) => { if (!c.checked) hidden.push(c.dataset.f); });
@@ -2431,7 +2485,7 @@ async function saveItem() {
   try {
     let itemId;
     try { itemId = await writeItem(payload); }
-    catch (e1) { const { addons: _a, hidden_fields: _h, variants: _v, ...base } = payload; itemId = await writeItem(base); } // pa kolonat e reja
+    catch (e1) { const { addons: _a, hidden_fields: _h, variants: _v, media: _m, ...base } = payload; itemId = await writeItem(base); } // pa kolonat e reja
     // Shkallët e çmimit: fshi të vjetrat + rivendos
     await sb.from("price_tiers").delete().eq("service_id", itemId);
     const rows = [];
@@ -4839,6 +4893,7 @@ function wire() {
   // Kërkimi në katalog (lokal, pa rrjet — i domosdoshëm pas importeve të mëdha)
   if ($("#catSearch")) $("#catSearch").oninput = debounce(renderCatalog, 150);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
+  if ($("#addMedia")) $("#addMedia").onclick = () => { addMediaRow("", "", ""); const rows = document.querySelectorAll("#itemMedia .media-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".m-url").focus(); };
   if ($("#addAddon")) $("#addAddon").onclick = () => { addAddonRow("", "", "", false, null, null); const rows = document.querySelectorAll("#itemAddons .addon-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".a-name").focus(); };
   if ($("#addVariant")) $("#addVariant").onclick = () => { addVariantRow("", ""); const rows = document.querySelectorAll("#itemVariants .variant-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".v-label").focus(); };
   if ($("#itemSave")) $("#itemSave").onclick = saveItem;
