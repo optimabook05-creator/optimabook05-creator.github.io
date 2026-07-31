@@ -72,6 +72,14 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
 
+    /* SHENJA E VERSIONIT — para çdo kontrolli tjetër.
+       PSE KETU: kontrolli i sekretit më poshtë kthen "ok" të heshtur për çdo
+       kërkesë pa sekret. Po ta vendosja pas tij, shenja s'arrihej kurrë dhe
+       verifikimi i ngarkimit mbetej i pamundur — pikërisht problemi që zgjidh.
+       Nuk zbulon asgjë: vetëm një numër versioni, asnjë të dhënë, asnjë sekret. */
+    const peek = req.method === "POST" ? await req.clone().json().catch(() => ({})) : {};
+    if (peek && peek.ping) return new Response(JSON.stringify({ ok: true, build: "179", photo: true, voice: true }), { headers: { "Content-Type": "application/json" } });
+
     // SIGURI: verifiko secret_token-in që Telegram e dërgon në çdo webhook.
     // Vendoset kur regjistrohet webhook-u (setWebhook?secret_token=<X>). Kështu
     // askush s'mund të POST-ojë mesazhe të rreme edhe nëse di business_id-në.

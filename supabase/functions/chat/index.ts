@@ -1301,10 +1301,22 @@ function rateLimited(key: string, max: number): boolean {
 }
 
 /* ---------------- Handler ---------------- */
+/* SHENJA E VERSIONIT — pse ekziston:
+   Pas çdo ngarkimi (deploy) pronari pyet "a hyri?" dhe deri tani përgjigjja e
+   ndershme ishte "shpresoj". Nga jashtë funksioni dukej njësoj para dhe pas:
+   asnjë numër versioni, asnjë datë. Nëse ngjitja e kodit dështonte përgjysmë,
+   askush s'e merrte vesh derisa një klient real të merrte përgjigje të gabuar.
+   Tani mjafton një kërkesë e vetme:  POST {"ping":1}  →  kthen këtë numër.
+   RRIT KËTË NUMËR sa herë ndryshon ky skedar. */
+const BUILD = "179";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const { business_id, text, client_name, client_phone, history, channel, chat_id, preview, image_b64, image_mime, audio_b64, audio_mime } = await req.json();
+    const body = await req.json();
+    // Pyetja "cili version je?" — para çdo kontrolli tjetër, pa prekur asnjë të dhënë.
+    if (body && body.ping) return json({ ok: true, build: BUILD, vision: true, audio: true });
+    const { business_id, text, client_name, client_phone, history, channel, chat_id, preview, image_b64, image_mime, audio_b64, audio_mime } = body;
     // Foto PA tekst është rasti më i zakonshëm: klienti dërgon screenshot-in
     // e një reklame dhe s'shkruan asgjë. Pa këtë, kërkesa refuzohej me 400.
     if (!business_id || (!text && !image_b64 && !audio_b64)) return json({ error: "business_id and text (or image/audio) are required" }, 400);
