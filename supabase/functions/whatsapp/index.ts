@@ -145,9 +145,11 @@ Deno.serve(async (req) => {
       } catch (_e) { /* zë i palexueshëm → vazhdo */ }
     }
 
-    await supabase.from("messages").insert({
+    /* Ruaj mesazhin e klientit PARA thirrjes së AI-së — që edhe nëse AI-ja
+       dështon, pronari ta shohë gjithsesi se çfarë shkroi klienti. */
+    const { data: uRow } = await supabase.from("messages").insert({
       business_id: businessId, channel: "whatsapp", chat_id: from, role: "user", content: (isImg ? "📷 [foto] " : isAud ? "🎤 [zë] " : "") + text,
-    });
+    }).select("id").maybeSingle();
 
     // Thirr trurin AI
     const r = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
@@ -157,6 +159,17 @@ Deno.serve(async (req) => {
     });
     const out = await r.json().catch(() => ({}));
     const reply = out.reply || "…";
+
+    /* KUJTESA E FOTOS — klienti vazhdon të pyesë për të njëjtin produkt në mesazhe
+       ku fotoja NUK bashkëngjitet më. Ruajmë përshkrimin e asaj që AI-ja pa, që
+       ai të udhëtojë me bisedën dhe filli të mos humbasë kurrë. */
+    if (uRow && uRow.id && out.image_desc) {
+      try {
+        await supabase.from("messages")
+          .update({ content: `📷 [foto: ${String(out.image_desc).slice(0, 120)}] ${text}`.trim() })
+          .eq("id", uRow.id);
+      } catch (_e) { /* shtesë */ }
+    }
 
     await supabase.from("messages").insert({
       business_id: businessId, channel: "whatsapp", chat_id: from, role: "bot", content: reply,

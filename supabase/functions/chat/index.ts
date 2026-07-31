@@ -443,6 +443,12 @@ function durHuman(s: any, sq: boolean): string {
    Me mijëra artikuj (import Excel etj.) s'futen dot të gjithë në prompt:
    zgjidhen vetëm ata që përputhen me fjalët e klientit (emër/përshkrim/kod).
    Fjalët më të gjata peshojnë më shumë (më specifike). Katalogë ≤cap → të gjithë. */
+/* Teksti me te cilin KERKOHET ne katalog. Nuk eshte i njejti me tekstin qe
+   lexon AI-ja: fjaleve te klientit u shtohen fjalet e nxjerra nga fotoja, qe
+   produkti i duhur te hyje ne prompt edhe kur klienti s'ka shkruar asnje fjale. */
+function searchText(ctx: any): string {
+  return String(ctx.text || "") + " " + String(ctx.imageHint || "");
+}
 function relevantServices(services: any[], text: string, history: any[], cap = 60) {
   if (!services || services.length <= cap) return services || [];
   const recent = (history || []).slice(-4).map((m: any) => String(m.text || "")).join(" ");
@@ -692,6 +698,35 @@ async function tryRules(ctx: any): Promise<any | null> {
 }
 
 /* ---------------- Shtresa 2: AI (Gemini) ---------------- */
+/* ---- HAPI I IDENTIFIKIMIT NGA FOTOJA ----
+   PSE EKZISTON (vrimë e vërtetë, jo zbukurim):
+   Me katalogë të mëdhenj (shitës telefonash, parfumesh, pjesësh — mijëra artikuj)
+   vetëm ~60 artikuj hyjnë në prompt, të zgjedhur sipas FJALËVE të klientit.
+   Por klienti që dërgon vetëm një screenshot NUK SHKRUAN FJALË. Pa fjalë s'ka
+   çfarë të kërkohet → hynin 60 artikujt e parë sipas radhës, dhe produkti i
+   duhur mund të mos ishte fare aty. AI-ja do të thoshte "s'e kam" për diçka
+   që biznesi E KA. Ndaj: fillimisht LEXOJMË foton me një thirrje të vogël (pa
+   katalog fare) dhe nxjerrim fjalët kyçe — markë, model, ngjyrë, tekst mbi
+   etiketë. Ato fjalë pastaj e drejtojnë kërkimin në katalog, dhe më tej gjithçka
+   vazhdon si gjithmonë: përgjigjet dalin nga DATABAZA, jo nga hamendja.
+   Kthen "" në çdo dështim — atëherë sillet saktësisht si më parë. */
+async function describeImage(b64: string, mime: string): Promise<string> {
+  if (!b64 || !GEMINI_KEY) return "";
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_KEY}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: "You identify a product in a photo so it can be looked up in a shop's catalog. Reply with ONLY search keywords separated by spaces: brand, model, product type, colour, size, and any text readable on the label or packaging. No sentences, no punctuation, max 12 words. If you cannot tell what the product is, reply with a plain description of what you see." }] },
+        contents: [{ role: "user", parts: [{ inline_data: { mime_type: mime || "image/jpeg", data: b64 } }, { text: "Identify this product." }] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 40 },
+      }),
+    });
+    if (!res.ok) return "";
+    const d = await res.json();
+    return String(d?.candidates?.[0]?.content?.parts?.[0]?.text || "").replace(/\s+/g, " ").trim().slice(0, 120);
+  } catch (_e) { return ""; }
+}
+
 async function askGemini(system: string, contents: any[]) {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_KEY}`, {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -711,6 +746,7 @@ async function askGemini(system: string, contents: any[]) {
             intent_confidence: { type: "NUMBER" }, service_confidence: { type: "NUMBER" },
             time_confidence: { type: "NUMBER" }, risk_score: { type: "NUMBER" },
             unanswered_question: { type: "STRING" },
+            image_desc: { type: "STRING" },
           },
           required: ["reply", "wants_to_book"],
         },
@@ -765,8 +801,9 @@ async function askOpenAI(system: string, contents: any[]) {
               intent_confidence: { type: "number" }, service_confidence: { type: "number" },
               time_confidence: { type: "number" }, risk_score: { type: "number" },
               unanswered_question: { type: "string" },
+              image_desc: { type: "string" },
             },
-            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "wants_to_reschedule", "needs_human", "sentiment", "service", "date", "time", "confidence", "intent_confidence", "service_confidence", "time_confidence", "risk_score", "unanswered_question"],
+            required: ["reply", "lang", "wants_to_book", "wants_to_cancel", "wants_to_reschedule", "needs_human", "sentiment", "service", "date", "time", "confidence", "intent_confidence", "service_confidence", "time_confidence", "risk_score", "unanswered_question", "image_desc"],
           },
         },
       },
@@ -932,7 +969,7 @@ async function runAI(ctx: any) {
     `SHORTHAND (Albanian internet/SMS — customers type like this constantly; treat it as normal speech): cpb/çpb="çfarë po bën" (a casual hello — greet back warmly, do NOT ask what they want), ckemi/ç’kemi/tung/tungi="hello", spo="s’po/nuk po", sdi="s’di", smun/smum="s’mund", ska="s’ka", ktu="këtu", ktej="këtej", nsr/nesr="nesër", mrm="mirëmëngjes or mirëmbrëma", nt="natën e mirë", flm/fmnd/rrofsh="faleminderit", qka/çka="çfarë", qysh="si/how", vlla/moj/bre/ore=informal address (just tone — ignore it), pls/plz="please", oki/dakord="ok". Also: letters doubled for emphasis (saaa kushtonnn), q typed for ç or k, digits for words, no punctuation and no capitals at all, or rAnDoM capitals. NEVER reply that you do not understand any of these — read the intent and answer naturally.`,
     `SERVICES (name — minutes — price):`,
     // Katalogë të mëdhenj: vetëm shërbimet përkatëse hyjnë në prompt (kërkim i brendshëm)
-    relevantServices(services, text, history).map((s: any) => {
+    relevantServices(services, searchText(ctx), history).map((s: any) => {
       // Pa çmim fare (punë me porosi / prodhim vetjak) → AI mbledh kërkesën, pronari çon ofertën
       if (!Number(s.price)) return `- ${s.name} — ${s.duration_min} min — PRICE ON REQUEST (see PRICE ON REQUEST rule)`;
       // Çmim i pafreskuar → AI-ja NUK e sheh numrin fare (s'ka çfarë të citojë gabim)
@@ -986,6 +1023,7 @@ Also set "confidence" = the overall (the minimum of the three). Use LOW scores (
     `SENTIMENT: detect the customer's emotion → set "sentiment" to one of: happy, neutral, frustrated. If they seem frustrated/angry/upset, reply with EXTRA empathy and calm, apologize, and set needs_human=true so the owner is alerted.`,
     `EXAMPLES (messy/dialect → understanding): "a ke nai or neser na 3" → book tomorrow 15:00. "qysh je, a ki kohe me ardh nesr na drek" (Gheg) → book tomorrow ~12:00. "wanna book tmrw 4pm pls" → book tomorrow 16:00. "SA KUSHTON SHËRBIMI/PRODUKTI" → answer price, no booking. "s'mum me ardh nesr" → wants_to_cancel=true. "rrofsh/flm/tnx" → short thanks.`,
     `PHOTO (the customer sent an image): look at it carefully and say what you actually see, then answer about THIS business. If it matches something in the catalog above, name that item and give its price. If it is similar but not identical, say honestly what is close and what differs. If you cannot tell, or it is not something this business offers, do NOT guess — describe briefly what you see, ask ONE clarifying question, and take their name + phone so the owner can confirm. NEVER ignore the image. NEVER invent a product that is not in the catalog.`,
+    `PHOTO MEMORY (critical): whenever an image is present, ALSO fill "image_desc" with a short factual description of what is in it — brand, model, colour, size, text visible on the label, distinguishing details (e.g. "parfum shishe kafe 100ml, etiketë 'Tobako Mix'" or "Golf 7 i zi, 2019, targa AA123BB"). Max 15 words, in the business language, facts only, no sales talk. This is how you REMEMBER the photo: the customer will keep asking about it ("sa kushton?", "a e ke ngjyrë tjetër?", "sa është stoku?") in later messages where the image is no longer attached — the description is carried into the conversation history so you never lose track of which product they meant. When there is no image, set "image_desc" to "".`,
     `VOICE (the customer sent a voice message): listen to it and answer what they ACTUALLY said, exactly as if they had typed it — do not ask them to repeat it in writing, and never say you cannot hear it. People send voice notes because typing is slow for them; treat it as completely normal. If a key word is unclear (a name, a number, an address), repeat back what you understood and ask ONE short confirming question.`,
     `MEDIA & "ONE LIKE THIS": some catalog items carry MEDIA — photos, videos, or example/portfolio links, each with a label describing it. (a) When the customer asks to SEE something ("a ke foto?", "ma trego", "send me examples"), paste the actual URL(s) — send the link itself, never say "check our page". (b) When the customer refers to one of those examples — pastes the link back, names it, or says "I want one like this / si ky / si ai" — figure out WHICH media entry they mean from its label and the conversation, then answer about THAT specific item: its name, what it includes, and its price. Say back in words what you understood ("a modern one-page site like Bella") so they can correct you. (c) If several could match, ask ONE short question naming the options. (d) NEVER pretend you cannot see the links: they are listed in the catalog above.`,
     `REMINDER (final check before answering): your reply MUST be in the language of the customer's latest message — see #1 RULE.`,
@@ -1092,7 +1130,7 @@ Also set "confidence" = the overall (the minimum of the three). Use LOW scores (
   // Roja: vetëm përgjigjet e gjeneruara nga AI (jo konfirmimet e ndërtuara nga sistemi)
   if (!booked && !cancelled && !rescheduled && !proposed) reply = guardReply(reply, services, biz, isSqLang(biz));
   const intent = out.wants_to_book ? "booking" : out.wants_to_cancel ? "cancel" : out.wants_to_reschedule ? "reschedule" : (out.needs_human ? "human" : "info");
-  return { reply, booked, cancelled, rescheduled, proposed, escalated, intent, confidence: overallConf, sentiment: out.sentiment || null, via: "ai" };
+  return { reply, booked, cancelled, rescheduled, proposed, escalated, intent, confidence: overallConf, sentiment: out.sentiment || null, image_desc: out.image_desc || "", via: "ai" };
 }
 
 /* ---------------- RRETHI I MËSIMIT (learning loop) ----------------
@@ -1151,7 +1189,7 @@ async function runInquiry(ctx: any) {
   const sq = (alb === null) ? isSqLang(biz) : alb;   // përgjigju në gjuhën e klientit
   const lang = "the customer's language";
   // Katalogë të mëdhenj (import Excel etj.): vetëm artikujt përkatës hyjnë në prompt
-  const svcSel = relevantServices(services, text, history);
+  const svcSel = relevantServices(services, searchText(ctx), history);
   const catalog = svcSel.map((s: any) => {
     const d = durHuman(s, sq);
     let line = `- ${s.name}${Number(s.price) ? " — " + s.price + "€" : ""}${d ? " — gati ~" + d : ""}`;
@@ -1185,6 +1223,7 @@ async function runInquiry(ctx: any) {
     `UNDERSTANDING: Understand the customer no matter HOW they write — any language or dialect (Gheg & Tosk Albanian, slang), abbreviations (flm, pls), typos, missing diacritics, ALL CAPS, voice-to-text errors, mixed Albanian-English. Always extract the real intent; never reject a message for being informal/misspelled. If truly unclear, ask ONE short question.`,
     `SHORTHAND (Albanian internet/SMS — customers type like this constantly; treat it as normal speech): cpb/çpb="çfarë po bën" (a casual hello — greet back warmly, do NOT ask what they want), ckemi/ç’kemi/tung/tungi="hello", spo="s’po/nuk po", sdi="s’di", smun/smum="s’mund", ska="s’ka", ktu="këtu", ktej="këtej", nsr/nesr="nesër", mrm="mirëmëngjes or mirëmbrëma", nt="natën e mirë", flm/fmnd/rrofsh="faleminderit", qka/çka="çfarë", qysh="si/how", vlla/moj/bre/ore=informal address (just tone — ignore it), pls/plz="please", oki/dakord="ok". Also: letters doubled for emphasis (saaa kushtonnn), q typed for ç or k, digits for words, no punctuation and no capitals at all, or rAnDoM capitals. NEVER reply that you do not understand any of these — read the intent and answer naturally.`,
     `PHOTO (the customer sent an image): look at it carefully and say what you actually see, then answer about THIS business. If it matches something in the catalog above, name that item and give its price. If it is similar but not identical, say honestly what is close and what differs. If you cannot tell, or it is not something this business offers, do NOT guess — describe briefly what you see, ask ONE clarifying question, and take their name + phone so the owner can confirm. NEVER ignore the image. NEVER invent a product that is not in the catalog.`,
+    `PHOTO MEMORY (critical): whenever an image is present, ALSO fill "image_desc" with a short factual description of what is in it — brand, model, colour, size, text visible on the label, distinguishing details (e.g. "parfum shishe kafe 100ml, etiketë 'Tobako Mix'" or "Golf 7 i zi, 2019, targa AA123BB"). Max 15 words, in the business language, facts only, no sales talk. This is how you REMEMBER the photo: the customer will keep asking about it ("sa kushton?", "a e ke ngjyrë tjetër?", "sa është stoku?") in later messages where the image is no longer attached — the description is carried into the conversation history so you never lose track of which product they meant. When there is no image, set "image_desc" to "".`,
     `VOICE (the customer sent a voice message): listen to it and answer what they ACTUALLY said, exactly as if they had typed it — do not ask them to repeat it in writing, and never say you cannot hear it. People send voice notes because typing is slow for them; treat it as completely normal. If a key word is unclear (a name, a number, an address), repeat back what you understood and ask ONE short confirming question.`,
     `MEDIA & "ONE LIKE THIS": some catalog items carry MEDIA — photos, videos, or example/portfolio links, each with a label describing it. (a) When the customer asks to SEE something ("a ke foto?", "ma trego", "send me examples"), paste the actual URL(s) — send the link itself, never say "check our page". (b) When the customer refers to one of those examples — pastes the link back, names it, or says "I want one like this / si ky / si ai" — figure out WHICH media entry they mean from its label and the conversation, then answer about THAT specific item: its name, what it includes, and its price. Say back in words what you understood ("a modern one-page site like Bella") so they can correct you. (c) If several could match, ask ONE short question naming the options. (d) NEVER pretend you cannot see the links: they are listed in the catalog above.`,
     `REMINDER (final check before answering): your reply MUST be in the language of the customer's latest message — see #1 RULE.`,
@@ -1224,7 +1263,7 @@ async function runInquiry(ctx: any) {
   if (/\b(dua|e dua|e marr|po e marr|porosi|porosit|porosis|interesoj|interesohem|le ta bejme|dakord|me ndihmoni|me beni|order|i want|interested|let s do)\b/.test(tx)) {
     await saveLead(ctx, text);
   }
-  return { reply, via: "inquiry" };
+  return { reply, image_desc: (out && out.image_desc) || "", via: "inquiry" };
 }
 
 /* ---------------- MBUROJA E KUOTËS (rate limit) ----------------
@@ -1301,6 +1340,17 @@ Deno.serve(async (req) => {
     for (const s of services) svcDur[s.id] = s.duration_min;
     const now = nowInTz(biz.timezone || "Europe/Tirane");   // P0-2: data/ora në timezone-in e biznesit
     const ctx: any = { businessId: business_id, biz, services, hours, staff, hMap, svcDur, text: safeText, client_name, client_phone, channel, chat_id, history, now, todayStr: now.todayStr, preview: isPreview, image_b64, image_mime, audio_b64, audio_mime };
+
+    /* IDENTIFIKO PRODUKTIN NGA FOTOJA PARA se të ndërtohet prompti — por vetëm
+       kur ka vërtet vlerë, që të mos harxhohet kuotë kot:
+         • katalog i madh (>60) → kërkimi PRET artikuj, ndaj fjalët nga fotoja
+           janë e vetmja mënyrë që produkti i duhur të hyjë fare në prompt;
+         • klienti s'shkroi asnjë fjalë → s'ka çfarë të kërkohet pa fotonë.
+       Bizneset e vogla (një sallon me 20 shërbime) s'paguajnë asnjë thirrje
+       shtesë: aty i gjithë katalogu hyn gjithsesi dhe një thirrje mjafton. */
+    if (image_b64 && (services.length > 60 || !String(text || "").trim())) {
+      ctx.imageHint = await describeImage(image_b64, image_mime);
+    }
 
     let result: any;
     // Mënyra INQUIRY (biznese pa takime): AI informon + merr kërkesën, pa kalendar

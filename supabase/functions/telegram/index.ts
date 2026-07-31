@@ -465,10 +465,11 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: true }).limit(10);
     const history = (hist || []).map((h: any) => ({ role: h.role, text: h.content }));
 
-    // Ruaj mesazhin e klientit
-    await supabase.from("messages").insert({
+    /* Ruaj mesazhin e klientit PARA thirrjes së AI-së — që edhe nëse AI-ja
+       dështon, pronari ta shohë gjithsesi se çfarë shkroi klienti. */
+    const { data: uRow } = await supabase.from("messages").insert({
       business_id: businessId, channel: "telegram", chat_id: chatId, role: "user", content: (photo ? "📷 [foto] " : voice ? "🎤 [zë] " : "") + msg.text,
-    });
+    }).select("id").maybeSingle();
 
     // Thirr trurin AI
     const r = await fetch(`${SUPABASE_URL}/functions/v1/chat`, {
@@ -478,6 +479,20 @@ Deno.serve(async (req) => {
     });
     const out = await r.json().catch(() => ({}));
     const reply = out.reply || "…";
+
+    /* KUJTESA E FOTOS — pjesa që i mungonte gjithçkaje.
+       Klienti dërgon screenshot-in ("a e ke këtë?") dhe pastaj VAZHDON të pyesë:
+       "sa kushton?", "a e ke ngjyrë tjetër?", "sa është stoku?". Në ato mesazhe
+       fotoja NUK bashkëngjitet më. Pa këtë, historia mbante vetëm "📷 [foto]" —
+       një gjurmë boshe — dhe AI-ja e humbte fillin se për cilin produkt bëhej fjalë.
+       Ndaj ruajmë PËRSHKRIMIN e asaj që pa, dhe ai udhëton me bisedën. */
+    if (uRow && uRow.id && out.image_desc) {
+      try {
+        await supabase.from("messages")
+          .update({ content: `📷 [foto: ${String(out.image_desc).slice(0, 120)}] ${msg.text}`.trim() })
+          .eq("id", uRow.id);
+      } catch (_e) { /* shtesë — mospërmbushja s'prish asgjë */ }
+    }
 
     // Ruaj përgjigjen + dërgoje në Telegram
     await supabase.from("messages").insert({
