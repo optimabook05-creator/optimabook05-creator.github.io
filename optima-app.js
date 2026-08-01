@@ -142,6 +142,16 @@ const T = {
     itemTiers: "Çmime sipas sasisë (shumicë) — opsionale", tiersHint: "Shkruaj nga sa copë dhe çmimin. P.sh. nga 2 → 40, nga 100 → 12. Aplikohet vetë sipas sasisë.",
     addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
     secBasics: "📝 Bazat", secTime: "⏱ Koha & prenotimi", secPricing: "💶 Çmimi", secStock: "📦 Stoku & kodi",
+    tabTryAi: "🧪 Provo AI-në",
+    tryDesc: "Bisedo me AI-në tënde pikërisht si klienti. Dërgo edhe foto — provoje si dikush që kap screenshot nga reklama dhe pyet \"a e ke këtë?\". Asgjë nuk ruhet: pa rezervime, pa porosi, pa njoftime.",
+    tryPh: "Shkruaj si klienti… (p.sh. a e ke këtë?)", trySendBtn: "Dërgo", tryReset: "↺ Fillo nga e para",
+    tryPhoto: "Bashkëngjit foto", tryVisitor: "Vizitor (provë)",
+    tryHello: "Përshëndetje! Shkruaj diçka ose bashkëngjit një foto — po përgjigjem si te klientët e vërtetë.",
+    tryTook: "u përgjigj për {s}s",
+    tryFail: "Nuk u arrit përgjigjja:",
+    tryOldFn: "Funksioni 'chat' është version i vjetër — ngarkoje sërish nga Supabase. (Prova u ndal që të mos bëhej rezervim i vërtetë.)",
+    tryBadImg: "Kjo foto nuk lexohet — provo një tjetër.",
+    tryNoBiz: "Biznesi nuk është ngarkuar ende — rifresko faqen dhe provo sërish.",
     itemMedia: "🖼 Foto, video & linqe", addMedia: "+ Shto foto / video / link",
     mediaHint: "Ngjit linkun e fotos, videos ose të punës që ke bërë. Shkruaj te \"çfarë është\" me fjalë të thjeshta — pikërisht ato fjalë e ndihmojnë AI-në të kuptojë kur klienti thotë \"dua një si ky\".",
     mediaImage: "Foto", mediaVideo: "Video", mediaLink: "Link",
@@ -438,6 +448,16 @@ const T = {
     itemTiers: "Quantity pricing (wholesale) — optional", tiersHint: "Enter from how many and the price. E.g. from 2 → 40, from 100 → 12. Applied automatically by quantity.",
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
     secBasics: "📝 Basics", secTime: "⏱ Time & booking", secPricing: "💶 Price", secStock: "📦 Stock & code",
+    tabTryAi: "🧪 Try the AI",
+    tryDesc: "Chat with your AI exactly like a customer. Send photos too — try it like someone who screenshots your ad and asks \"do you have this?\". Nothing is saved: no bookings, no orders, no alerts.",
+    tryPh: "Type like a customer… (e.g. do you have this?)", trySendBtn: "Send", tryReset: "↺ Start over",
+    tryPhoto: "Attach a photo", tryVisitor: "Visitor (test)",
+    tryHello: "Hi! Type something or attach a photo — I'll answer just like I do for real customers.",
+    tryTook: "answered in {s}s",
+    tryFail: "Could not get a reply:",
+    tryOldFn: "The 'chat' function is an old version — redeploy it from Supabase. (The test stopped so no real booking could happen.)",
+    tryBadImg: "That image can't be read — try another one.",
+    tryNoBiz: "Your business isn't loaded yet — refresh the page and try again.",
     itemMedia: "🖼 Photos, videos & links", addMedia: "+ Add photo / video / link",
     mediaHint: "Paste the link to a photo, a video, or work you have done. In \"what it is\", describe it in plain words — those exact words are what let the AI understand when a customer says \"I want one like this\".",
     mediaImage: "Photo", mediaVideo: "Video", mediaLink: "Link",
@@ -2430,6 +2450,136 @@ function addMediaRow(type, url, label) {
   row.append(k, u, l, del, note);
   $("#itemMedia").appendChild(row);
   if (url) testUrl();   // artikull i ruajtur më parë → provoje sapo hapet
+}
+
+
+/* =====================================================================
+   BANKA E PROVËS — pronari e provon AI-në E VËRTETË vetë.
+   Pse ekziston: nga telefoni i vet ai njihet si PRONAR dhe mesazhet nuk
+   shkojnë kurrë te AI-ja; ndërkaq bot-i i thoshte "hap panelin → Provo AI-në",
+   një pamje që s'ekzistonte fare. Këtu flet me trurin real, me foto, dhe
+   me preview:true — pra asgjë nuk shkruhet: pa rezervime, pa porosi, pa njoftime.
+   ===================================================================== */
+let tryImg = null;              // { b64, mime, name, dataUrl }
+let trySending = false;
+const trySession = "try-" + Math.random().toString(36).slice(2, 10);
+
+function tryPush(role, text, imgUrl) {
+  const m = $("#tryMsgs"); if (!m) return null;
+  const b = document.createElement("div");
+  b.className = "try-b " + (role === "user" ? "me" : role === "err" ? "err" : "ai");
+  if (imgUrl) { const im = document.createElement("img"); im.src = imgUrl; im.alt = ""; b.appendChild(im); }
+  if (text) { const t = document.createElement("div"); t.textContent = text; b.appendChild(t); }
+  m.appendChild(b); m.scrollTop = m.scrollHeight;
+  return b;
+}
+function tryHistory() {
+  const out = [];
+  document.querySelectorAll("#tryMsgs .try-b").forEach((b) => {
+    if (b.classList.contains("typing") || b.classList.contains("err")) return;
+    const t = b.textContent.trim(); if (!t) return;
+    out.push({ role: b.classList.contains("me") ? "user" : "bot", text: t });
+  });
+  return out.slice(-10);
+}
+function tryClearFile() {
+  tryImg = null;
+  const f = $("#tryFile"); if (f) f.hidden = true;
+  const p = $("#tryPick"); if (p) p.value = "";
+}
+/* Fotot e telefonit janë 3–8 MB — shumë për t'i çuar ashtu. I zvogëlojmë në
+   1280px: mjaft për njohje, dhe kursen kuotë e kohë pritjeje. */
+function tryReadFile(file) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error("read"));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode"));
+      img.onload = () => {
+        const max = 1280;
+        const sc = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        const url = c.toDataURL("image/jpeg", 0.85);
+        resolve({ b64: url.split(",")[1], mime: "image/jpeg", name: file.name, dataUrl: url });
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+async function trySend() {
+  if (trySending) return;
+  const inp = $("#tryInput"); if (!inp) return;
+  const q = inp.value.trim();
+  if (!q && !tryImg) return;
+  /* Kurrë një buton që s'bën asgjë pa shpjegim: nëse biznesi s'është ngarkuar
+     ende, thuaje. Heshtja e lë pronarin të mendojë se AI-ja është e prishur. */
+  if (!biz || !sb) { tryPush("err", tr("tryNoBiz")); return; }
+
+  trySending = true;
+  const sendBtn = $("#trySend"); if (sendBtn) sendBtn.disabled = true;
+  const img = tryImg;
+  const hist = tryHistory();
+  tryPush("user", q, img ? img.dataUrl : null);
+  inp.value = ""; tryClearFile();
+
+  const dots = tryPush("ai", "…"); if (dots) dots.classList.add("typing");
+  const t0 = Date.now();
+  try {
+    const { data, error } = await sb.functions.invoke("chat", { body: {
+      business_id: biz.id, text: q, channel: "demo", chat_id: trySession,
+      client_name: tr("tryVisitor"), history: hist, preview: true,
+      image_b64: img ? img.b64 : undefined, image_mime: img ? img.mime : undefined,
+    }});
+    if (dots) dots.remove();
+    if (error) throw error;
+    /* Pranohet VETËM përgjigjja që e kthen preview:true. Pa këtë kontroll, një
+       version i vjetër i funksionit do të bënte rezervim TË VËRTETË gjatë provës. */
+    if (!data || data.preview !== true) {
+      tryPush("err", tr("tryOldFn"));
+    } else {
+      tryPush("ai", data.reply || "…");
+      const n = $("#tryNote");
+      if (n) n.textContent = tr("tryTook").replace("{s}", ((Date.now() - t0) / 1000).toFixed(1));
+    }
+  } catch (e) {
+    if (dots) dots.remove();
+    tryPush("err", tr("tryFail") + " " + String((e && e.message) || e).slice(0, 120));
+  } finally {
+    trySending = false;
+    if (sendBtn) sendBtn.disabled = false;
+    inp.focus();
+  }
+}
+function renderTryAi() {
+  const m = $("#tryMsgs"); if (!m) return;
+  if (!m.childElementCount) tryPush("ai", tr("tryHello"));
+}
+function wireTryAi() {
+  const clip = $("#tryClip"), pick = $("#tryPick");
+  if (clip && pick) {
+    clip.onclick = () => pick.click();
+    pick.onchange = async () => {
+      const f = pick.files && pick.files[0]; if (!f) return;
+      try {
+        tryImg = await tryReadFile(f);
+        $("#tryThumb").src = tryImg.dataUrl;
+        $("#tryFileName").textContent = f.name.slice(0, 40);
+        $("#tryFile").hidden = false;
+      } catch (_e) { toast(tr("tryBadImg")); tryClearFile(); }
+    };
+  }
+  const x = $("#tryFileX"); if (x) x.onclick = tryClearFile;
+  const s2 = $("#trySend"); if (s2) s2.onclick = trySend;
+  const i = $("#tryInput"); if (i) i.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); trySend(); } };
+  const r = $("#tryReset"); if (r) r.onclick = () => {
+    const m = $("#tryMsgs"); if (m) m.innerHTML = "";
+    const n = $("#tryNote"); if (n) n.textContent = "";
+    tryClearFile(); renderTryAi();
+  };
 }
 
 function addTierRow(minQty, unitPrice) {
@@ -4921,6 +5071,7 @@ function wire() {
   // Kërkimi në katalog (lokal, pa rrjet — i domosdoshëm pas importeve të mëdha)
   if ($("#catSearch")) $("#catSearch").oninput = debounce(renderCatalog, 150);
   if ($("#addTier")) $("#addTier").onclick = () => addTierRow();
+  wireTryAi();
   if ($("#addMedia")) $("#addMedia").onclick = () => { addMediaRow("", "", ""); const rows = document.querySelectorAll("#itemMedia .media-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".m-url").focus(); };
   if ($("#addAddon")) $("#addAddon").onclick = () => { addAddonRow("", "", "", false, null, null); const rows = document.querySelectorAll("#itemAddons .addon-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".a-name").focus(); };
   if ($("#addVariant")) $("#addVariant").onclick = () => { addVariantRow("", ""); const rows = document.querySelectorAll("#itemVariants .variant-row"); const last = rows[rows.length - 1]; if (last) last.querySelector(".v-label").focus(); };
@@ -4976,7 +5127,7 @@ function wire() {
         stats: renderStats, calendar: renderCalendar, appointments: renderAppointments,
         blocks: renderBlocks, waitlist: renderWaitlist, leads: renderLeads,
         customers: renderCustomers, activity: renderActivity,
-        orders: renderOrders, reports: renderReports, inbox: renderInbox,
+        orders: renderOrders, reports: renderReports, inbox: renderInbox, tryai: renderTryAi,
         catalog: renderCatalog, config: renderConfigHub,
       };
       const fn = lazy[tab.dataset.tab]; if (fn) fn();

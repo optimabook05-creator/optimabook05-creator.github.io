@@ -2692,3 +2692,44 @@ details.tg-easy { margin-top: 12px; background: var(--glass-soft); border: 1px s
 details.tg-easy > summary { cursor: pointer; font-weight: 800; font-size: 13px; color: var(--ink-soft); }
 details.tg-easy > summary:focus-visible { outline: 2.5px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 details.tg-easy[open] > summary { margin-bottom: 8px; }
+
+/* ===== BANKA E PROVËS (Provo AI-në) =====
+   Pronari e provon AI-në e vërtetë, me foto, pa dalë nga paneli. */
+.try-wrap { display: flex; flex-direction: column; gap: var(--sp-8); max-width: 720px; }
+.try-msgs { min-height: 240px; max-height: 52vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column; gap: var(--sp-8); padding: var(--sp-12);
+  background: var(--glass-soft); border: 1px solid var(--glass-line); border-radius: var(--r-md); }
+.try-b { max-width: 82%; padding: 10px 13px; border-radius: 14px; font-size: 14.5px; font-weight: 600; line-height: 1.45; word-break: break-word; }
+.try-b.me { align-self: flex-end; background: linear-gradient(160deg, var(--accent-bright), var(--accent)); color: #fff; border-bottom-right-radius: 5px; }
+.try-b.ai { align-self: flex-start; background: var(--glass-strong); border: 1px solid var(--glass-line); color: var(--ink); border-bottom-left-radius: 5px; }
+.try-b.err { align-self: flex-start; background: var(--red-soft); color: var(--red); border: 1px solid var(--red); font-weight: 700; }
+.try-b img { max-width: 190px; border-radius: 10px; display: block; margin-bottom: 6px; }
+.try-b.typing { opacity: .55; }
+/* Fotoja e zgjedhur, para dërgimit */
+.try-file { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8);
+  background: var(--glass-soft); border: 1px solid var(--glass-line); border-radius: var(--r-sm); font-size: 13px; font-weight: 700; }
+.try-file img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; }
+.try-file span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); }
+.try-file button { border: none; background: transparent; color: var(--ink-faint); font-size: 16px; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+.try-file button:hover { color: var(--red); background: var(--red-soft); }
+/* Rreshti i shkrimit */
+.try-bar { display: flex; align-items: center; gap: var(--sp-8); }
+.try-bar input[type="text"] { flex: 1; min-width: 0; font-family: var(--font-body); border: 1px solid var(--field-border);
+  background: var(--field-bg); border-radius: var(--r-sm); padding: 12px 13px; font-size: 15px; font-weight: 600; color: var(--ink); outline: none; }
+.try-bar input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3.5px var(--accent-soft); }
+.try-clip { flex: 0 0 auto; width: 44px; height: 44px; border-radius: var(--r-sm); border: 1px solid var(--glass-edge);
+  background: var(--glass-soft); font-size: 18px; cursor: pointer; line-height: 1; }
+.try-clip:hover { border-color: var(--accent); }
+.try-bar .btn { flex: 0 0 auto; }
+.try-bar .btn[disabled] { opacity: .5; cursor: default; }
+.try-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); flex-wrap: wrap; }
+.try-note { font-size: 12.5px; font-weight: 700; color: var(--ink-faint); }
+/* Në telefon: fusha e shkrimit merr gjithë gjerësinë, butonat poshtë saj.
+   Dhe kutia e mesazheve ULET — me 52vh, fusha e shkrimit binte pikërisht mbi
+   shiritin e poshtëm dhe të detyronte të rrëshqisje për të shkruar. Në një
+   bisedë, fusha duhet të jetë aty pa e kërkuar. */
+@media (max-width: 520px) {
+  .try-bar { flex-wrap: wrap; }
+  .try-bar input[type="text"] { order: -1; flex-basis: 100%; }
+  .try-msgs { min-height: 180px; max-height: min(38vh, 300px); }
+}

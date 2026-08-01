@@ -21,9 +21,9 @@
 <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=179">
-<link rel="modulepreload" href="config.js?v=179">
-<link rel="modulepreload" href="optima-app.js?v=179">
+<link rel="stylesheet" href="style.css?v=180">
+<link rel="modulepreload" href="config.js?v=180">
+<link rel="modulepreload" href="optima-app.js?v=180">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -166,6 +166,7 @@
       <div class="nav-group" data-t="grpDaily">Përdor çdo ditë</div>
       <button class="tab active" data-tab="stats" data-t="tabStat">🏠 Përmbledhje</button>
       <button class="tab" data-tab="inbox" data-t="tabInbox">💬 Bisedat AI</button>
+      <button class="tab" data-tab="tryai" data-t="tabTryAi">🧪 Provo AI-në</button>
       <button class="tab" data-tab="calendar" data-t="tabCal">📅 Kalendari</button>
       <button class="tab" data-tab="appointments" data-t="tabAppt">📋 Takimet</button>
       <button class="tab" data-tab="orders" data-t="tabOrders">🧾 Porositë</button>
@@ -372,6 +373,32 @@
       <div id="weeklyBox"></div>
       <div id="insightsBox" class="stagger"></div>
       <div class="stats-grid stagger" id="statsGrid"></div>
+    </div>
+
+    <!-- BANKA E PROVËS — pronari e provon AI-në VETË.
+         Pa këtë ai s'kishte asnjë rrugë: nga telefoni i vet njihet si PRONAR
+         (mesazhet s'shkojnë te AI-ja), dhe "Provo AI-në" ishte kod i vdekur —
+         pamja mungonte, ndërsa bot-i i thoshte ta hapte. -->
+    <div class="tab-pane" id="pane-tryai">
+      <p class="pane-desc" data-t="tryDesc">Bisedo me AI-në tënde pikërisht si klienti. Dërgo edhe foto — provoje si dikush që kap screenshot nga reklama dhe pyet "a e ke këtë?". Asgjë nuk ruhet: pa rezervime, pa porosi, pa njoftime.</p>
+      <div class="try-wrap">
+        <div class="try-msgs" id="tryMsgs" aria-live="polite"></div>
+        <div class="try-file" id="tryFile" hidden>
+          <img id="tryThumb" alt="">
+          <span id="tryFileName"></span>
+          <button type="button" id="tryFileX" aria-label="Hiq foton">✕</button>
+        </div>
+        <div class="try-bar">
+          <input type="file" id="tryPick" accept="image/*" hidden>
+          <button type="button" class="try-clip" id="tryClip" data-t-title="tryPhoto" title="Bashkëngjit foto">📎</button>
+          <input type="text" id="tryInput" maxlength="500" data-t-ph="tryPh" placeholder="Shkruaj si klienti… (p.sh. a e ke këtë?)">
+          <button type="button" class="btn primary" id="trySend" data-t="trySendBtn">Dërgo</button>
+        </div>
+        <div class="try-foot">
+          <button type="button" class="btn ghost small" id="tryReset" data-t="tryReset">↺ Fillo nga e para</button>
+          <span class="try-note" id="tryNote"></span>
+        </div>
+      </div>
     </div>
 
     <div class="tab-pane" id="pane-inbox">
@@ -995,7 +1022,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=179"></script>
-<script type="module" src="optima-app.js?v=179"></script>
+<script src="core.js?v=180"></script>
+<script type="module" src="optima-app.js?v=180"></script>
 </body>
 </html>
