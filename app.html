@@ -21,9 +21,9 @@
 <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=181">
-<link rel="modulepreload" href="config.js?v=181">
-<link rel="modulepreload" href="optima-app.js?v=181">
+<link rel="stylesheet" href="style.css?v=182">
+<link rel="modulepreload" href="config.js?v=182">
+<link rel="modulepreload" href="optima-app.js?v=182">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -377,24 +377,13 @@
           <p data-t="shareSub">Këto i jep klientëve. Punojnë që tani.</p>
         </div>
 
-        <div class="share-row">
-          <div class="share-i">🌐</div>
-          <div class="share-t">
-            <strong data-t="sharePubH">Faqja e rezervimeve / porosive</strong>
-            <span data-t="sharePubD">Vëre në bio të Instagram-it, në WhatsApp, kudo. Klienti rezervon vetë.</span>
-            <input type="text" id="sharePubLink" readonly>
-          </div>
-          <div class="share-b">
-            <button class="btn small primary" id="sharePubCopy" type="button" data-t="copyLink">Kopjo</button>
-            <a class="btn small" id="sharePubOpen" target="_blank" rel="noopener" data-t="openLink">Hap ↗</a>
-          </div>
-        </div>
-
-        <div class="share-row" id="shareTgRow" hidden>
+        <!-- NJË LINK, jo dy. Ky është i vetmi që i duhet biznesit: klientët
+             pyesin këtu, ti përgjigjesh këtu, dhe je ti vetë me pushtete shtesë. -->
+        <div class="share-row main" id="shareTgRow" hidden>
           <div class="share-i">💬</div>
           <div class="share-t">
-            <strong data-t="shareTgH">Biseda me AI-në në Telegram</strong>
-            <span data-t="shareTgD">Klienti hap linkun, shkruan ose dërgon foto, dhe AI-ja i përgjigjet 24/7.</span>
+            <strong><span data-t="shareTgH">Linku yt</span> <em class="share-tag" data-t="shareMain">KY U JEP KLIENTËVE</em></strong>
+            <span data-t="shareTgD">Klienti hap linkun dhe pyet — me tekst, me zë, ose me foto. AI-ja përgjigjet 24/7 dhe merr rezervimet.</span>
             <input type="text" id="shareTgLink" readonly>
           </div>
           <div class="share-b">
@@ -403,7 +392,22 @@
           </div>
         </div>
 
-        <p class="share-foot" data-t="shareFoot">💡 Provoji vetë te <b>🧪 Provo AI-në</b> para se t'ua japësh klientëve.</p>
+        <details class="share-more">
+          <summary data-t="shareAlsoH">Ke edhe një faqe rezervimesh (opsionale)</summary>
+          <div class="share-row">
+            <div class="share-i">🌐</div>
+            <div class="share-t">
+              <span data-t="sharePubD">Për ata që s'kanë Telegram — rezervojnë vetë, pa bisedë. Vëre në bio të Instagram-it.</span>
+              <input type="text" id="sharePubLink" readonly>
+            </div>
+            <div class="share-b">
+              <button class="btn small" id="sharePubCopy" type="button" data-t="copyLink">Kopjo</button>
+              <a class="btn small" id="sharePubOpen" target="_blank" rel="noopener" data-t="openLink">Hap ↗</a>
+            </div>
+          </div>
+        </details>
+
+        <p class="share-foot" data-t="shareFoot">💡 Ti vetë shkruan te i njëjti link — të njeh si pronar. Shkruaj <b>/admin</b> për komandat.</p>
       </div>
 
       <div id="todayBox"></div>
@@ -1062,7 +1066,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=181"></script>
-<script type="module" src="optima-app.js?v=181"></script>
+<script src="core.js?v=182"></script>
+<script type="module" src="optima-app.js?v=182"></script>
 </body>
 </html>

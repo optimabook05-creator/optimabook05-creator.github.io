@@ -2762,3 +2762,18 @@ details.tg-easy[open] > summary { margin-bottom: 8px; }
   .share-b { grid-area: btn; flex-direction: row; }
   .share-b .btn { flex: 1; }
 }
+
+/* Një link kryesor, faqja si opsion i palosur */
+.share-row.main { border-top: none; }
+.share-tag { font-style: normal; font-size: 10px; font-weight: 900; letter-spacing: .06em;
+  background: var(--accent-soft); color: var(--accent-deep); padding: 3px 7px; border-radius: 999px; vertical-align: middle; margin-left: 6px; white-space: nowrap; }
+.share-more { margin-top: 4px; }
+.share-more > summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--ink-soft);
+  padding: 8px 0; list-style: none; }
+.share-more > summary::-webkit-details-marker { display: none; }
+.share-more > summary::before { content: "▸ "; }
+.share-more[open] > summary::before { content: "▾ "; }
+/* KURTHI I NJOHUR: `display:grid` e mund fshehjen e një <details> të mbyllur —
+   rreshti mbetej i dukshëm dhe binte mbi tekstin poshtë. I njëjti mësim si
+   `[hidden]` që humbet ndaj `display:flex`. Fshehja shprehimisht. */
+.share-more:not([open]) .share-row { display: none; }

@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
        verifikimi i ngarkimit mbetej i pamundur — pikërisht problemi që zgjidh.
        Nuk zbulon asgjë: vetëm një numër versioni, asnjë të dhënë, asnjë sekret. */
     const peek = req.method === "POST" ? await req.clone().json().catch(() => ({})) : {};
-    if (peek && peek.ping) return new Response(JSON.stringify({ ok: true, build: "179", photo: true, voice: true }), { headers: { "Content-Type": "application/json" } });
+    if (peek && peek.ping) return new Response(JSON.stringify({ ok: true, build: "182", photo: true, voice: true }), { headers: { "Content-Type": "application/json" } });
 
     // SIGURI: verifiko secret_token-in që Telegram e dërgon në çdo webhook.
     // Vendoset kur regjistrohet webhook-u (setWebhook?secret_token=<X>). Kështu
@@ -218,17 +218,24 @@ Deno.serve(async (req) => {
           : `🔒 Owner commands are blocked for your own safety.\n\nThe webhook secret is missing, so we can't prove this request really came from Telegram — and without that, anyone who knows the address could pause the AI or change your prices.\n\nFix (once): Supabase → Edge Functions → Secrets → add TELEGRAM_WEBHOOK_SECRET, then re-register the webhook with the same secret. Alerts keep working meanwhile.`, BOT);
         return new Response("ok");
       }
-      if (!isSwitch && !isPriceCmd) {
-        // Çdo gjë tjetër nga pronari → udhëzues i shkurtër, dhe STOP (kurrë si klient)
+      /* NJË VEND I VETËM PËR TË GJITHË.
+         Më parë ÇDO mesazh i pronarit ndalej këtu me një udhëzues, dhe s'shkonte
+         kurrë te AI-ja. Pasoja: pronari nuk e shihte DOT kurrë atë që sheh
+         klienti — as për të provuar, as për t'ia treguar dikujt. Tani i njëjti
+         bot, i njëjti link: komandat i njeh vetëm pronari, gjithçka tjetër
+         zhvillohet normalisht si bisedë. "/admin" e sjell listën e komandave. */
+      const isAdminAsk = /^\/(admin|help|komanda)\b/i.test(txt);
+      if (isAdminAsk) {
         const names = ownerBiz.map((b: any) => {
           const off = !!(b.config && b.config.aiOff);
           return `${off ? "🔕" : "✅"} ${b.name}${off ? (sqO ? " — AI E NDALUR" : " — AI OFF") : ""}`;
         }).join("\n");
         await sendTelegram(chatId, sqO
-          ? `👋 Kjo bisedë është paneli yt, jo bisedë klienti — ndaj mesazhet e tua nuk shkojnë te AI-ja.\n\n${names}\n\nKomandat:\n/off — ndal AI-në në çast\n/on — kthee në punë\n/status — gjendja\niPhone 15 = 430 — vendos çmimin\niphone 17 = -10% — gjithë familja\n* = +5% — gjithë katalogun\n\nDo t'i provosh përgjigjet e AI-së? Hap panelin → "Provo AI-në" (atje nuk ruhet asgjë).`
-          : `👋 This chat is your control panel, not a customer chat — so your messages don't go to the AI.\n\n${names}\n\nCommands:\n/off — pause the AI instantly\n/on — bring it back\n/status — current state\niPhone 15 = 430 — set a price\niphone 17 = -10% — a whole family\n* = +5% — the whole catalog\n\nWant to try the AI's replies? Open the panel → "Try the AI" (nothing is saved there).`, BOT);
+          ? `👑 Ti je pronari këtu.\n\n${names}\n\nKomandat e tua:\n/off — ndal AI-në në çast\n/on — kthee në punë\n/status — gjendja\niPhone 15 = 430 — vendos çmimin\niphone 17 = -10% — gjithë familja\n* = +5% — gjithë katalogun\n\nÇdo gjë tjetër që shkruan këtu shkon te AI-ja, njësoj si te një klient — kështu e provon kurdo që të duash.`
+          : `👑 You are the owner here.\n\n${names}\n\nYour commands:\n/off — pause the AI instantly\n/on — bring it back\n/status — current state\niPhone 15 = 430 — set a price\niphone 17 = -10% — a whole family\n* = +5% — the whole catalog\n\nAnything else you type here goes to the AI, exactly like a customer — so you can test it whenever you want.`, BOT);
         return new Response("ok");
       }
+      // Asnjë komandë → bie poshtë dhe trajtohet si bisedë normale me AI-në.
     }
 
     /* ---- ÇELËSI I NDALIMIT NGA TELEFONI (vetëm pronari i lidhur) ----
@@ -392,6 +399,10 @@ Deno.serve(async (req) => {
           .eq("channel", "telegram").eq("chat_id", chatId).maybeSingle();
         businessId = link?.business_id || null;
       } catch (_e) { businessId = null; }
+      /* PRONARI s'ka nevojë për asnjë link. Ai u lidh një herë nga paneli
+         (owner_tg_chat), pra biznesi i tij dihet tashmë. Pa këtë rresht, pronari
+         që shkruan te bot-i i vet merrte "hap linkun e biznesit" — absurde. */
+      if (!businessId && isOwnerChat) businessId = ownerBiz[0].id;
       if (!businessId) {
         // S'ka lidhje → udhëzim i shkurtër (dygjuhësh), pa zhurmë të mëtejshme
         await sendTelegram(chatId, "Për të filluar, hap linkun e biznesit (t.me/…?start=…) që të lidhem me të. / To start, open the business's link (t.me/…?start=…) so I know who to connect you with. 🙏", BOT);
