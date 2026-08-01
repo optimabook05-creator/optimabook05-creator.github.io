@@ -21,9 +21,9 @@
 <link rel="modulepreload" href="https://esm.sh/@supabase/supabase-js@2" crossorigin>
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=180">
-<link rel="modulepreload" href="config.js?v=180">
-<link rel="modulepreload" href="optima-app.js?v=180">
+<link rel="stylesheet" href="style.css?v=181">
+<link rel="modulepreload" href="config.js?v=181">
+<link rel="modulepreload" href="optima-app.js?v=181">
 <style>
   /* Pamje auth + onboarding (përdorin sistemin "Milk Glass") */
   .auth-wrap { max-width: 440px; margin: 60px auto; padding: 0 20px; }
@@ -366,6 +366,46 @@
     </div>
 
     <div class="tab-pane active" id="pane-stats">
+
+      <!-- LINQET PËR KLIENTËT — gjëja e parë që i duhet çdo biznesi, dhe deri tani
+           ishte e fshehur: faqja publike ishte poshtë te Cilësimet, kurse linku i
+           Telegram-it ishte i palosur brenda një seksioni që dukej si lodër
+           ("provoje shpejt"). Pronari s'kishte si ta dinte se e kishte. -->
+      <div class="share-box" id="shareBox">
+        <div class="share-h">
+          <h3 data-t="shareH">📣 Linqet e tua për klientët</h3>
+          <p data-t="shareSub">Këto i jep klientëve. Punojnë që tani.</p>
+        </div>
+
+        <div class="share-row">
+          <div class="share-i">🌐</div>
+          <div class="share-t">
+            <strong data-t="sharePubH">Faqja e rezervimeve / porosive</strong>
+            <span data-t="sharePubD">Vëre në bio të Instagram-it, në WhatsApp, kudo. Klienti rezervon vetë.</span>
+            <input type="text" id="sharePubLink" readonly>
+          </div>
+          <div class="share-b">
+            <button class="btn small primary" id="sharePubCopy" type="button" data-t="copyLink">Kopjo</button>
+            <a class="btn small" id="sharePubOpen" target="_blank" rel="noopener" data-t="openLink">Hap ↗</a>
+          </div>
+        </div>
+
+        <div class="share-row" id="shareTgRow" hidden>
+          <div class="share-i">💬</div>
+          <div class="share-t">
+            <strong data-t="shareTgH">Biseda me AI-në në Telegram</strong>
+            <span data-t="shareTgD">Klienti hap linkun, shkruan ose dërgon foto, dhe AI-ja i përgjigjet 24/7.</span>
+            <input type="text" id="shareTgLink" readonly>
+          </div>
+          <div class="share-b">
+            <button class="btn small primary" id="shareTgCopy" type="button" data-t="copyLink">Kopjo</button>
+            <a class="btn small" id="shareTgOpen" target="_blank" rel="noopener" data-t="openLink">Hap ↗</a>
+          </div>
+        </div>
+
+        <p class="share-foot" data-t="shareFoot">💡 Provoji vetë te <b>🧪 Provo AI-në</b> para se t'ua japësh klientëve.</p>
+      </div>
+
       <div id="todayBox"></div>
       <!-- Fitimi fantazmë: paratë që AI-ja solli kur biznesi ishte i mbyllur -->
       <div id="ghostBox"></div>
@@ -1022,7 +1062,7 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
   window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
 }
 </script>
-<script src="core.js?v=180"></script>
-<script type="module" src="optima-app.js?v=180"></script>
+<script src="core.js?v=181"></script>
+<script type="module" src="optima-app.js?v=181"></script>
 </body>
 </html>

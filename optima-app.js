@@ -142,6 +142,12 @@ const T = {
     itemTiers: "Çmime sipas sasisë (shumicë) — opsionale", tiersHint: "Shkruaj nga sa copë dhe çmimin. P.sh. nga 2 → 40, nga 100 → 12. Aplikohet vetë sipas sasisë.",
     addTier: "+ Shkallë çmimi", tierQty: "Nga sa copë", tierPrice: "Çmimi për copë", stockLbl: "Stok", hasTiers: "💹 shumicë",
     secBasics: "📝 Bazat", secTime: "⏱ Koha & prenotimi", secPricing: "💶 Çmimi", secStock: "📦 Stoku & kodi",
+    shareH: "📣 Linqet e tua për klientët", shareSub: "Këto i jep klientëve. Punojnë që tani.",
+    sharePubH: "Faqja e rezervimeve / porosive",
+    sharePubD: "Vëre në bio të Instagram-it, në WhatsApp, kudo. Klienti rezervon vetë.",
+    shareTgH: "Biseda me AI-në në Telegram",
+    shareTgD: "Klienti hap linkun, shkruan ose dërgon foto, dhe AI-ja i përgjigjet 24/7.",
+    shareFoot: "💡 Provoji vetë te 🧪 Provo AI-në para se t'ua japësh klientëve.",
     tabTryAi: "🧪 Provo AI-në",
     tryDesc: "Bisedo me AI-në tënde pikërisht si klienti. Dërgo edhe foto — provoje si dikush që kap screenshot nga reklama dhe pyet \"a e ke këtë?\". Asgjë nuk ruhet: pa rezervime, pa porosi, pa njoftime.",
     tryPh: "Shkruaj si klienti… (p.sh. a e ke këtë?)", trySendBtn: "Dërgo", tryReset: "↺ Fillo nga e para",
@@ -448,6 +454,12 @@ const T = {
     itemTiers: "Quantity pricing (wholesale) — optional", tiersHint: "Enter from how many and the price. E.g. from 2 → 40, from 100 → 12. Applied automatically by quantity.",
     addTier: "+ Price tier", tierQty: "From qty", tierPrice: "Price each", stockLbl: "Stock", hasTiers: "💹 wholesale",
     secBasics: "📝 Basics", secTime: "⏱ Time & booking", secPricing: "💶 Price", secStock: "📦 Stock & code",
+    shareH: "📣 Your customer links", shareSub: "Give these to customers. They work right now.",
+    sharePubH: "Booking / ordering page",
+    sharePubD: "Put it in your Instagram bio, on WhatsApp, anywhere. Customers book themselves.",
+    shareTgH: "Chat with your AI on Telegram",
+    shareTgD: "The customer opens the link, types or sends a photo, and the AI answers 24/7.",
+    shareFoot: "💡 Try them yourself in 🧪 Try the AI before handing them to customers.",
     tabTryAi: "🧪 Try the AI",
     tryDesc: "Chat with your AI exactly like a customer. Send photos too — try it like someone who screenshots your ad and asks \"do you have this?\". Nothing is saved: no bookings, no orders, no alerts.",
     tryPh: "Type like a customer… (e.g. do you have this?)", trySendBtn: "Send", tryReset: "↺ Start over",
@@ -3410,6 +3422,23 @@ function renderSettings() {
     const un = $("#tgAlertUnlink"); if (un) un.hidden = !biz.owner_tg_chat;
   }
   const op = $("#openPubLink"); if (op) op.href = pubBase;
+
+  /* Kutia "Linqet e tua për klientët" te faqja kryesore — të njëjtat linqe si më
+     poshtë, por aty ku pronari i sheh pa i kërkuar. Linku i Telegram-it shfaqet
+     vetëm nëse bot-i i përbashkët është konfiguruar. */
+  {
+    const sp = $("#sharePubLink"); if (sp) sp.value = pubBase;
+    const so = $("#sharePubOpen"); if (so) so.href = pubBase;
+    const row = $("#shareTgRow");
+    if (row) {
+      row.hidden = !MASTER_BOT;
+      if (MASTER_BOT) {
+        const url = `https://t.me/${MASTER_BOT}?start=${biz.id}`;
+        const st = $("#shareTgLink"); if (st) st.value = url;
+        const sg = $("#shareTgOpen"); if (sg) sg.href = url;
+      }
+    }
+  }
   const co = $("#commerceOn"); if (co) co.checked = !!biz.commerce_enabled;
   const cc = $("#bizCurrency"); if (cc) cc.value = biz.currency || "EUR";
   const cfg = biz.config || {};
@@ -5008,6 +5037,15 @@ function wire() {
       $("#teamEmail").value = ""; renderTeam(); toast(tr("toastSaved"));
     } catch (ex) { errToast(ex); }
   };
+  /* Kopjimi për kutinë e linqeve. Një ndihmës i vetëm — fallback-u me
+     execCommand mban shfletuesit e vjetër ku clipboard API s'ekziston. */
+  const copyFrom = async (sel) => {
+    const el = $(sel); if (!el) return;
+    try { await navigator.clipboard.writeText(el.value); toast(tr("copied")); }
+    catch (_e) { el.select(); document.execCommand && document.execCommand("copy"); toast(tr("copied")); }
+  };
+  if ($("#sharePubCopy")) $("#sharePubCopy").onclick = () => copyFrom("#sharePubLink");
+  if ($("#shareTgCopy")) $("#shareTgCopy").onclick = () => copyFrom("#shareTgLink");
   if ($("#copyPubLink")) $("#copyPubLink").onclick = async () => {
     const v = $("#pubLink").value;
     try { await navigator.clipboard.writeText(v); toast(tr("copied")); }

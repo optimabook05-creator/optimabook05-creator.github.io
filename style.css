@@ -2733,3 +2733,32 @@ details.tg-easy[open] > summary { margin-bottom: 8px; }
   .try-bar input[type="text"] { order: -1; flex-basis: 100%; }
   .try-msgs { min-height: 180px; max-height: min(38vh, 300px); }
 }
+
+/* ===== LINQET PËR KLIENTËT (faqja kryesore) =====
+   Gjëja e parë që i duhet një biznesi. Dukshmëri maksimale, zero kërkim. */
+.share-box { background: var(--glass); border: 1px solid var(--glass-edge); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-soft); padding: 18px 18px 14px; margin-bottom: var(--sp-16); position: relative; overflow: hidden; }
+.share-box::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 90px; pointer-events: none;
+  background: radial-gradient(60% 120% at 20% 0%, var(--accent-glow), transparent 70%); opacity: .5; }
+.share-box > * { position: relative; }
+.share-h h3 { font-family: var(--font-display); font-size: 16.5px; font-weight: 800; margin: 0; }
+.share-h p { color: var(--ink-soft); font-weight: 700; font-size: 13px; margin: 3px 0 14px; }
+.share-row { display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-12); align-items: center;
+  padding: 12px 0; border-top: 1px solid var(--glass-line); }
+.share-i { font-size: 22px; line-height: 1; }
+.share-t { min-width: 0; }
+.share-t strong { display: block; font-size: 14.5px; font-weight: 800; }
+.share-t span { display: block; color: var(--ink-soft); font-weight: 600; font-size: 12.5px; margin: 2px 0 7px; }
+.share-t input { width: 100%; font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--ink);
+  border: 1px solid var(--field-border); background: var(--field-bg); border-radius: var(--r-sm); padding: 9px 11px; outline: none; }
+.share-b { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.share-b .btn { white-space: nowrap; text-align: center; }
+.share-foot { margin: 12px 0 0; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); }
+/* Telefon: ikona + teksti sipër, butonat në një rresht poshtë — pa ngushtim */
+@media (max-width: 620px) {
+  .share-row { grid-template-columns: auto 1fr; grid-template-areas: "ico txt" "btn btn"; }
+  .share-i { grid-area: ico; align-self: start; }
+  .share-t { grid-area: txt; }
+  .share-b { grid-area: btn; flex-direction: row; }
+  .share-b .btn { flex: 1; }
+}
