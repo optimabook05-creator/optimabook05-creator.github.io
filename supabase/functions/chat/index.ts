@@ -897,12 +897,42 @@ function extractAmounts(text: string): number[] {
   while ((m = re.exec(s))) { const num = (m[1] != null ? m[1] : m[2]); if (num != null) out.push(Math.round(parseFloat(String(num).replace(",", ".")) * 100) / 100); }
   return out;
 }
+/* Lista e shumave që AI-ja LEJOHET t'i thotë. Roja e fundit e krahason çdo çmim
+   në përgjigje me këtë listë; çfarë s'është këtu, zëvendësohet me "do ta konfirmoj".
+
+   DY GABIME TË PROVUARA, TË RREGULLUARA KËTU:
+
+   1) `JSON.stringify(services)` fuste ÇDO numër të gjendur në rresht — përfshirë
+      copëzat e datave. Për `price_updated_at: "2026-07-02T14:06:47.94Z"` lista
+      merrte 2026, 7, 2, 14, 6 dhe 47.94 si "çmime të lejuara". Roja bëhej shumë
+      më e butë nga ç'dukej: një shifër e hallucinuar "2026 €" kalonte.
+   2) Çmimi i një artikulli me çmim TË VJETËR hynte gjithsesi në listë. Pra edhe
+      pse numri hiqet nga prompt-i, nëse AI-ja e merrte nga historia e bisedës
+      (10 mesazhet e fundit, ku e kishte thënë dje), roja e linte të kalonte.
+
+   Tani lexohen VETËM fushat që mbajnë vërtet çmim, dhe artikujt me çmim të
+   vjetër përjashtohen kur biznesi punon me çmime të gjalla. */
 function allowedAmounts(services: any[], biz: any): number[] {
   const set = new Set<number>();
-  const add = (txt: string) => { const re = /\d+(?:[.,]\d+)?/g; let m: any; while ((m = re.exec(txt))) { const n = Math.round(parseFloat(m[0].replace(",", ".")) * 100) / 100; if (n > 0) set.add(n); } };
-  add(JSON.stringify(services || []));   // çmime bazë + shkallë + addon (çfarëdo fushe numerike)
-  add(String(biz?.ai_notes || ""));      // çmime legjitime në FAQ
-  add(String(biz?._learned || ""));      // çmime legjitime nga PËRGJIGJET E MËSUARA të pronarit (Rrethi i Mësimit)
+  const put = (v: any) => {
+    const n = Math.round(Number(v) * 100) / 100;
+    if (Number.isFinite(n) && n > 0) set.add(n);
+  };
+  const addText = (txt: string) => {
+    const re = /\d+(?:[.,]\d+)?/g; let m: any;
+    while ((m = re.exec(txt))) put(parseFloat(m[0].replace(",", ".")));
+  };
+  for (const s of services || []) {
+    if (!s) continue;
+    // Çmim i pafreskuar → NUK është shumë e lejuar; s'duhet të dalë nga asnjë rrugë.
+    const stale = priceStale(biz, s);
+    if (!stale) { put(s.price); put(s.cost); }
+    for (const v of (Array.isArray(s.variants) ? s.variants : [])) if (v && !stale) put(v.price);
+    for (const a of (Array.isArray(s.addons) ? s.addons : [])) if (a) { put(a.price); put(a.cost); }
+    for (const t of (Array.isArray(s.tiers) ? s.tiers : [])) if (t && !stale) put(t.unit_price ?? t.price);
+  }
+  addText(String(biz?.ai_notes || ""));   // çmime legjitime në FAQ
+  addText(String(biz?._learned || ""));   // çmime nga përgjigjet e mësuara të pronarit
   return [...set];
 }
 // Nëse përgjigjja përmend një çmim me monedhë që S'është te të dhënat reale → zëvendëson me fallback të sigurt.
@@ -1308,7 +1338,7 @@ function rateLimited(key: string, max: number): boolean {
    askush s'e merrte vesh derisa një klient real të merrte përgjigje të gabuar.
    Tani mjafton një kërkesë e vetme:  POST {"ping":1}  →  kthen këtë numër.
    RRIT KËTË NUMËR sa herë ndryshon ky skedar. */
-const BUILD = "179";
+const BUILD = "184";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
