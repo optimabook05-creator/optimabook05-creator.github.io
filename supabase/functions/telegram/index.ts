@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
        verifikimi i ngarkimit mbetej i pamundur — pikërisht problemi që zgjidh.
        Nuk zbulon asgjë: vetëm një numër versioni, asnjë të dhënë, asnjë sekret. */
     const peek = req.method === "POST" ? await req.clone().json().catch(() => ({})) : {};
-    if (peek && peek.ping) return new Response(JSON.stringify({ ok: true, build: "182", photo: true, voice: true }), { headers: { "Content-Type": "application/json" } });
+    if (peek && peek.ping) return new Response(JSON.stringify({ ok: true, build: "183", photo: true, voice: true }), { headers: { "Content-Type": "application/json" } });
 
     // SIGURI: verifiko secret_token-in që Telegram e dërgon në çdo webhook.
     // Vendoset kur regjistrohet webhook-u (setWebhook?secret_token=<X>). Kështu
@@ -118,6 +118,17 @@ Deno.serve(async (req) => {
     const update = await req.json().catch(() => ({}));
     const msg = update.message || update.edited_message;
     if (!msg?.chat) return new Response("ok");
+
+    /* MOS E PERPUNO DY HERE TE NJEJTIN MESAZH (Telegram ridergon kur vonohemi).
+       ISHTE ME POSHTE, PAS KOMANDAVE TE PRONARIT — dhe kjo ishte e rrezikshme:
+       nje ridergim i "* = +5%" e ngrinte katalogun DY here (+10.25%), pa e
+       marre vesh askush. Tani mbrojtja vjen e PARA, para cdo veprimi. */
+    const updateId = update.update_id != null ? "tg_" + update.update_id : null;
+    if (updateId) {
+      const { error: dupErr } = await supabase.from("processed_updates").insert({ id: updateId });
+      if (dupErr && dupErr.code === "23505") return new Response("ok"); // tashme i perpunuar
+      // gabime te tjera (p.sh. tabela s'ekziston ende) → vazhdo (prapa-perputhshem)
+    }
 
     /* ---- FOTO DHE ZË (zbulimi) ----
        Deri tani `if (!msg.text)` e hidhte mesazhin → dy klientë krejt normalë
@@ -409,14 +420,6 @@ Deno.serve(async (req) => {
         return new Response("ok");
       }
       if (/^\/start\b/.test(msg.text)) msg.text = "Përshëndetje"; // /start i thjeshtë → përshëndetje njerëzore
-    }
-
-    // P0-4: Idempotency — mos përpuno dy herë të njëjtin update (Telegram ridërgon)
-    const updateId = update.update_id != null ? "tg_" + update.update_id : null;
-    if (updateId) {
-      const { error: dupErr } = await supabase.from("processed_updates").insert({ id: updateId });
-      if (dupErr && dupErr.code === "23505") return new Response("ok"); // tashmë i përpunuar
-      // gabime të tjera (p.sh. tabela s'ekziston ende) → vazhdo normalisht (prapa-përputhshëm)
     }
 
     /* ALBUM (disa foto njëherësh) — Telegram e dërgon SECILËN foto si update të
