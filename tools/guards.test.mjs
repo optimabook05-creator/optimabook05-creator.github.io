@@ -26,7 +26,7 @@ function grab(name) {
   if (i < 0) throw new Error("s'u gjet funksioni " + name);
   return SRC.slice(i, SRC.indexOf("\n}", i) + 2);
 }
-const names = ["priceStale", "extractAmounts", "allowedAmounts", "guardReply"];
+const names = ["priceStale", "extractAmounts", "allowedAmounts", "guardReply", "losesTiebreak"];
 const tmp = path.join(os.tmpdir(), `guards-${process.pid}.ts`);
 fs.writeFileSync(tmp, names.map(grab).join("\n\n") + `\n\nexport { ${names.join(", ")} };\n`);
 const G = await import("file://" + tmp.replace(/\\/g, "/"));
@@ -89,6 +89,38 @@ console.log("\nD) Shtesat, paketat dhe përgjigjet e mësuara");
   t("çmimi i paketës (220) lejohet", ok.has(220));
   t("çmimi me shumicë (80) lejohet", ok.has(80));
   t("çmimi nga përgjigja e mësuar (350) lejohet", ok.has(350));
+}
+
+console.log("\nE) Gara e rezervimit — rregulli i vendimit (losesTiebreak)");
+{
+  // Tre klientë shkruajnë të njëjtin orar në të njëjtin çast; kapaciteti = 1 person
+  const rows = [
+    { id: "c", created_at: "2026-08-01T10:00:00.002Z" },
+    { id: "a", created_at: "2026-08-01T10:00:00.001Z" },
+    { id: "b", created_at: "2026-08-01T10:00:00.003Z" },
+  ];
+  const humbin = rows.filter((r) => G.losesTiebreak(r.id, rows, 1));
+  t("nga 3 kërkesa, saktësisht 2 tërhiqen (mbetet 1)", humbin.length === 2);
+  t("fiton më i vjetri (a)", !humbin.some((r) => r.id === "a"));
+
+  // I njëjti mikrosekond → vendos id-ja; pa këtë, të dy do të mbeteshin ose të dy do të tërhiqeshin
+  const barazim = [
+    { id: "zzz", created_at: "2026-08-01T10:00:00.000Z" },
+    { id: "aaa", created_at: "2026-08-01T10:00:00.000Z" },
+  ];
+  const h1 = barazim.filter((r) => G.losesTiebreak(r.id, barazim, 1));
+  const h2 = barazim.filter((r) => G.losesTiebreak(r.id, barazim, 1));
+  t("barazim i plotë në kohë → saktësisht 1 humbës", h1.length === 1);
+  t("i njëjti rezultat sa herë llogaritet (deterministik)", JSON.stringify(h1) === JSON.stringify(h2));
+
+  // Renditja e hyrjes s'duhet ta ndryshojë rezultatin — çdo instancë i lexon rreshtat ndryshe
+  const perzier = rows.slice().reverse();
+  t("renditja e leximit nuk ndikon", JSON.stringify(rows.filter((r) => G.losesTiebreak(r.id, perzier, 1)).map((r) => r.id))
+      === JSON.stringify(humbin.map((r) => r.id)));
+
+  t("kapacitet 2 (dy persona staf) → vetëm 1 nga 3 tërhiqet", rows.filter((r) => G.losesTiebreak(r.id, rows, 2)).length === 1);
+  t("pa mbivendosje → askush nuk tërhiqet", !G.losesTiebreak("a", [rows[0]], 1));
+  t("listë bosh → pa rrëzim", !G.losesTiebreak("a", [], 1));
 }
 
 console.log(`\n${pass} kaluan, ${fail} dështuan`);

@@ -350,6 +350,21 @@ function parseService(tx: string, services: any[]): any {
 }
 
 /* ---------------- Veprime (të përbashkëta për rregullat dhe AI) ---------------- */
+/* RREGULLI I VENDIMIT PËR REZERVIMIN E DYFISHTË.
+   Kur dy (ose më shumë) kërkesa e shkruajnë të njëjtin orar në të njëjtin çast,
+   secila e ekzekuton këtë funksion mbi TË NJËJTIN grup rreshtash. Rregulli duhet
+   të jetë DETERMINISTIK, përndryshe: ose të gjithë mbeten (rezervim i dyfishtë),
+   ose të gjithë tërhiqen (orari mbetet bosh pa nevojë).
+   Rregulli: fitojnë `capacity` më të vjetrit — sipas created_at, dhe kur ai
+   përputhet (i njëjti mikrosekond), sipas id-së. Të dy janë të njëjta për
+   këdo që i lexon, ndaj rezultati është i njëjtë kudo. */
+function losesTiebreak(mineId: string, overlapping: any[], capacity: number): boolean {
+  if (!Array.isArray(overlapping) || overlapping.length <= capacity) return false;
+  const rend = overlapping.slice().sort((a: any, b: any) =>
+    String(a.created_at).localeCompare(String(b.created_at)) || String(a.id).localeCompare(String(b.id)));
+  return rend.findIndex((a: any) => a.id === mineId) >= capacity;
+}
+
 async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: string) {
   const { businessId, biz, svcDur, staff, client_name, client_phone, channel, chat_id } = ctx;
   const needApproval = !!(biz.config && biz.config.requireApproval);   // pronari aprovon vetë çdo prenotim
@@ -372,8 +387,46 @@ async function doBook(ctx: any, svc: any, dateStr: string, time: string, lang?: 
   };
   // Vendos staf vetëm kur ka staf (do të thotë që enterprise.sql është ekzekutuar)
   if (staffId) { row.staff_id = staffId; row.location_id = st ? st.location_id : null; }
-  const { error } = await supabase.from("appointments").insert(row);
-  if (error) return { booked: false, reply: null, alternatives: [] };
+  /* ---- REZERVIMI I DYFISHTË (race condition) ----
+     Deri këtu kemi bërë "lexo oraret e zëna → vendos se është e lirë → shkruaj",
+     pa asnjë bllokim mes hapave. Dy klientë që shkruajnë në të njëjtin çast e
+     lexojnë TË DY orarin si të lirë. Mbrojtja ka dy shtresa:
+
+     SHTRESA 1 (bazë) — indeksi unik `appts_slot_uniq` (booking-race.sql):
+       e njëjta orë + i njëjti staf → shkrimi i dytë DËSHTON. Këtu e kapim si
+       "orari sapo u zu" dhe i ofrojmë alternativa, jo si gabim teknik.
+
+     SHTRESA 2 (kod) — verifikim PAS shkrimit për MBIVENDOSJET, të cilat një
+       indeks unik s'i shpreh dot (10:00 për 60 min përplaset me 10:30 për 30).
+       Të dy shkruesit e bëjnë të njëjtin kontroll dhe përdorin të njëjtin
+       rregull vendimi — më i vjetri fiton — ndaj saktësisht njëri tërhiqet.
+       Pa këtë rregull deterministik, ose të dy do të mbeteshin, ose të dy do
+       të tërhiqeshin dhe orari do të mbetej bosh kot. */
+  const { data: ins, error } = await supabase.from("appointments").insert(row).select("id, created_at").maybeSingle();
+  if (error) {
+    // 23505 = shkelje e indeksit unik → orari u zu ndërkohë (jo gabim teknik)
+    const taken = String((error as any).code || "") === "23505";
+    return { booked: false, reply: null, alternatives: taken ? free.filter((t: string) => t !== time).slice(0, 3) : [] };
+  }
+
+  if (ins && ins.id) {
+    const mine = ins;
+    const endMin = toMin(time) + svc.duration_min;
+    const { data: clash } = await supabase.from("appointments")
+      .select("id, appt_time, created_at, service_id, staff_id")
+      .eq("business_id", businessId).eq("appt_date", dateStr).neq("status", "cancelled");
+    const capacity = Math.max(1, (staff || []).filter((s: any) => s.active !== false).length);
+    const overlapping = (clash || []).filter((a: any) => {
+      if (staffId && a.staff_id && a.staff_id !== staffId) return false;   // staf tjetër → s'përplaset
+      const aStart = toMin(hm(a.appt_time));
+      const aEnd = aStart + (svcDur[a.service_id] || svc.duration_min);
+      return aStart < endMin && aEnd > toMin(time);
+    });
+    if (losesTiebreak(mine.id, overlapping, capacity)) {
+      await supabase.from("appointments").delete().eq("id", mine.id);
+      return { booked: false, reply: null, alternatives: free.filter((t: string) => t !== time).slice(0, 3) };
+    }
+  }
   const notifText = needApproval
     ? `🔔 KËRKESË prenotimi (prit miratim): ${client_name || "Klient"} — ${svc.name}, ${dateStr} ${time}${st ? " (" + st.name + ")" : ""}. Aprovoje te Takimet.`
     : `✅ ${client_name || "Klient"} — ${svc.name}, ${dateStr} ${time}${st ? " (" + st.name + ")" : ""}`;
@@ -1338,7 +1391,7 @@ function rateLimited(key: string, max: number): boolean {
    askush s'e merrte vesh derisa një klient real të merrte përgjigje të gabuar.
    Tani mjafton një kërkesë e vetme:  POST {"ping":1}  →  kthen këtë numër.
    RRIT KËTË NUMËR sa herë ndryshon ky skedar. */
-const BUILD = "184";
+const BUILD = "185";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });

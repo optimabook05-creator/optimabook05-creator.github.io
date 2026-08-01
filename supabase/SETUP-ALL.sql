@@ -589,3 +589,11 @@ update public.businesses set tg_webhook_secret = gen_random_uuid()
 -- ose një foto që i ka dërguar vetë biznesi.
 -- =====================================================================
 alter table public.services add column if not exists media jsonb;
+
+-- =====================================================================
+-- MBROJTJA NGA REZERVIMI I DYFISHTE (booking-race.sql)
+-- =====================================================================
+create unique index if not exists appts_slot_uniq
+  on public.appointments (business_id, appt_date, appt_time,
+    coalesce(staff_id, '00000000-0000-0000-0000-000000000000'::uuid))
+  where status <> 'cancelled';

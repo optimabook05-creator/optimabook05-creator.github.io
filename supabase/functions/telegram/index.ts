@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
        verifikimi i ngarkimit mbetej i pamundur — pikërisht problemi që zgjidh.
        Nuk zbulon asgjë: vetëm një numër versioni, asnjë të dhënë, asnjë sekret. */
     const peek = req.method === "POST" ? await req.clone().json().catch(() => ({})) : {};
-    if (peek && peek.ping) return new Response(JSON.stringify({ ok: true, build: "184", photo: true, voice: true }), { headers: { "Content-Type": "application/json" } });
+    if (peek && peek.ping) return new Response(JSON.stringify({ ok: true, build: "185", photo: true, voice: true }), { headers: { "Content-Type": "application/json" } });
 
     // SIGURI: verifiko secret_token-in që Telegram e dërgon në çdo webhook.
     // Vendoset kur regjistrohet webhook-u (setWebhook?secret_token=<X>). Kështu
