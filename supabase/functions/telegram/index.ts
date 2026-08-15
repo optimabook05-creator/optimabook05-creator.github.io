@@ -60,12 +60,45 @@ async function sendPhotoTG(chatId: string, url: string, caption: string, token: 
   return !!(r && r.ok);
 }
 
-async function sendTelegram(chatId: string, text: string, token: string) {
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text }),
-  });
+/* DËRGIMI NUK HESHT MË.
+   Ky funksion e hidhte fare përgjigjen e Telegram-it. Pikërisht kjo e bëri
+   FATALE një gabim tokeni: Telegram kthen {ok:false, description:"bot can't
+   initiate conversation..."} dhe askush s'e shihte — pronari shtypte /off,
+   s'merrte asgjë, dhe mendonte se AI-ja s'u ndal. Tani çdo dështim shkruhet
+   te log-et e Supabase-it me arsyen e saktë, dhe thirrësi merr false që të
+   vendosë vetë (p.sh. njoftim rezervë te paneli). */
+async function sendTelegram(chatId: string, text: string, token: string): Promise<boolean> {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    }).then((x) => x.json()).catch(() => null);
+    if (r && r.ok) return true;
+    console.error("[telegram] sendMessage dështoi:", JSON.stringify({
+      chat: chatId, code: r?.error_code, why: String(r?.description || "pa përgjigje").slice(0, 160),
+    }));
+    return false;
+  } catch (e) {
+    console.error("[telegram] sendMessage rrëzim:", String((e as any)?.message || e).slice(0, 160));
+    return false;
+  }
+}
+
+/* Rrjeti i sigurisë për PRONARIN: nëse Telegram-i s'e arrin dot, mesazhi
+   shkon te njoftimet e panelit. Ndryshe pronari s'merr vesh KURRË se një
+   përgjigje e tij (statusi i /off, konfirmimi i çmimit) nuk mbërriti. */
+async function replyOwner(chatId: string, text: string, token: string, businessId?: string) {
+  const ok = await sendTelegram(chatId, text, token);
+  if (!ok && businessId) {
+    try {
+      await supabase.from("notifications").insert({
+        business_id: businessId,
+        text: "⚠️ S'të dërgova dot këtë në Telegram — ja çfarë ndodhi:\n" + text.slice(0, 400),
+      });
+    } catch (_e) { /* njoftimi është rrjet sigurie, s'e bllokon rrjedhën */ }
+  }
+  return ok;
 }
 
 Deno.serve(async (req) => {
@@ -236,7 +269,7 @@ Deno.serve(async (req) => {
       if ((isSwitch || isPriceCmd) && !whTrusted) {
         await sendTelegram(chatId, sqO
           ? `🔒 Komandat e pronarit janë të bllokuara për sigurinë tënde.\n\nMungon sekreti i webhook-ut, ndaj nuk provohet se kërkesa vjen vërtet nga Telegram — dhe pa këtë, dikush që di adresën mund të ndalonte AI-në ose të ndryshonte çmimet.\n\nRregullimi (një herë): Supabase → Edge Functions → Secrets → shto TELEGRAM_WEBHOOK_SECRET, pastaj ri-regjistro webhook-un me të njëjtin sekret. Njoftimet vazhdojnë normalisht ndërkohë.`
-          : `🔒 Owner commands are blocked for your own safety.\n\nThe webhook secret is missing, so we can't prove this request really came from Telegram — and without that, anyone who knows the address could pause the AI or change your prices.\n\nFix (once): Supabase → Edge Functions → Secrets → add TELEGRAM_WEBHOOK_SECRET, then re-register the webhook with the same secret. Alerts keep working meanwhile.`, ownerBot);
+          : `🔒 Owner commands are blocked for your own safety.\n\nThe webhook secret is missing, so we can't prove this request really came from Telegram — and without that, anyone who knows the address could pause the AI or change your prices.\n\nFix (once): Supabase → Edge Functions → Secrets → add TELEGRAM_WEBHOOK_SECRET, then re-register the webhook with the same secret. Alerts keep working meanwhile.`, ownerBot, ownerBiz[0].id);
         return new Response("ok");
       }
       /* NJË VEND I VETËM PËR TË GJITHË.
@@ -251,9 +284,9 @@ Deno.serve(async (req) => {
           const off = !!(b.config && b.config.aiOff);
           return `${off ? "🔕" : "✅"} ${b.name}${off ? (sqO ? " — AI E NDALUR" : " — AI OFF") : ""}`;
         }).join("\n");
-        await sendTelegram(chatId, sqO
+        await replyOwner(chatId, sqO
           ? `👑 Ti je pronari këtu.\n\n${names}\n\nKomandat e tua:\n/off — ndal AI-në në çast\n/on — kthee në punë\n/status — gjendja\niPhone 15 = 430 — vendos çmimin\niphone 17 = -10% — gjithë familja\n* = +5% — gjithë katalogun\n\nÇdo gjë tjetër që shkruan këtu shkon te AI-ja, njësoj si te një klient — kështu e provon kurdo që të duash.`
-          : `👑 You are the owner here.\n\n${names}\n\nYour commands:\n/off — pause the AI instantly\n/on — bring it back\n/status — current state\niPhone 15 = 430 — set a price\niphone 17 = -10% — a whole family\n* = +5% — the whole catalog\n\nAnything else you type here goes to the AI, exactly like a customer — so you can test it whenever you want.`, ownerBot);
+          : `👑 You are the owner here.\n\n${names}\n\nYour commands:\n/off — pause the AI instantly\n/on — bring it back\n/status — current state\niPhone 15 = 430 — set a price\niphone 17 = -10% — a whole family\n* = +5% — the whole catalog\n\nAnything else you type here goes to the AI, exactly like a customer — so you can test it whenever you want.`, ownerBot, ownerBiz[0].id);
         return new Response("ok");
       }
       // Asnjë komandë → bie poshtë dhe trajtohet si bisedë normale me AI-në.
@@ -284,7 +317,7 @@ Deno.serve(async (req) => {
           ? (sq ? "\n\nKlientët do marrin: \"Do t'ju kthehemi personalisht shumë shpejt\" — dhe ti njoftohesh për çdo mesazh. Shkruaj /on për ta kthyer."
                 : "\n\nCustomers will get: \"We'll get back to you personally very soon\" — and you get notified for every message. Send /on to switch it back.")
           : (sq ? "\n\nShkruaj /off për ta ndalur në çast kurdo." : "\n\nSend /off to stop it instantly at any time.");
-        await sendTelegram(chatId, lines + tip, ownerBot);
+        await replyOwner(chatId, lines + tip, ownerBot, ownerBiz[0].id);
         return new Response("ok");
       }
       // s'është kanal pronari → vazhdo si mesazh klienti normal
@@ -325,16 +358,16 @@ Deno.serve(async (req) => {
           /* ---- NDRYSHIM MASIV ME PËRQINDJE: një mesazh → gjithë familja ---- */
           const pct = Number(rawNum.replace(",", "."));
           if (!/^[+-]/.test(rawNum) || !Number.isFinite(pct) || pct < -90 || pct > 500) {
-            await sendTelegram(chatId, sq
+            await replyOwner(chatId, sq
               ? `Për ndryshim masiv shkruaj me shenjë: "iphone 17 = -10%" (ulje) ose "= +5%" (rritje). Kufijtë: -90% deri +500%.`
-              : `For bulk changes use a sign: "iphone 17 = -10%" (down) or "= +5%" (up). Limits: -90% to +500%.`, ownerBot);
+              : `For bulk changes use a sign: "iphone 17 = -10%" (down) or "= +5%" (up). Limits: -90% to +500%.`, ownerBot, ownerBiz[0].id);
             return new Response("ok");
           }
           const targets = cands.filter((s: any) => Number(s.price) > 0); // pa çmim = "me kërkesë" → s'shkallëzohet
           if (!targets.length) {
-            await sendTelegram(chatId, sq
+            await replyOwner(chatId, sq
               ? `S'gjeta artikuj me çmim që përputhen me "${mPrice[1].trim()}".`
-              : `No priced items match "${mPrice[1].trim()}".`, ownerBot);
+              : `No priced items match "${mPrice[1].trim()}".`, ownerBot, ownerBiz[0].id);
             return new Response("ok");
           }
           const factor = 1 + pct / 100;
@@ -349,45 +382,45 @@ Deno.serve(async (req) => {
           for (let i = 0; i < rows.length; i += 300) {
             const { error: upErr } = await supabase.from("services").upsert(rows.slice(i, i + 300));
             if (upErr) {
-              await sendTelegram(chatId, sq ? `Diçka dështoi — provo sërish.` : `Something failed — try again.`, ownerBot);
+              await replyOwner(chatId, sq ? `Diçka dështoi — provo sërish.` : `Something failed — try again.`, ownerBot, ownerBiz[0].id);
               return new Response("ok");
             }
           }
           const ex = targets.slice(0, 3).map((s: any, i: number) => `• ${s.name}: ${s.price}€ → ${rows[i].price}€`).join("\n");
           const more = targets.length > 3 ? (sq ? `\n…dhe ${targets.length - 3} të tjerë` : `\n…and ${targets.length - 3} more`) : "";
-          await sendTelegram(chatId, sq
+          await replyOwner(chatId, sq
             ? `✅ ${targets.length} artikuj u përditësuan (${pct > 0 ? "+" : ""}${pct}%):\n${ex}${more}\n\nÇmimet u freskuan tani.`
-            : `✅ ${targets.length} items updated (${pct > 0 ? "+" : ""}${pct}%):\n${ex}${more}\n\nPrices refreshed now.`, ownerBot);
+            : `✅ ${targets.length} items updated (${pct > 0 ? "+" : ""}${pct}%):\n${ex}${more}\n\nPrices refreshed now.`, ownerBot, ownerBiz[0].id);
           return new Response("ok");
         }
 
         /* ---- VENDOSJE ABSOLUTE (një artikull i vetëm, kërkon saktësi) ---- */
         const newPrice = parsePriceNum(rawNum);
         if (!q || wantAll || !Number.isFinite(newPrice) || newPrice < 0 || newPrice > 100000000) {
-          await sendTelegram(chatId, sq
+          await replyOwner(chatId, sq
             ? `Çmimi s'u lexua. Shkruaj: emri i artikullit = çmimi (p.sh. iPhone 15 = 430), ose masivisht me %: iphone 17 = -10%`
-            : `Couldn't read that. Write: item name = price (e.g. iPhone 15 = 430), or in bulk with %: iphone 17 = -10%`, ownerBot);
+            : `Couldn't read that. Write: item name = price (e.g. iPhone 15 = 430), or in bulk with %: iphone 17 = -10%`, ownerBot, ownerBiz[0].id);
           return new Response("ok");
         }
         const hits = exact.length ? exact : cands;
         if (!hits.length) {
-          await sendTelegram(chatId, sq
+          await replyOwner(chatId, sq
             ? `S'e gjeta "${mPrice[1].trim()}" në katalog. Shkruaje emrin siç është në panel (ose kodin SKU) = çmimi.`
-            : `Couldn't find "${mPrice[1].trim()}" in the catalog. Use the exact name from the panel (or the SKU) = price.`, ownerBot);
+            : `Couldn't find "${mPrice[1].trim()}" in the catalog. Use the exact name from the panel (or the SKU) = price.`, ownerBot, ownerBiz[0].id);
           return new Response("ok");
         }
         if (hits.length > 1) {
           const list = hits.slice(0, 5).map((s: any) => `• ${s.name}${s.sku ? " (" + s.sku + ")" : ""}`).join("\n");
-          await sendTelegram(chatId, sq
+          await replyOwner(chatId, sq
             ? `Gjeta ${hits.length} artikuj që përputhen:\n${list}\n\nShkruaje emrin e plotë (ose SKU-në) = çmimi.\n💡 Për t'i ndryshuar TË GJITHË njëherësh: ${mPrice[1].trim()} = -10%`
-            : `Found ${hits.length} matching items:\n${list}\n\nWrite the full name (or SKU) = price.\n💡 To change them ALL at once: ${mPrice[1].trim()} = -10%`, ownerBot);
+            : `Found ${hits.length} matching items:\n${list}\n\nWrite the full name (or SKU) = price.\n💡 To change them ALL at once: ${mPrice[1].trim()} = -10%`, ownerBot, ownerBiz[0].id);
           return new Response("ok");
         }
         const hit = hits[0];
         const { error: upErr } = await supabase.from("services").update({ price: newPrice }).eq("id", hit.id);
-        await sendTelegram(chatId, upErr
+        await replyOwner(chatId, upErr
           ? (sq ? `Diçka dështoi — provo sërish.` : `Something failed — try again.`)
-          : (sq ? `✅ ${hit.name}: ${hit.price}€ → ${newPrice}€ — çmimi u freskua tani.` : `✅ ${hit.name}: ${hit.price}€ → ${newPrice}€ — price refreshed now.`), ownerBot);
+          : (sq ? `✅ ${hit.name}: ${hit.price}€ → ${newPrice}€ — çmimi u freskua tani.` : `✅ ${hit.name}: ${hit.price}€ → ${newPrice}€ — price refreshed now.`), ownerBot, ownerBiz[0].id);
         return new Response("ok");
       }
       // s'është kanal pronari → mesazh klienti normal (vazhdon poshtë)

@@ -16,6 +16,35 @@ const SIGNS = [
   [/\/\\\\[dswb]/,               "`\\\\d`/`\\\\s` i dyfishuar brenda regex-i"],
 ];
 
+/* REKURSIONI I DREJTPËRDREJTË — klasa e gabimit që lindin redaktimet masive.
+   Një zëvendësim me regex mbi shumë rreshta e ktheu `sendTelegram(...)` brenda
+   `replyOwner` në `replyOwner(...)` → funksioni thërret veten, stack overflow,
+   dhe ÇDO mesazh i pronarit vdes. Sintaksa ishte e vlefshme, testet kaluan.
+   Kapet vetëm duke parë emrin e funksionit përballë trupit të tij. */
+function scanRecursion(src) {
+  const out = [];
+  const lines = src.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    /* VETËM deklarime SHUMËRRESHTËSHE: rreshti mbaron me "{" dhe s'ka trup në të.
+       Pa këtë kusht skaneri alarmohej nga funksione njërreshtëshe FQINJË
+       (`function round2(n){...}` pastaj `function money(n){ round2(n) }`) —
+       5 alarme të rreme nga 5, pra një mjet që stërvit syrin ta injorojë. */
+    const m = lines[i].match(/^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\([^)]*\)[^{]*\{\s*$/);
+    if (!m) continue;
+    const name = m[1];
+    // Vetëm rreshti i PARË i trupit: rekursioni i ligjshëm vjen pas një kushti ndalimi
+    for (let j = i + 1; j < lines.length; j++) {
+      const t = lines[j].trim();
+      if (!t || t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) continue;
+      if (new RegExp("(?:await\\s+|=\\s*|return\\s+)" + name + "\\s*\\(").test(t)) {
+        out.push({ line: j + 1, text: t, why: `"${name}" thërret VETEN si veprim i parë — rekursion i pafund` });
+      }
+      break;   // vetëm rreshti i parë i vërtetë i trupit
+    }
+  }
+  return out;
+}
+
 function scanText(src) {
   const out = [];
   src.split("\n").forEach((line, i) => {
@@ -42,7 +71,8 @@ if (require.main === module) {
   })(ROOT);
   let n = 0;
   for (const f of files) {
-    for (const h of scanText(fs.readFileSync(f, "utf8"))) {
+    const src = fs.readFileSync(f, "utf8");
+    for (const h of [...scanText(src), ...scanRecursion(src)]) {
       n++;
       console.log(`⚠️  ${path.relative(ROOT, f)}:${h.line}\n    ${h.text.slice(0, 90)}\n    → ${h.why}\n`);
     }
