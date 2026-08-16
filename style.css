@@ -2777,3 +2777,37 @@ details.tg-easy[open] > summary { margin-bottom: 8px; }
    rreshti mbetej i dukshëm dhe binte mbi tekstin poshtë. I njëjti mësim si
    `[hidden]` që humbet ndaj `display:flex`. Fshehja shprehimisht. */
 .share-more:not([open]) .share-row { display: none; }
+
+/* ===== Si po punon punonjësi yt AI (Bisedat AI) =====
+   Të dhënat e `ai_events` mblidheshin prej muajsh pa asnjë ekran.
+   Numri i dështimeve është KLIKUESHËM: matja pa rrugë veprimi është dekor. */
+.ap-card {
+  background: linear-gradient(150deg, var(--accent-soft), var(--glass-strong) 55%);
+  border: 1px solid rgba(12,166,120,.22); border-radius: 18px;
+  padding: 16px 18px; margin-bottom: var(--sp-16);
+  box-shadow: 0 1px 2px rgba(22,32,28,.04), inset 0 1px 0 rgba(255,255,255,.7);
+}
+:root[data-theme="dark"] .ap-card {
+  background: linear-gradient(150deg, rgba(32,201,151,.10), rgba(24,33,29,.6) 55%);
+  border-color: rgba(32,201,151,.20); box-shadow: 0 1px 2px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.ap-h { font-family: var(--font-display); font-weight: 800; font-size: 15px; letter-spacing: -.02em;
+  margin-bottom: 12px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ap-sub { font-family: var(--font-body); font-weight: 600; font-size: 12px; color: var(--ink-soft); letter-spacing: 0; }
+.ap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: var(--sp-8); }
+.ap-chip { display: flex; align-items: center; gap: 10px; background: var(--glass-strong);
+  border: 1px solid var(--glass-edge); border-radius: 13px; padding: 10px 12px; }
+.ap-chip.ap-act { border-color: rgba(204,126,14,.28); background: var(--amber-soft); }
+.ap-ico { font-size: 18px; line-height: 1; flex: none; }
+.ap-n { font-family: var(--font-display); font-weight: 800; font-size: 18px; letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums; }
+.ap-l { font-size: 11.5px; font-weight: 600; color: var(--ink-soft); line-height: 1.3; margin-top: 1px; }
+.ap-d { font-size: 11px; font-weight: 800; margin-left: 4px; }
+.ap-d.up { color: var(--accent-deep); }
+.ap-d.down { color: var(--red); }
+.ap-cta { display: block; width: 100%; margin-top: 11px; border: 1px solid rgba(204,126,14,.3);
+  background: var(--amber-soft); color: var(--amber); font-family: var(--font-body);
+  font-weight: 800; font-size: 12.5px; padding: 9px 12px; border-radius: 11px; cursor: pointer;
+  transition: filter .16s, transform .14s; }
+.ap-cta:hover { filter: brightness(1.03); }
+.ap-cta:active { transform: scale(.985); }

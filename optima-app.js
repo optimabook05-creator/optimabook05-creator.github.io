@@ -184,6 +184,9 @@ const T = {
     aiqAnswerPh: "Përgjigja që duhet të japë AI…", aiqQPh: "Pyetja (si do ta bënte klienti)…",
     aiqSave: "Mësoje AI-në", aiqDismiss: "Hiqe", aiqLearned: "Të mësuara",
     aiqAddBtn: "+ Shto pyetje-përgjigje", aiqSaved: "✅ AI-ja e mësoi — do ta dijë përgjithmonë",
+    apTitle: "Si po punon punonjësi yt AI", apSub: "30 ditët e fundit",
+    apConvos: "biseda", apSolo: "i mbylli vetë", apMoney: "u kthyen në rezervim/porosi", apAsked: "të kërkuan ty",
+    apSeeAsked: "Shiko {n} bisedat ku më kërkuan ty →", apSeeHint: "Lexo bisedën dhe shtyp «✏️ Korrigjo» — AI-ja s'e përsërit më.",
     fixBtn: "✏️ Korrigjo", fixNoQ: "S'ka pyetje klienti para kësaj përgjigjeje — shtoje te 'Shto pyetje-përgjigje'.",
     fixTitle: "✏️ Mëso AI-në përgjigjen e saktë", fixSub: "Kjo do të vlejë për çdo klient që pyet të njëjtën gjë, përgjithmonë.",
     fixQLbl: "Klienti pyeti", fixWrongLbl: "AI-ja u përgjigj", fixALbl: "Përgjigjja e saktë", fixSaveBtn: "Mësoje AI-në",
@@ -497,6 +500,9 @@ const T = {
     aiqAnswerPh: "The answer the AI should give…", aiqQPh: "The question (as a customer would ask it)…",
     aiqSave: "Teach the AI", aiqDismiss: "Remove", aiqLearned: "Learned",
     aiqAddBtn: "+ Add Q&A", aiqSaved: "✅ The AI learned it — it will know it forever",
+    apTitle: "How your AI employee is doing", apSub: "last 30 days",
+    apConvos: "conversations", apSolo: "handled alone", apMoney: "turned into a booking/order", apAsked: "asked for you",
+    apSeeAsked: "See the {n} conversations where they asked for you →", apSeeHint: "Read the chat and hit «✏️ Correct» — the AI won't repeat it.",
     fixBtn: "✏️ Correct", fixNoQ: "There's no customer question before this reply — add it via 'Add Q&A' instead.",
     fixTitle: "✏️ Teach the AI the right answer", fixSub: "This will apply to every customer who asks the same thing, forever.",
     fixQLbl: "The customer asked", fixWrongLbl: "The AI replied", fixALbl: "The correct answer", fixSaveBtn: "Teach the AI",
@@ -1968,7 +1974,94 @@ async function addAiqManual(question, answer) {
   renderAiq(); // merr id-në reale
 }
 
+/* =====================================================================
+   SI PO PUNON PUNONJËSI YT AI
+   Tabela `ai_events` mbush një rresht për çdo bisedë që nga dita e parë —
+   dhe deri tani NUK e shihte askush. Muaj të dhënash pa asnjë ekran.
+
+   PARIMI I PARAQITJES: pronari s'ka pyetje "sa është konfidenca mesatare".
+   Ai ka tri pyetje, dhe vetëm tri:
+     1. A po ma bën punën vetë?      → sa biseda i mbylli pa mua
+     2. A po sjell para?             → sa u kthyen në rezervim/porosi
+     3. Ku po ngec?                  → sa më kërkuan mua, dhe pse
+   Prandaj numrat janë në gjuhën e tij, dhe ai i treti është I KLIKUESHËM:
+   të çon te bisedat përkatëse, ku me butonin "Korrigjo" e mëson AI-në.
+   Matja pa rrugë veprimi është dekor; kjo e mbyll rrethin.
+   ===================================================================== */
+async function renderAiPerf() {
+  if (!$("#aiPerfBox") || !biz) return;
+  return swr("aiperf", async () => {
+    const now = Date.now();
+    const since = new Date(now - 30 * 864e5).toISOString();
+    const prevSince = new Date(now - 60 * 864e5).toISOString();
+    // Tabela mund të mos ekzistojë ende (ai-events.sql i paekzekutuar) → degradim i butë
+    try {
+      const { data, error } = await sb.from("ai_events")
+        .select("via, intent, confidence, booked, proposed, cancelled, escalated, created_at, chat_id, channel")
+        .eq("business_id", biz.id).gte("created_at", prevSince)
+        .order("created_at", { ascending: false }).limit(4000);
+      if (error) throw error;
+      return { rows: data || [], since, prevSince };
+    } catch (_e) { return { missing: true }; }
+  }, drawAiPerf);
+}
+
+function drawAiPerf(d) {
+  const box = $("#aiPerfBox"); if (!box) return;
+  if (d === null) { box.innerHTML = skel(1); return; }
+  // Pa tabelë ose pa asnjë bisedë → mos zër vend me një kuti bosh
+  if (d.__error || d.missing || !d.rows || !d.rows.length) { box.innerHTML = ""; return; }
+
+  const cur = d.rows.filter((r) => r.created_at >= d.since);
+  const prev = d.rows.filter((r) => r.created_at < d.since);
+  if (!cur.length) { box.innerHTML = ""; return; }
+
+  const stats = (rows) => {
+    const n = rows.length;
+    const escalated = rows.filter((r) => r.escalated).length;
+    const money = rows.filter((r) => r.booked || r.proposed).length;
+    // "E mbylli vetë" = nuk kërkoi njeriun. Kjo është vlera që blen pronari.
+    const solo = n - escalated;
+    return { n, solo, soloPct: n ? Math.round(solo / n * 100) : 0, escalated, money };
+  };
+  const c = stats(cur), p = stats(prev);
+
+  // Krahasimi me 30 ditët e mëparshme — vetëm kur ka me çfarë të krahasohet
+  const delta = (a, b) => {
+    if (!p.n || !b) return "";
+    const pct = Math.round(((a - b) / b) * 100);
+    if (!pct) return "";
+    return `<span class="ap-d ${pct > 0 ? "up" : "down"}">${pct > 0 ? "▲" : "▼"} ${Math.abs(pct)}%</span>`;
+  };
+
+  const chip = (ico, num, lbl, extra, cls) =>
+    `<div class="ap-chip${cls ? " " + cls : ""}"><span class="ap-ico">${ico}</span><div>
+      <div class="ap-n">${num} ${extra || ""}</div><div class="ap-l">${esc(lbl)}</div></div></div>`;
+
+  box.innerHTML = `<div class="ap-card">
+    <div class="ap-h">🤖 ${esc(tr("apTitle"))} <span class="ap-sub">${esc(tr("apSub"))}</span></div>
+    <div class="ap-grid">
+      ${chip("💬", c.n, tr("apConvos"), delta(c.n, p.n))}
+      ${chip("✅", c.soloPct + "%", tr("apSolo"), delta(c.soloPct, p.soloPct))}
+      ${chip("💰", c.money, tr("apMoney"), delta(c.money, p.money))}
+      ${c.escalated ? chip("🙋", c.escalated, tr("apAsked"), "", "ap-act") : ""}
+    </div>
+    ${c.escalated ? `<button type="button" class="ap-cta" id="apSeeAsked">${esc(tr("apSeeAsked").replace("{n}", c.escalated))}</button>` : ""}
+  </div>`;
+
+  // Rruga e veprimit: numri i dështimeve të çon te bisedat, ku i korrigjon
+  const btn = $("#apSeeAsked");
+  if (btn) btn.onclick = () => {
+    const s = $("#inboxSearch");
+    if (s) { s.value = ""; s.focus(); }
+    toast(tr("apSeeHint"));
+    const list = $("#inboxList");
+    if (list) list.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+}
+
 async function renderInbox() {
+  renderAiPerf(); // si po punon AI-ja — në krye, para bisedave
   renderAiq(); // Rrethi i Mësimit jeton në krye të kësaj skede
   const box = $("#inboxList"); if (!box || !biz) return;
   box.innerHTML = (typeof skel === "function") ? skel(3) : "";
