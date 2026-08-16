@@ -59,7 +59,12 @@ module.exports = { scanText, SIGNS };
 
 if (require.main === module) {
   const fs = require("fs"), path = require("path");
-  const ROOT = "C:/Users/Lenovo/Desktop/upgradeYourSelf";
+  /* Shtegu nxirret nga vendndodhja e vetë skedarit — jo i koduar.
+     Ishte "C:/Users/Lenovo/Desktop/upgradeYourSelf": punonte vetëm në një
+     kompjuter të vetëm dhe e rrëzonte CI-në me ENOENT. Një rojë që s'ekzekutohet
+     dot jashtë tavolinës sonë s'mbron asgjë. (i18n.cjs dhe tscheck.cjs e kishin
+     bërë saktë me __dirname që në fillim.) */
+  const ROOT = path.resolve(__dirname, "..");
   const files = [];
   (function walk(d) {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
