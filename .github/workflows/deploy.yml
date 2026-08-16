@@ -48,9 +48,15 @@ jobs:
       - name: Testet
         run: node --test
 
+      # `version: latest` e detyron veprimin ta pyesë GitHub API-n për lëshimin e
+      # fundit — kërkesë PA autentikim, që godet kufirin e shpejtësisë dhe e rrëzon
+      # gjithë shpërndarjen ("Failed to resolve latest Supabase CLI release").
+      # GITHUB_TOKEN e jep vetë Actions: e bën kërkesën të autentikuar → pa kufi.
       - uses: supabase/setup-cli@v1
         with:
           version: latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Shpërndaj të gjithë funksionet
         env:
