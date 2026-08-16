@@ -2811,3 +2811,18 @@ details.tg-easy[open] > summary { margin-bottom: 8px; }
   transition: filter .16s, transform .14s; }
 .ap-cta:hover { filter: brightness(1.03); }
 .ap-cta:active { transform: scale(.985); }
+
+/* ===== Kërkesat e ftohta (leads të paprekura mbi 2 ditë) =====
+   AI-ja e kap klientin me emër e numër — pastaj kërkesa rri dhe askush s'ia
+   kujton pronarit. Mosha nuk fshihet më te data e vogël gri: del si shenjë
+   që e tërheq syrin, sepse një lead 2-ditësh është praktikisht i humbur. */
+.lead-coldbar {
+  background: var(--amber-soft); border: 1px solid rgba(204,126,14,.28); color: var(--amber);
+  border-radius: var(--r-sm); padding: 10px 13px; margin-bottom: var(--sp-12);
+  font-size: 13px; font-weight: 700; line-height: 1.4;
+}
+.block-item.lead-cold { border-color: rgba(204,126,14,.30); background: var(--amber-soft); }
+:root[data-theme="dark"] .block-item.lead-cold { background: rgba(245,159,26,.09); }
+.lead-age { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px;
+  background: rgba(204,126,14,.16); color: var(--amber); font-size: 11.5px; font-weight: 800;
+  white-space: nowrap; }

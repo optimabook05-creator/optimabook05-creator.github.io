@@ -65,12 +65,35 @@ Deno.serve(async () => {
           buyers += count || 0;
         } catch (_e) {}
 
-        if (!todayN && !buyers) continue; // asgjë për të thënë → heshtje (zero bezdi)
+        /* ---- KËRKESAT E FTOHTA ----
+           AI-ja e kap klientin me emër e numër; pastaj kërkesa rri te lista dhe
+           ASKUSH s'ia kujton pronarit. Një lead i paprekur 2 ditë është praktikisht
+           i humbur — klienti ka blerë gjetkë. Deri tani digest-i i numëronte vetëm
+           ata të djeshmit si "blerës të kapur"; askush s'thoshte "këta të presin".
+           Kufiri 48 orë: nën të është ende punë normale, mbi të është para që ikin. */
+        let cold = 0, coldOldestDays = 0;
+        try {
+          const cutoff = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+          const { data: colds } = await supabase.from("leads")
+            .select("created_at").eq("business_id", bid).eq("status", "new")
+            .lt("created_at", cutoff).order("created_at").limit(200);
+          cold = (colds || []).length;
+          if (cold) {
+            const oldest = new Date(colds[0].created_at).getTime();
+            coldOldestDays = Math.max(1, Math.floor((Date.now() - oldest) / 864e5));
+          }
+        } catch (_e) { /* tabela mund të mungojë → digest-i vazhdon normal */ }
+
+        if (!todayN && !buyers && !cold) continue; // asgjë për të thënë → heshtje (zero bezdi)
 
         const title = sq ? "☀️ Dita jote sot" : "☀️ Your day today";
         const parts: string[] = [];
         if (todayN) parts.push(sq ? `${todayN} takime sot${firstAt ? ", i pari në " + firstAt : ""}` : `${todayN} bookings today${firstAt ? ", first at " + firstAt : ""}`);
         if (buyers) parts.push(sq ? `dje AI kapi ${buyers} blerës` : `yesterday the AI captured ${buyers} buyer${buyers > 1 ? "s" : ""}`);
+        // E fundit dhe më e forta: para që po ikin, me moshën e më të vjetrës
+        if (cold) parts.push(sq
+          ? `⚠️ ${cold} kërkesa të pakontaktuara (më e vjetra prej ${coldOldestDays} ditësh)`
+          : `⚠️ ${cold} request${cold > 1 ? "s" : ""} not contacted yet (oldest ${coldOldestDays}d)`);
         const body = parts.join(" · ");
 
         await fetch(`${SUPABASE_URL}/functions/v1/push`, {

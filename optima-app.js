@@ -187,6 +187,7 @@ const T = {
     apTitle: "Si po punon punonjësi yt AI", apSub: "30 ditët e fundit",
     apConvos: "biseda", apSolo: "i mbylli vetë", apMoney: "u kthyen në rezervim/porosi", apAsked: "të kërkuan ty",
     apSeeAsked: "Shiko {n} bisedat ku më kërkuan ty →", apSeeHint: "Lexo bisedën dhe shtyp «✏️ Korrigjo» — AI-ja s'e përsërit më.",
+    leadCold: "pret prej {n} ditësh", leadColdBar: "{n} kërkesa presin prej mbi 2 ditësh — kontaktoji para se t'i marrë dikush tjetër",
     fixBtn: "✏️ Korrigjo", fixNoQ: "S'ka pyetje klienti para kësaj përgjigjeje — shtoje te 'Shto pyetje-përgjigje'.",
     fixTitle: "✏️ Mëso AI-në përgjigjen e saktë", fixSub: "Kjo do të vlejë për çdo klient që pyet të njëjtën gjë, përgjithmonë.",
     fixQLbl: "Klienti pyeti", fixWrongLbl: "AI-ja u përgjigj", fixALbl: "Përgjigjja e saktë", fixSaveBtn: "Mësoje AI-në",
@@ -503,6 +504,7 @@ const T = {
     apTitle: "How your AI employee is doing", apSub: "last 30 days",
     apConvos: "conversations", apSolo: "handled alone", apMoney: "turned into a booking/order", apAsked: "asked for you",
     apSeeAsked: "See the {n} conversations where they asked for you →", apSeeHint: "Read the chat and hit «✏️ Correct» — the AI won't repeat it.",
+    leadCold: "waiting {n}d", leadColdBar: "{n} request(s) waiting over 2 days — contact them before someone else does",
     fixBtn: "✏️ Correct", fixNoQ: "There's no customer question before this reply — add it via 'Add Q&A' instead.",
     fixTitle: "✏️ Teach the AI the right answer", fixSub: "This will apply to every customer who asks the same thing, forever.",
     fixQLbl: "The customer asked", fixWrongLbl: "The AI replied", fixALbl: "The correct answer", fixSaveBtn: "Teach the AI",
@@ -3957,14 +3959,25 @@ function drawLeads(rows) {
   if (rows.__error) { list.innerHTML = errorHTML("leadsRetry"); const r = $("#leadsRetry"); if (r) r.onclick = rows.retry; return; }
   if (!rows.length) { list.innerHTML = emptyHTML("📥", tr("emptyLeads"), tr("emptyLeadsHint")); return; }
   list.innerHTML = "";
+  /* KËRKESAT E FTOHTA — AI-ja e kapi klientin, por pastaj kërkesa rri dhe askush
+     s'ia kujton pronarit. Një lead i paprekur 2 ditë është praktikisht i humbur:
+     klienti ka blerë gjetkë. Ndaj mosha nuk fshihet më te data e vogël gri —
+     del si shenjë qelibar që e tërheq syrin, me numrin e ditëve. */
+  const COLD_H = 48;
+  let coldCount = 0;
   for (const l of rows) {
     const d = new Date(l.created_at);
     const st = l.status === "contacted" ? tr("leadContacted") : tr("leadNew");
+    const ageH = (Date.now() - d.getTime()) / 3600000;
+    const cold = l.status !== "contacted" && ageH >= COLD_H;
+    if (cold) coldCount++;
+    const days = Math.max(1, Math.floor(ageH / 24));
     const item = document.createElement("div");
-    item.className = "block-item";
+    item.className = "block-item" + (cold ? " lead-cold" : "");
     item.innerHTML = `<span class="grow">🛒 <strong>${esc(l.client_name || "Klient")}</strong> — ${esc(l.summary)}
       <small style="color:var(--ink-faint)"> · ${d.getDate()} ${T[lang].months[d.getMonth()]}</small>
-      <span class="tag ${l.status === "contacted" ? "confirmed" : "pending"}">${st}</span></span>`;
+      <span class="tag ${l.status === "contacted" ? "confirmed" : "pending"}">${st}</span>
+      ${cold ? `<span class="lead-age">⏳ ${esc(tr("leadCold").replace("{n}", days))}</span>` : ""}</span>`;
     if (l.status !== "contacted") {
       const b = document.createElement("button");
       b.className = "btn small ghost"; b.textContent = tr("markContacted");
@@ -3972,6 +3985,13 @@ function drawLeads(rows) {
       item.appendChild(b);
     }
     list.appendChild(item);
+  }
+  // Përmbledhja në krye: numri i plotë para syve, që të mos varet nga scroll-i
+  if (coldCount) {
+    const warn = document.createElement("div");
+    warn.className = "lead-coldbar";
+    warn.textContent = "⏳ " + tr("leadColdBar").replace("{n}", coldCount);
+    list.insertBefore(warn, list.firstChild);
   }
 }
 
