@@ -1,8 +1,9 @@
 name: CI
 
-# Kontrolle automatike para se kodi të arrijë te përdoruesit:
-# - sintaksa e skedarëve JS
-# - testet e logjikës bazë (core.js) me node:test (pa varësi)
+# Kontrolle automatike para se kodi të arrijë te përdoruesit.
+# ISHIN VETËM 2 (sintaksë + teste) ndërsa projekti kishte ndërtuar 5 mjete —
+# pra tre prej tyre ekzistonin dhe nuk i ekzekutonte kurrë askush veç meje,
+# me dorë. Një rojë që s'vihet në punë është sikur të mos ekzistojë.
 on:
   push:
     branches: [master]
@@ -16,11 +17,29 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - name: Syntax check (JS)
+          node-version: "22"          # 20 s'e mbështet --experimental-strip-types
+
+      - name: Sintaksa e skedarëve JS
         run: |
           node --check core.js
           node --check optima-app.js
           node --check v.js
-      - name: Run tests
+          node --check sw.js
+
+      - name: Sintaksa e funksioneve Deno (TypeScript)
+        run: node tools/tscheck.cjs
+
+      - name: Skaneri i dëmtimeve (regex të prishur, rekursion)
+        run: node tools/damage.cjs
+
+      - name: Vetë-testi i skanerit
+        run: node tools/damage.test.cjs
+
+      - name: Testet e logjikës bazë
         run: node --test
+
+      - name: Rojet e sigurisë (çmimet, gara e rezervimit)
+        run: node tools/guards.test.mjs
+
+      - name: Përkthimet (asnjë çelës i munguar)
+        run: node tools/i18n.cjs

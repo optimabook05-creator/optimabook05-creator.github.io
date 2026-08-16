@@ -1,0 +1,57 @@
+# =====================================================================
+# APEXIFY — konfigurimi i funksioneve (burimi i së vërtetës për shpërndarjen)
+#
+# PSE EKZISTON: deri tani çdo funksion shpërndahej ME DORË (kopjo → ngjit →
+# Deploy), 11 herë, pa asnjë provë se hyri. Kjo prodhoi një defekt real: kopja
+# e `telegram` në Supabase mbeti VERSIONE prapa kodit, dhe askush s'e mori vesh
+# derisa u mat me shenjën e versionit.
+#
+# ⚠️ RREGULL KRITIK: ÇDO funksion duhet të jetë i listuar këtu.
+# Parazgjedhja e Supabase CLI-së është verify_jwt = true. Nëse një funksion
+# harrohet, shpërndarja automatike do t'i vinte JWT-në ON — dhe webhook-ët
+# (Telegram/Meta) e cron-i do të merrnin 401 dhe do të VDISNIN NË HESHTJE.
+#
+# Vlerat më poshtë NUK janë hamendje — u matën kundrejt sistemit live
+# (thirrje pa autorizim: 401 = JWT ON, 200/400 = JWT OFF).
+# =====================================================================
+
+project_id = "mhbrhrsjlxluxvwjhcne"
+
+# ---- Thirren NGA JASHTË (webhook, cron, trigger DB) → JWT duhet OFF ----
+# Telegram/Meta s'dërgojnë dot çelës Supabase; pg_net dhe cron-i as ata.
+
+[functions.chat]
+verify_jwt = false        # e thërret telegram/whatsapp me çelësin publik + paneli
+
+[functions.telegram]
+verify_jwt = false        # webhook i Telegram-it (mbrohet me secret_token, jo me JWT)
+
+[functions.whatsapp]
+verify_jwt = false        # webhook i Meta-s
+
+[functions.push]
+verify_jwt = false        # pg_net nga trigger-at e bazës
+
+[functions.fill-slot]
+verify_jwt = false        # trigger i bazës (anulim → njofton listën e pritjes)
+
+[functions.reminders]
+verify_jwt = false        # cron
+
+[functions.digest]
+verify_jwt = false        # cron ("Dita ime")
+
+[functions.winback]
+verify_jwt = false        # cron
+
+[functions.reviews]
+verify_jwt = false        # cron
+
+# ---- Thirren VETËM nga paneli i pronarit të loguar → JWT ON ----
+# Kështu kuota e AI-së s'digjet dot nga jashtë.
+
+[functions.import]
+verify_jwt = true         # lexuesi AI i çmimoreve
+
+[functions.refine]
+verify_jwt = true         # redaktori i dijes

@@ -1,0 +1,73 @@
+name: Deploy edge functions
+
+# =====================================================================
+# SHPËRNDARJA AUTOMATIKE — zëvendëson 11 kopjo-ngjitje me dorë.
+#
+# PROBLEMI QË ZGJIDH: çdo ndryshim te `supabase/functions/**` duhej çuar
+# me dorë, funksion pas funksioni. Kjo prodhoi defekte reale:
+#   • kopja e `telegram` mbeti versione prapa dhe askush s'e mori vesh;
+#   • një herë SQL-ja u ngjit brenda redaktorit të funksionit (clipboard-i
+#     ishte mbishkruar) — gabim që s'jep asnjë sinjal;
+#   • asnjë provë se shpërndarja hyri vërtet.
+#
+# TANI: çdo push në master që prek funksionet i shpërndan VETË të gjithë,
+# me cilësimet e JWT-së nga supabase/config.toml, dhe VERIFIKON pastaj.
+#
+# NEVOJITET NJË HERË: GitHub → Settings → Secrets → Actions → New secret
+#   Emri:  SUPABASE_ACCESS_TOKEN
+#   Vlera: token nga https://supabase.com/dashboard/account/tokens
+# =====================================================================
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/config.toml"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:        # mund të nisët edhe me dorë nga skeda Actions
+
+concurrency:
+  group: deploy-functions   # dy shpërndarje njëkohësisht → gjendje e paparashikueshme
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Rojet para shpërndarjes: kod i prishur NUK duhet të arrijë te klientët.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Kontrollo sintaksën e funksioneve
+        run: node tools/tscheck.cjs
+      - name: Skaneri i dëmtimeve
+        run: node tools/damage.cjs
+      - name: Testet
+        run: node --test
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Shpërndaj të gjithë funksionet
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy --project-ref mhbrhrsjlxluxvwjhcne
+
+      # PROVA, jo shpresa: pyet funksionet nëse janë gjallë dhe cilin build kanë.
+      - name: Verifiko që hynë
+        run: |
+          BASE="https://mhbrhrsjlxluxvwjhcne.supabase.co/functions/v1"
+          fail=0
+          for f in telegram whatsapp chat; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/$f" \
+                   -H "Content-Type: application/json" -d '{"ping":1}')
+            echo "$f → HTTP $code"
+            # 401 do të thoshte se JWT-ja u vu gabimisht ON te një webhook
+            if [ "$code" = "401" ]; then echo "❌ $f: JWT ON — webhook-u do vdiste!"; fail=1; fi
+            if [ "$code" = "000" ]; then echo "❌ $f: nuk përgjigjet fare"; fail=1; fi
+          done
+          exit $fail
