@@ -5,7 +5,11 @@
    Multi-tenant: RLS siguron që çdo pronar sheh vetëm të dhënat e veta.
    ===================================================================== */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+/* supabase-js vjen si skript klasik i VETË-HOSTUAR (supabase-js.js, ngarkuar
+   te app.html PARA këtij moduli) — jo më import nga esm.sh. Importi nga CDN
+   i huaj ishte pikë e vetme dështimi: bllokohej nga Brave Shields / rrjeti
+   dhe I GJITHË moduli vdiste para rreshtit të parë → faqe bosh. */
+const { createClient } = window.supabase;
 import { SUPABASE_URL, SUPABASE_KEY, MASTER_BOT } from "./config.js";
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -5367,9 +5371,12 @@ function wire() {
 
 /* ---------------- Nisja ---------------- */
 async function init() {
-  applyLang();
-  wire();
   try {
+    /* applyLang/wire BRENDA mburojës: nëse hedhin gabim (p.sh. HTML i vjetër
+       në cache pa një element që kodi i ri e pret), më parë vdiste GJITHÇKA
+       para showView → faqe bosh. Tani çdo dështim nisjeje → të paktën hyrja. */
+    applyLang();
+    wire();
     const { data: { session } } = await sb.auth.getSession();
     if (session) { await afterLogin(); }
     else { showView("auth"); }

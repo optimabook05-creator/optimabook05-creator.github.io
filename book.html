@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" href="fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/sora-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=187">
+<link rel="stylesheet" href="style.css?v=188">
 <style>
   .pub-wrap { max-width: 560px; margin: 30px auto 80px; padding: 0 16px; }
   .pub-card { background: var(--glass); backdrop-filter: blur(20px) saturate(1.6); -webkit-backdrop-filter: blur(20px) saturate(1.6);
@@ -124,9 +124,12 @@
 
 <!-- Etiketë STATIKE e versionuar (jo document.write: ai bllokon skanerin e parangarkimit
      — mësim i v80/v81). Skripti klasik ekzekutohet gjithmonë PARA modulit poshtë. -->
-<script src="core.js?v=187"></script>
+<script src="supabase-js.js?v=188"></script>
+<script src="core.js?v=188"></script>
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+/* supabase-js i vetë-hostuar (skripti klasik lart) — jo esm.sh. CDN i huaj i
+   bllokuar = klienti s'rezervon dot dhe biznesi humbet para. Kurrë më. */
+const { createClient } = window.supabase;
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 

@@ -69,7 +69,8 @@ if (require.main === module) {
   (function walk(d) {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
       // Vetë skaneri dhe testi i tij i përmbajnë gjurmët si TË DHËNA prove — jo gabime.
-      if (["node_modules", ".git", "fonts", "damage.cjs", "damage.test.cjs"].includes(e.name)) continue;
+      // supabase-js.js: bibliotekë e palës së tretë, e minifikuar (vendor) — jona s'është.
+      if (["node_modules", ".git", "fonts", "damage.cjs", "damage.test.cjs", "supabase-js.js"].includes(e.name)) continue;
       const p = path.join(d, e.name);
       if (e.isDirectory()) walk(p); else if (/\.(js|cjs|ts|html)$/.test(e.name)) files.push(p);
     }
