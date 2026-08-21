@@ -74,6 +74,33 @@ jobs:
             echo "$f → HTTP $code"
             # 401 do të thoshte se JWT-ja u vu gabimisht ON te një webhook
             if [ "$code" = "401" ]; then echo "❌ $f: JWT ON — webhook-u do vdiste!"; fail=1; fi
+            # 404 = funksioni NUK u shpërnda fare. Pikërisht kështu 'whatsapp'
+            # mungoi në server për javë të tëra pa e vënë re askush — verifikuesi
+            # i mëparshëm e linte 404-ën të kalonte si sukses.
+            if [ "$code" = "404" ]; then echo "❌ $f: nuk u shpërnda fare"; fail=1; fi
             if [ "$code" = "000" ]; then echo "❌ $f: nuk përgjigjet fare"; fail=1; fi
+          done
+
+          # "Diçka u përgjigj" s'mjafton: kopja e vjetër përgjigjet po aq bindshëm
+          # sa e reja (ashtu mbeti 'chat' 6 builde prapa pa asnjë alarm).
+          # Prova e vërtetë: numri i build-it në server = numri në kodin që sapo çuam.
+          want_chat=$(grep -oE 'BUILD = "[0-9]+"' supabase/functions/chat/index.ts | grep -oE '[0-9]+')
+          got_chat=$(curl -s -X POST "$BASE/chat" -H "Content-Type: application/json" -d '{"ping":1}' \
+                     | grep -oE '"build":"[0-9]+"' | grep -oE '[0-9]+')
+          echo "chat: kodi=$want_chat serveri=$got_chat"
+          if [ "$want_chat" != "$got_chat" ]; then echo "❌ chat: serveri mbeti me build të vjetër"; fail=1; fi
+          want_tg=$(grep -oE 'build: "[0-9]+"' supabase/functions/telegram/index.ts | grep -oE '[0-9]+')
+          got_tg=$(curl -s -X POST "$BASE/telegram" -H "Content-Type: application/json" -d '{"ping":1}' \
+                   | grep -oE '"build":"[0-9]+"' | grep -oE '[0-9]+')
+          echo "telegram: kodi=$want_tg serveri=$got_tg"
+          if [ "$want_tg" != "$got_tg" ]; then echo "❌ telegram: serveri mbeti me build të vjetër"; fail=1; fi
+
+          # Ana tjetër e medaljes: import/refine DUHET të kthejnë 401 pa çelës.
+          # Çdo gjë tjetër = JWT u fik gabimisht dhe dera mbeti hapur.
+          for f in import refine; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE/$f" \
+                   -H "Content-Type: application/json" -d '{}')
+            echo "$f → HTTP $code (pritet 401)"
+            if [ "$code" != "401" ]; then echo "❌ $f: JWT OFF — funksion i brendshëm i ekspozuar!"; fail=1; fi
           done
           exit $fail
